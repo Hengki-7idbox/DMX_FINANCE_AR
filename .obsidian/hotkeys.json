@@ -1,0 +1,10 @@
+{
+  "app:go-back": [{ "modifiers": ["Alt"], "key": "ArrowLeft" }],
+  "app:go-forward": [{ "modifiers": ["Alt"], "key": "ArrowRight" }],
+  "editor:toggle-bold": [{ "modifiers": ["Mod"], "key": "b" }],
+  "editor:toggle-italics": [{ "modifiers": ["Mod"], "key": "i" }],
+  "editor:insert-link": [{ "modifiers": ["Mod"], "key": "k" }],
+  "switcher:open": [{ "modifiers": ["Mod"], "key": "o" }],
+  "graph:open": [{ "modifiers": ["Mod"], "key": "g" }],
+  "toggle-dark-mode": [{ "modifiers": ["Mod", "Shift"], "key": "d" }]
+}

@@ -1,0 +1,19 @@
+{
+  "attachmentFolderPath": "doc/attachments",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "doc",
+  "alwaysUpdateLinks": true,
+  "showLineNumber": true,
+  "strictLineBreaks": false,
+  "readableLineLength": true,
+  "defaultViewMode": "preview",
+  "livePreview": true,
+  "showFrontmatter": false,
+  "foldHeading": true,
+  "foldIndent": true,
+  "useTab": false,
+  "tabSize": 2,
+  "spellcheck": false,
+  "promptDelete": true,
+  "trashOption": "local"
+}
