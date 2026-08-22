@@ -9,19 +9,31 @@
   "colorGroups": [
     {
       "query": "path:doc/PRD_Sistem.md",
-      "color": { "a": 1, "rgb": 14701138 }
+      "color": {
+        "a": 1,
+        "rgb": 14701138
+      }
     },
     {
       "query": "path:doc/DATABASE.md",
-      "color": { "a": 1, "rgb": 2201331 }
+      "color": {
+        "a": 1,
+        "rgb": 2201331
+      }
     },
     {
       "query": "path:doc/API.md",
-      "color": { "a": 1, "rgb": 3447003 }
+      "color": {
+        "a": 1,
+        "rgb": 3447003
+      }
     },
     {
       "query": "path:doc/BUSINESS_RULES.md",
-      "color": { "a": 1, "rgb": 15844367 }
+      "color": {
+        "a": 1,
+        "rgb": 15844367
+      }
     }
   ],
   "collapse-display": false,
@@ -34,6 +46,6 @@
   "repelStrength": 10,
   "linkStrength": 1,
   "linkDistance": 250,
-  "scale": 1,
+  "scale": 0.7132754626224403,
   "close": false
 }
