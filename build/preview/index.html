@@ -326,7 +326,7 @@
                             <td class="px-4 py-3" x-text="c.creditLimit"></td>
                             <td class="px-4 py-3" x-text="c.outstanding"></td>
                             <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs" :class="c.status==='Aktif'?'bg-green-900/30 text-green-400':c.status==='Warning'?'bg-yellow-900/30 text-yellow-400':'bg-gray-600/30 text-gray-400'" x-text="c.status"></span></td>
-                            <td class="px-4 py-3 text-right"><button @click="deleteCustomer(c.kode)" class="text-gray-400 hover:text-red-500" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                            <td class="px-4 py-3 text-right"><button @click="showDeleteModal=true;deleteTarget=c" class="text-gray-400 hover:text-red-500" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
                         </tr>
                     </template>
                 </tbody>
@@ -708,6 +708,8 @@ function app() {
             setTimeout(() => lucide.createIcons(), 100);
         },
         editingCustomer: null,
+        showDeleteModal: false,
+        deleteTarget: null,
         customerSearch: '',
         get filteredCustomers() {
             if (!this.customerSearch) return this.customers;
@@ -769,9 +771,12 @@ function app() {
             this.importFile = null;
             this.showToast('Import berhasil! 125 records diproses.', 'success');
         },
-        deleteCustomer(kode) {
-            this.customers = this.customers.filter(c => c.kode !== kode);
-            this.showToast('Customer ' + kode + ' berhasil dihapus', 'success');
+        confirmDelete() {
+            if (!this.deleteTarget) return;
+            this.customers = this.customers.filter(c => c.kode !== this.deleteTarget.kode);
+            this.showToast('Customer ' + this.deleteTarget.kode + ' berhasil dihapus', 'success');
+            this.showDeleteModal = false;
+            this.deleteTarget = null;
             setTimeout(() => lucide.createIcons(), 100);
         },
         exclusions: [
@@ -1632,6 +1637,25 @@ function app() {
         <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
             <button @click="showTrackerActionModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
             <button @click="saveTrackerAction()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Simpan Aksi</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Konfirmasi Hapus Customer -->
+<div x-show="showDeleteModal" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="showDeleteModal=false;deleteTarget=null"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-sm">
+        <div class="p-6 text-center">
+            <div class="w-14 h-14 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="alert-triangle" class="w-7 h-7 text-red-400"></i></div>
+            <h3 class="text-lg font-semibold mb-2">Hapus Customer?</h3>
+            <p class="text-sm text-gray-400 mb-1">Yakin ingin menghapus</p>
+            <p class="text-sm font-medium text-white" x-text="deleteTarget?.nama"></p>
+            <p class="text-xs text-gray-500 mt-1">Kode: <span x-text="deleteTarget?.kode"></span></p>
+            <p class="text-xs text-red-400 mt-3">Data yang dihapus tidak dapat dikembalikan.</p>
+        </div>
+        <div class="flex items-center justify-center gap-3 p-5 border-t border-gray-700">
+            <button @click="showDeleteModal=false;deleteTarget=null" class="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="confirmDelete()" class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">Hapus</button>
         </div>
     </div>
 </div>
