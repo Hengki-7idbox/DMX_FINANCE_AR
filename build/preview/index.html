@@ -105,14 +105,14 @@
                     <label class="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
                     <div class="relative">
                         <i data-lucide="mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
-                        <input type="email" x-model="loginEmail" class="w-full pl-10 pr-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="email@dmx.co.id" @keyup.enter="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='hengki@dmx.co.id'||loginPassword!=='password'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)">
+                        <input type="email" x-model="loginEmail" class="w-full pl-10 pr-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="email@dmx.co.id" @keyup.enter="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='admin@dmx.co.id'||loginPassword!=='admin'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)">
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
                     <div class="relative" x-data="{show:false}">
                         <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
-                        <input :type="show?'text':'password'" x-model="loginPassword" class="w-full pl-10 pr-10 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="Masukkan password" @keyup.enter="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='hengki@dmx.co.id'||loginPassword!=='password'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)">
+                        <input :type="show?'text':'password'" x-model="loginPassword" class="w-full pl-10 pr-10 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="Masukkan password" @keyup.enter="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='admin@dmx.co.id'||loginPassword!=='admin'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)">
                         <button type="button" @click="show=!show" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"><i data-lucide="eye" class="w-4 h-4"></i></button>
                     </div>
                 </div>
@@ -120,7 +120,7 @@
                     <input type="checkbox" class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600">
                     <span class="text-sm text-gray-400">Ingat saya</span>
                 </div>                    <p x-show="loginError" x-text="loginError" class="text-red-400 text-sm text-center mb-3"></p>
-                    <button @click="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='hengki@dmx.co.id'||loginPassword!=='password'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors" type="submit">Masuk</button>
+                    <button @click="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='admin@dmx.co.id'||loginPassword!=='admin'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors" type="submit">Masuk</button>
             </div>
         </div>
         <p class="text-center text-gray-500 text-xs mt-6">AR Finance Tools v1.0 &copy; 2026</p>
@@ -181,7 +181,7 @@
             </button>
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0"><span class="text-sm font-semibold text-blue-400">H</span></div>
-                <div x-show="sidebarExpanded" x-transition class="overflow-hidden flex-1 min-w-0"><p class="text-sm font-medium truncate">Hengki</p><p class="text-xs text-gray-400">Admin</p></div>
+                <div x-show="sidebarExpanded" x-transition class="overflow-hidden flex-1 min-w-0"><p class="text-sm font-medium truncate">Admin</p><p class="text-xs text-gray-400">Administrator</p></div>
                 <button x-show="sidebarExpanded" @click="page='login'" class="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="log-out" class="w-4 h-4"></i></button>
             </div>
         </div>
@@ -609,7 +609,7 @@
             <table class="w-full text-sm">
                 <thead class="bg-gray-700/50"><tr><th class="text-left px-4 py-3 font-medium">Timestamp</th><th class="text-left px-4 py-3 font-medium">User</th><th class="text-left px-4 py-3 font-medium">Aksi</th><th class="text-left px-4 py-3 font-medium">Module</th><th class="text-left px-4 py-3 font-medium">Detail</th></tr></thead>
                 <tbody class="divide-y divide-gray-700">
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs text-gray-500">2026-08-22 09:15</td><td class="px-4 py-3">Hengki</td><td class="px-4 py-3"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs">CREATE</span></td><td class="px-4 py-3">Invoice Exclusion</td><td class="px-4 py-3 text-gray-400">Added INV-0847 to exclusion</td></tr>
+                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs text-gray-500">2026-08-22 09:15</td><td class="px-4 py-3">Admin</td><td class="px-4 py-3"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs">CREATE</span></td><td class="px-4 py-3">Invoice Exclusion</td><td class="px-4 py-3 text-gray-400">Added INV-0847 to exclusion</td></tr>
                     <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs text-gray-500">2026-08-22 08:30</td><td class="px-4 py-3">Ahmad Fauzi</td><td class="px-4 py-3"><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">UPDATE</span></td><td class="px-4 py-3">Aging Report</td><td class="px-4 py-3 text-gray-400">Generated aging report Aug</td></tr>
                     <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs text-gray-500">2026-08-21 17:45</td><td class="px-4 py-3">Siti Rahayu</td><td class="px-4 py-3"><span class="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">SEND</span></td><td class="px-4 py-3">Reminders</td><td class="px-4 py-3 text-gray-400">Sent batch to 15 customers</td></tr>
                 </tbody>
@@ -684,8 +684,8 @@ function app() {
         accurateImportFile: null,
         accurateImportType: 'journal',
         accurateImportHistory: [
-            { id: 1, tanggal: '2026-08-22', file: 'accurate_aug2026.xlsx', records: 1250, status: 'Success', user: 'Hengki' },
-            { id: 2, tanggal: '2026-08-15', file: 'accurate_jul2026.xlsx', records: 2100, status: 'Success', user: 'Hengki' },
+            { id: 1, tanggal: '2026-08-22', file: 'accurate_aug2026.xlsx', records: 1250, status: 'Success', user: 'Admin' },
+            { id: 2, tanggal: '2026-08-15', file: 'accurate_jul2026.xlsx', records: 2100, status: 'Success', user: 'Admin' },
             { id: 3, tanggal: '2026-08-10', file: 'accurate_jun2026_partial.csv', records: 850, status: 'Partial', user: 'Admin' },
         ],
         handleAccurateImport() {
@@ -700,7 +700,7 @@ function app() {
                 file: this.accurateImportFile.name,
                 records: Math.floor(Math.random() * 2000) + 500,
                 status: 'Success',
-                user: 'Hengki'
+                user: 'Admin'
             });
             this.showAccurateImportModal = false;
             this.accurateImportFile = null;
@@ -960,7 +960,7 @@ function app() {
         editingUser: null,
         userForm: { name: '', email: '', role: 'viewer', password: '' },
         users: [
-            { id: 1, name: 'Hengki', email: 'hengki@dmx.co.id', role: 'Admin', status: 'Active', initial: 'H', color: 'blue' },
+            { id: 1, name: 'Admin', email: 'admin@dmx.co.id', role: 'Admin', status: 'Active', initial: 'A', color: 'blue' },
             { id: 2, name: 'Ahmad Fauzi', email: 'ahmad@dmx.co.id', role: 'AR Accountant', status: 'Active', initial: 'A', color: 'green' },
             { id: 3, name: 'Siti Rahayu', email: 'siti@dmx.co.id', role: 'AR Collector', status: 'Active', initial: 'S', color: 'yellow' },
         ],

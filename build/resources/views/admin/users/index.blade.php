@@ -34,7 +34,7 @@
                                 <span class="font-medium">Hengki</span>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-gray-500">hengki@dmx.co.id</td>
+                        <td class="px-4 py-3 text-gray-500">admin@dmx.co.id</td>
                         <td class="px-4 py-3"><span class="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 rounded-full text-xs font-medium">Admin</span></td>
                         <td class="px-4 py-3 text-center"><span class="w-2 h-2 bg-green-500 rounded-full inline-block"></span></td>
                         <td class="px-4 py-3 text-gray-500">Hari ini, 09:15</td>
@@ -102,7 +102,7 @@ function usersPage() {
         editingUser: null,
         form: { name: '', email: '', role: 'AR Accountant', password: '' },
         users: [
-            { id: 1, name: 'Hengki', email: 'hengki@dmx.co.id', role: 'Admin', status: 'Active' },
+            { id: 1, name: 'Admin', email: 'admin@dmx.co.id', role: 'Admin', status: 'Active' },
             { id: 2, name: 'Ahmad Fauzi', email: 'ahmad@dmx.co.id', role: 'AR Accountant', status: 'Active' },
             { id: 3, name: 'Siti Rahayu', email: 'siti@dmx.co.id', role: 'AR Collector', status: 'Active' },
         ],
