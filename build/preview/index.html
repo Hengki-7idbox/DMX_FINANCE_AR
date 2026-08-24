@@ -440,34 +440,138 @@
 <!-- =================== REMINDERS =================== -->
 <template x-if="page==='reminders'">
 <div>
+    <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div><h1 class="text-xl font-bold">Auto Email & WhatsApp Reminders</h1><p class="text-sm text-gray-400">Kirim pengingat otomatis ke customer</p></div>
-        <button @click="selectedReminders.length > 0 ? (showSendBatchModal=true) : showToast('Pilih minimal satu reminder','error')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="send" class="w-4 h-4"></i> Send Batch <span x-show="selectedReminders.length>0" x-text="'('+selectedReminders.length+')'" class="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-xs"></span></button>
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Sent This Month</p><p class="text-2xl font-bold mt-1">342</p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Email</p><p class="text-2xl font-bold mt-1">228</p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">WhatsApp</p><p class="text-2xl font-bold mt-1">114</p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Pending Payment</p><p class="text-2xl font-bold mt-1 text-yellow-400">67</p></div>
-    </div>
-    <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden mb-6">
-        <div class="p-4 border-b border-gray-700"><h3 class="font-semibold">Antrian Reminder</h3></div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-700/50"><tr><th class="text-left px-4 py-3 font-medium"><input type="checkbox" class="rounded" :checked="reminderSelectAll" @change="toggleAllReminders()"></th><th class="text-left px-4 py-3 font-medium">Customer</th><th class="text-left px-4 py-3 font-medium">Invoice</th><th class="text-right px-4 py-3 font-medium">Amount</th><th class="text-center px-4 py-3 font-medium">Tunggakan</th><th class="text-left px-4 py-3 font-medium">Channel</th><th class="text-left px-4 py-3 font-medium">Template</th></tr></thead>
-                <tbody class="divide-y divide-gray-700">
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3"><input type="checkbox" class="rounded" :checked="selectedReminders.includes(1)" @change="toggleReminderSelect(1)"></td><td class="px-4 py-3">PT. Maju Jaya</td><td class="px-4 py-3 font-mono text-xs">INV-0847</td><td class="px-4 py-3 text-right font-medium">Rp 45.5M</td><td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">7 hari</span></td><td class="px-4 py-3"><div class="flex gap-1"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs">Email</span><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">WA</span></div></td><td class="px-4 py-3 text-gray-400">Level 1</td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3"><input type="checkbox" class="rounded" :checked="selectedReminders.includes(2)" @change="toggleReminderSelect(2)"></td><td class="px-4 py-3">PT. Sukses Abadi</td><td class="px-4 py-3 font-mono text-xs">INV-0798</td><td class="px-4 py-3 text-right font-medium">Rp 89.2M</td><td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-red-900/30 text-red-400 rounded-full text-xs">52 hari</span></td><td class="px-4 py-3"><div class="flex gap-1"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs">Email</span><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">WA</span></div></td><td class="px-4 py-3 text-gray-400">Level 3</td></tr>
-                </tbody>
-            </table>
+        <div>
+            <h1 class="text-xl font-bold">AI Reminder Copilot</h1>
+            <p class="text-sm text-gray-400">Log percakapan customer, AI auto-extract janji bayar & sentiment</p>
+        </div>
+        <div class="flex gap-2">
+            <button @click="showRemindersAI=true" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium"><i data-lucide="sparkles" class="w-4 h-4"></i> AI Summary</button>
+            <button @click="selectedReminders.length > 0 ? (showSendBatchModal=true) : showToast('Pilih minimal satu reminder','error')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="send" class="w-4 h-4"></i> Send Batch <span x-show="selectedReminders.length>0" x-text="'('+selectedReminders.length+')'" class="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-xs"></span></button>
         </div>
     </div>
-    <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
-        <h3 class="font-semibold mb-4">Reminder Templates</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <button @click="openTemplateDetail('Level 1')" class="p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-blue-500 transition-colors text-left"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">Level 1 - Friendly</span><span class="px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full text-xs">1-30h</span></div><p class="text-xs text-gray-400">Pengingat ramah</p></button>
-            <button @click="openTemplateDetail('Level 2')" class="p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-yellow-500 transition-colors text-left"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">Level 2 - Firm</span><span class="px-2 py-0.5 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">31-60h</span></div><p class="text-xs text-gray-400">Pengingat tegas</p></button>
-            <button @click="openTemplateDetail('Level 3')" class="p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-red-500 transition-colors text-left"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">Level 3 - Urgent</span><span class="px-2 py-0.5 bg-red-900/30 text-red-400 rounded-full text-xs">&gt;60h</span></div><p class="text-xs text-gray-400">Peringatan keras</p></button>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
+            <p class="text-sm text-gray-400">Total Conversation</p>
+            <p class="text-2xl font-bold mt-1" x-text="aiConversations.length"></p>
+        </div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
+            <p class="text-sm text-gray-400">Janji Bayar</p>
+            <p class="text-2xl font-bold mt-1 text-green-400" x-text="aiConversations.filter(c=>c.promisedDate).length"></p>
+        </div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
+            <p class="text-sm text-gray-400">Sentimen Positif</p>
+            <p class="text-2xl font-bold mt-1 text-blue-400" x-text="aiConversations.filter(c=>c.sentiment==='Positive').length"></p>
+        </div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
+            <p class="text-sm text-gray-400">Pending Follow-up</p>
+            <p class="text-2xl font-bold mt-1 text-yellow-400" x-text="aiConversations.filter(c=>c.status==='Pending').length"></p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left: AI Chat / Log Conversation -->
+        <div class="lg:col-span-2">
+            <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+                <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+                    <h3 class="font-semibold flex items-center gap-2"><i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i> Log Percakapan Customer</h3>
+                    <select x-model="aiLogCustomer" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1.5 text-sm">
+                        <option value="">Pilih Customer...</option>
+                        <option>PT. Maju Jaya</option>
+                        <option>PT. Sukses Abadi</option>
+                        <option>PT. Makmur Sejahtera</option>
+                        <option>PT. Berkah Mandiri</option>
+                        <option>PT. Sentosa Jaya</option>
+                    </select>
+                </div>
+                <div class="p-4">
+                    <!-- Chat messages -->
+                    <div class="space-y-3 mb-4 max-h-80 overflow-y-auto" id="aiChatLog">
+                        <template x-for="msg in aiChatMessages" :key="msg.id">
+                            <div class="flex gap-3" :class="msg.role==='user'?'justify-end':''">
+                                <div x-show="msg.role==='assistant'" class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0"><i data-lucide="sparkles" class="w-4 h-4 text-white"></i></div>
+                                <div class="max-w-[80%] rounded-xl px-4 py-3 text-sm" :class="msg.role==='user'?'bg-blue-600 text-white':'bg-gray-700 text-gray-200'">
+                                    <p x-text="msg.text"></p>
+                                    <!-- AI extracted data -->
+                                    <div x-show="msg.extracted" class="mt-2 pt-2 border-t" :class="msg.role==='user'?'border-blue-500':'border-gray-600'">
+                                        <p class="text-xs font-medium mb-1" :class="msg.role==='user'?'text-blue-200':'text-purple-400'"><i data-lucide="brain" class="w-3 h-3 inline"></i> AI Extracted:</p>
+                                        <div class="flex flex-wrap gap-1.5" x-show="msg.extracted">
+                                            <span x-show="msg.extracted?.sentiment" class="px-2 py-0.5 rounded-full text-xs" :class="msg.extracted?.sentiment==='Positive'?'bg-green-900/50 text-green-300':msg.extracted?.sentiment==='Negative'?'bg-red-900/50 text-red-300':'bg-yellow-900/50 text-yellow-300'" x-text="msg.extracted?.sentiment"></span>
+                                            <span x-show="msg.extracted?.promisedDate" class="px-2 py-0.5 bg-green-900/50 text-green-300 rounded-full text-xs">📅 <span x-text="msg.extracted?.promisedDate"></span></span>
+                                            <span x-show="msg.extracted?.amount" class="px-2 py-0.5 bg-blue-900/50 text-blue-300 rounded-full text-xs">💰 <span x-text="msg.extracted?.amount"></span></span>
+                                            <span x-show="msg.extracted?.action" class="px-2 py-0.5 bg-orange-900/50 text-orange-300 rounded-full text-xs">📌 <span x-text="msg.extracted?.action"></span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div x-show="msg.role==='user'" class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0"><i data-lucide="user" class="w-4 h-4 text-white"></i></div>
+                            </div>
+                        </template>
+                        <!-- Typing indicator -->
+                        <div x-show="aiTyping" class="flex gap-3">
+                            <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0"><i data-lucide="sparkles" class="w-4 h-4 text-white"></i></div>
+                            <div class="bg-gray-700 rounded-xl px-4 py-3 text-sm text-gray-400"><span class="animate-pulse">AI sedang menganalisis...</span></div>
+                        </div>
+                    </div>
+                    <!-- Input -->
+                    <div class="flex gap-2">
+                        <input type="text" x-model="aiLogInput" @keyup.enter="sendAIChatLog()" placeholder="Contoh: "Customer bilang bayar tanggal 25 Agt Rp 45M" atau "PT. Sukses Abadi janji transfer minggu depan"" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <button @click="sendAIChatLog()" :disabled="!aiLogInput.trim()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"><i data-lucide="send" class="w-4 h-4"></i></button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">💡 Tip: Tuliskan percakapan apa adanya. AI akan otomatis extract: janji bayar, nominal, sentiment, & action items.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: AI Summary Panel -->
+        <div class="space-y-4">
+            <!-- Upcoming Promises -->
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
+                <h3 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="calendar-check" class="w-4 h-4 text-green-400"></i> Janji Bayar Mendatang</h3>
+                <div class="space-y-2">
+                    <template x-for="conv in upcomingPromises" :key="conv.id">
+                        <div class="p-3 bg-gray-700/50 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium" x-text="conv.customer"></span>
+                                <span class="px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full text-xs" x-text="conv.promisedDate"></span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">📝 <span x-text="conv.amount || 'Nominal belum dikonfirmasi'"></span></p>
+                        </div>
+                    </template>
+                    <p x-show="upcomingPromises.length === 0" class="text-sm text-gray-500 text-center py-3">Belum ada janji bayar</p>
+                </div>
+            </div>
+
+            <!-- Sentiment Overview -->
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
+                <h3 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="smile" class="w-4 h-4 text-yellow-400"></i> Sentiment Customer</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between"><span class="text-sm text-green-400">👍 Positif</span><span class="text-sm font-medium" x-text="aiConversations.filter(c=>c.sentiment==='Positive').length"></span></div>
+                    <div class="w-full bg-gray-700 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full transition-all" :style="'width:' + (aiConversations.length?Math.round(aiConversations.filter(c=>c.sentiment==='Positive').length/aiConversations.length*100):0)+'%'"></div></div>
+                    <div class="flex items-center justify-between"><span class="text-sm text-yellow-400">😐 Netral</span><span class="text-sm font-medium" x-text="aiConversations.filter(c=>c.sentiment==='Neutral').length"></span></div>
+                    <div class="w-full bg-gray-700 rounded-full h-2"><div class="bg-yellow-500 h-2 rounded-full transition-all" :style="'width:' + (aiConversations.length?Math.round(aiConversations.filter(c=>c.sentiment==='Neutral').length/aiConversations.length*100):0)+'%'"></div></div>
+                    <div class="flex items-center justify-between"><span class="text-sm text-red-400">👎 Negatif</span><span class="text-sm font-medium" x-text="aiConversations.filter(c=>c.sentiment==='Negative').length"></span></div>
+                    <div class="w-full bg-gray-700 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full transition-all" :style="'width:' + (aiConversations.length?Math.round(aiConversations.filter(c=>c.sentiment==='Negative').length/aiConversations.length*100):0)+'%'"></div></div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
+                <h3 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4 text-blue-400"></i> Aktivitas Terbaru</h3>
+                <div class="space-y-2">
+                    <template x-for="conv in aiConversations.slice(0, 4)" :key="conv.id">
+                        <div class="flex items-start gap-2 text-xs">
+                            <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" :class="conv.sentiment==='Positive'?'bg-green-400':conv.sentiment==='Negative'?'bg-red-400':'bg-yellow-400'"></div>
+                            <div>
+                                <p class="text-gray-300"><span class="font-medium" x-text="conv.customer"></span> - <span x-text="conv.summary"></span></p>
+                                <p class="text-gray-500 mt-0.5" x-text="conv.date"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -1137,18 +1241,71 @@ function app() {
             }, 2000);
         },
 
-        /* ===== REMINDERS ===== */
-        reminderSelectAll: false,
+        /* ===== REMINDERS AI ===== */
         selectedReminders: [],
+        reminderSelectAll: false,
         showSendBatchModal: false,
         showTemplateModal: false,
+        showRemindersAI: false,
         selectedTemplate: null,
         reminderBatchChannel: 'both',
-        reminders: [
-            { id: 1, customer: 'PT. Maju Jaya', invoice: 'INV-0847', amount: 'Rp 45.5M', tunggakan: 7, channels: ['Email','WA'], template: 'Level 1' },
-            { id: 2, customer: 'PT. Sukses Abadi', invoice: 'INV-0798', amount: 'Rp 89.2M', tunggakan: 52, channels: ['Email','WA'], template: 'Level 3' },
-            { id: 3, customer: 'PT. Makmur', invoice: 'INV-0712', amount: 'Rp 156.8M', tunggakan: 93, channels: ['Email','WA'], template: 'Level 3' },
+        aiLogCustomer: '',
+        aiLogInput: '',
+        aiTyping: false,
+        aiChatMessages: [
+            { id: 1, role: 'assistant', text: 'Halo! Saya AI Reminder Copilot. Ketik percakapan customer di sini, saya akan otomatis extract janji bayar, nominal, dan sentiment. 🎯', extracted: null },
         ],
+        aiConversations: [
+            { id: 1, customer: 'PT. Maju Jaya', date: '24 Agt 2026, 10:30', summary: 'Janji bayar tanggal 25 Agt', sentiment: 'Positive', promisedDate: '25 Agt 2026', amount: 'Rp 45.5M', status: 'Pending' },
+            { id: 2, customer: 'PT. Sukses Abadi', date: '23 Agt 2026, 14:15', summary: 'Minta perpanjangan 2 minggu', sentiment: 'Neutral', promisedDate: '7 Sep 2026', amount: 'Rp 89.2M', status: 'Pending' },
+            { id: 3, customer: 'PT. Makmur Sejahtera', date: '22 Agt 2026, 09:00', summary: 'Menolak bayar, claim barang rusak', sentiment: 'Negative', promisedDate: null, amount: null, status: 'Escalated' },
+        ],
+        get upcomingPromises() {
+            return this.aiConversations.filter(c => c.promisedDate).sort((a, b) => new Date(a.promisedDate) - new Date(b.promisedDate));
+        },
+        sendAIChatLog() {
+            if (!this.aiLogInput.trim()) return;
+            const userMsg = { id: Date.now(), role: 'user', text: this.aiLogInput, extracted: null };
+            this.aiChatMessages.push(userMsg);
+            this.aiLogInput = '';
+            this.aiTyping = true;
+            setTimeout(() => {
+                // AI extraction logic (simulated)
+                const text = userMsg.text.toLowerCase();
+                let extracted = {};
+                // Extract sentiment
+                if (text.match(/bayar|transfer|oke|siap|setuju|baik|akan/)) extracted.sentiment = 'Positive';
+                else if (text.match(/tolak|rusak|komplain|tidak|gak|nggak|masalah/)) extracted.sentiment = 'Negative';
+                else extracted.sentiment = 'Neutral';
+                // Extract date
+                const dateMatch = text.match(/(\d{1,2})\s*(jan|feb|mar|apr|mei|jun|jul|agu|ags|sep|okt|nov|des|agustus|september)/i);
+                if (dateMatch) extracted.promisedDate = dateMatch[0];
+                else if (text.match(/minggu depan|week depan/)) extracted.promisedDate = 'Minggu depan';
+                else if (text.match(/besok|lusa/)) extracted.promisedDate = text.match(/besok/) ? 'Besok' : 'Lusa';
+                // Extract amount
+                const amtMatch = text.match(/rp[\s.]*([\d.,]+)\s*[mkMKjuta]/i) || text.match(/(\d+\.?\d*)\s*[mkMKjuta]/i) || text.match(/(\d+\.?\d*)\s*juta/i);
+                if (amtMatch) extracted.amount = 'Rp ' + amtMatch[0];
+                // Extract action
+                if (text.match(/perpanjangan|tunda|undur/)) extracted.action = 'Perpanjangan waktu';
+                else if (text.match(/komplain|rusak|retur/)) extracted.action = 'Komplain barang';
+                else if (text.match(/konfirmasi|bayar|transfer/)) extracted.action = 'Konfirmasi pembayaran';
+                const aiMsg = { id: Date.now() + 1, role: 'assistant', text: '✅ Percakapan berhasil di-log! Berikut yang saya extract:', extracted: extracted };
+                this.aiChatMessages.push(aiMsg);
+                // Add to conversations
+                this.aiConversations.unshift({
+                    id: Date.now(),
+                    customer: this.aiLogCustomer || 'Unknown Customer',
+                    date: new Date().toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    summary: userMsg.text.substring(0, 50) + (userMsg.text.length > 50 ? '...' : ''),
+                    sentiment: extracted.sentiment,
+                    promisedDate: extracted.promisedDate || null,
+                    amount: extracted.amount || null,
+                    status: extracted.sentiment === 'Negative' ? 'Escalated' : 'Pending'
+                });
+                this.aiTyping = false;
+                setTimeout(() => lucide.createIcons(), 100);
+            }, 1500);
+        },
         toggleReminderSelect(id) {
             if (this.selectedReminders.includes(id)) {
                 this.selectedReminders = this.selectedReminders.filter(i => i !== id);
