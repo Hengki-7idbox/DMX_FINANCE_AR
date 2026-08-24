@@ -41,6 +41,11 @@ Route::middleware('auth')->group(function () {
         return view('laporan.aging-china');
     })->name('laporan.aging-china');
 
+    // Laporan: Aging Normal
+    Route::get('/aging-normal', function () {
+        return view('laporan.aging-normal');
+    })->name('laporan.aging-normal');
+
     // Tool 3: AR Reconciliation
     Route::get('/reconciliation', [ReconController::class, 'index'])->name('recon.index');
     Route::post('/reconciliation/import', [ReconController::class, 'importBank'])->name('recon.import');
