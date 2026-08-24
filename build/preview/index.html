@@ -299,7 +299,7 @@
         <div><h1 class="text-xl font-bold">Data Customer</h1><p class="text-sm text-gray-400">Kelola data master customer</p></div>
         <div class="flex gap-2">
             <button @click="showImportModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Import</button>
-            <button @click="showCustomerModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="plus" class="w-4 h-4"></i> Tambah Customer</button>
+            <button @click="editingCustomer=null;customerForm={kode:'',nama:'',kota:'',creditLimit:'',email:'',telepon:'',alamat:''};showCustomerModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="plus" class="w-4 h-4"></i> Tambah Customer</button>
         </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -319,7 +319,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-700/50">
                     <template x-for="c in customers" :key="c.kode">
-                        <tr class="hover:bg-gray-700/30">
+                        <tr class="hover:bg-gray-700/30 cursor-pointer" @dblclick="openEditCustomer(c)">
                             <td class="px-4 py-3 font-mono text-xs" x-text="c.kode"></td>
                             <td class="px-4 py-3" x-text="c.nama"></td>
                             <td class="px-4 py-3" x-text="c.kota"></td>
@@ -707,6 +707,7 @@ function app() {
             this.showToast('Import berhasil! ' + this.accurateImportHistory[0].records + ' records diproses.', 'success');
             setTimeout(() => lucide.createIcons(), 100);
         },
+        editingCustomer: null,
         customerForm: { kode: '', nama: '', kota: '', creditLimit: '', email: '', telepon: '', alamat: '' },
         importFile: null,
         toast: { show: false, message: '', type: 'success' },
@@ -720,23 +721,37 @@ function app() {
             this.toast = { show: true, message: message, type: type || 'success' };
             setTimeout(() => { this.toast.show = false; }, 3000);
         },
+        openEditCustomer(c) {
+            this.editingCustomer = c;
+            this.customerForm = { kode: c.kode, nama: c.nama, kota: c.kota, creditLimit: c.creditLimit.replace('Rp ', '').replace('M', ''), email: c.email || '', telepon: c.telepon || '', alamat: c.alamat || '' };
+            this.showCustomerModal = true;
+            setTimeout(() => lucide.createIcons(), 100);
+        },
         saveCustomer() {
             if (!this.customerForm.nama || !this.customerForm.kota) {
                 this.showToast('Nama dan kota harus diisi', 'error');
                 return;
             }
-            const newKode = 'C-' + String(this.customers.length + 1).padStart(3, '0');
-            this.customers.push({
-                kode: newKode,
-                nama: this.customerForm.nama,
-                kota: this.customerForm.kota,
-                creditLimit: this.customerForm.creditLimit ? 'Rp ' + this.customerForm.creditLimit + 'M' : 'Rp 0',
-                outstanding: 'Rp 0',
-                status: 'Aktif'
-            });
+            if (this.editingCustomer) {
+                this.editingCustomer.nama = this.customerForm.nama;
+                this.editingCustomer.kota = this.customerForm.kota;
+                this.editingCustomer.creditLimit = this.customerForm.creditLimit ? 'Rp ' + this.customerForm.creditLimit + 'M' : 'Rp 0';
+                this.showToast('Customer ' + this.customerForm.nama + ' berhasil diupdate!', 'success');
+            } else {
+                const newKode = 'C-' + String(this.customers.length + 1).padStart(3, '0');
+                this.customers.push({
+                    kode: newKode,
+                    nama: this.customerForm.nama,
+                    kota: this.customerForm.kota,
+                    creditLimit: this.customerForm.creditLimit ? 'Rp ' + this.customerForm.creditLimit + 'M' : 'Rp 0',
+                    outstanding: 'Rp 0',
+                    status: 'Aktif'
+                });
+                this.showToast('Customer berhasil ditambahkan!', 'success');
+            }
+            this.editingCustomer = null;
             this.customerForm = { kode: '', nama: '', kota: '', creditLimit: '', email: '', telepon: '', alamat: '' };
             this.showCustomerModal = false;
-            this.showToast('Customer berhasil ditambahkan!', 'success');
             setTimeout(() => lucide.createIcons(), 100);
         },
         handleImport() {
@@ -1103,8 +1118,8 @@ function app() {
     <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg max-h-[90vh] overflow-y-auto" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
         <div class="flex items-center justify-between p-5 border-b border-gray-700">
             <div>
-                <h3 class="text-lg font-semibold">Tambah Customer Baru</h3>
-                <p class="text-sm text-gray-400 mt-0.5">Isi data customer di bawah ini</p>
+                <h3 class="text-lg font-semibold" x-text="editingCustomer ? 'Edit Customer' : 'Tambah Customer Baru'"></h3>
+                <p class="text-sm text-gray-400 mt-0.5" x-text="editingCustomer ? 'Ubah data customer' : 'Isi data customer di bawah ini'"></p>
             </div>
             <button @click="showCustomerModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
         </div>
@@ -1140,7 +1155,7 @@ function app() {
         </div>
         <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
             <button @click="showCustomerModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
-            <button @click="saveCustomer()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Simpan Customer</button>
+            <button @click="saveCustomer()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors" x-text="editingCustomer ? 'Update Customer' : 'Simpan Customer'"></button>
         </div>
     </div>
 </div>
