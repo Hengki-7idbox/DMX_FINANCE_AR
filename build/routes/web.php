@@ -36,6 +36,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/aging-report/export', [AgingController::class, 'export'])->name('aging.export');
     Route::get('/aging-report/trend', [AgingController::class, 'trend'])->name('aging.trend');
 
+    // Laporan: Aging China
+    Route::get('/aging-china', function () {
+        return view('laporan.aging-china');
+    })->name('laporan.aging-china');
+
     // Tool 3: AR Reconciliation
     Route::get('/reconciliation', [ReconController::class, 'index'])->name('recon.index');
     Route::post('/reconciliation/import', [ReconController::class, 'importBank'])->name('recon.import');
