@@ -79,6 +79,9 @@ Route::middleware('auth')->group(function () {
         return view('accurate.index');
     })->name('accurate.index');
 
+    Route::post('/import-accurate/import', [\App\Http\Controllers\AccurateController::class, 'import'])->name('accurate.import');
+    Route::delete('/import-accurate/clear', [\App\Http\Controllers\AccurateController::class, 'clear'])->name('accurate.clear');
+
     // Admin
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::resource('users', UserController::class)->except(['show', 'edit', 'create']);

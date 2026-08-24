@@ -6,6 +6,8 @@
 <div x-data="{
     showImportModal: false,
     showHistoryModal: false,
+    showClearModal: false,
+    clearPassword: '',
     importFile: null,
     importType: 'journal',
     history: {{ \App\Models\ScheduledTask::where('type', 'accurate_import')->orderBy('created_at', 'desc')->get()->map(fn($t) => [
@@ -19,6 +21,26 @@
     get totalImports() { return this.history.length; },
     get totalRecords() { return this.history.reduce((a, b) => a + b.records, 0); },
     get lastImport() { return this.history.length > 0 ? this.history[0].tanggal : '-'; },
+    handleClearData() {
+        if (this.clearPassword !== 'admin') {
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Password salah! Gunakan password admin.', type: 'error' } }));
+            return;
+        }
+        fetch('{{ route('accurate.clear') }}', {
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            this.history = [];
+            this.showClearModal = false;
+            this.clearPassword = '';
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Semua data import Accurate berhasil dihapus.', type: 'success' } }));
+        })
+        .catch(() => {
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Gagal menghapus data', type: 'error' } }));
+        });
+    },
     handleImport() {
         if (!this.importFile) {
             window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Pilih file terlebih dahulu', type: 'error' } }));
@@ -60,6 +82,9 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">Import data transaksi dari software Accurate</p>
         </div>
         <div class="flex gap-2">
+            <button @click="showClearModal = true" class="inline-flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-600/30 rounded-lg text-sm font-medium transition-colors">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Clear Data
+            </button>
             <button @click="showHistoryModal = true" class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">
                 <i data-lucide="history" class="w-4 h-4"></i> History Import
             </button>
@@ -212,6 +237,28 @@
             </div>
             <div class="flex items-center justify-end p-5 border-t border-gray-200 dark:border-gray-700">
                 <button @click="showHistoryModal = false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Tutup</button>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    {{-- Modal: Clear Data (Password) --}}
+    <template x-if="showClearModal">
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60" @click="showClearModal = false; clearPassword = ''"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-sm">
+            <div class="p-6 text-center">
+                <div class="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="shield-alert" class="w-7 h-7 text-red-500 dark:text-red-400"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Clear Semua Data Import?</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Seluruh riwayat import Accurate akan dihapus. Masukkan password admin untuk konfirmasi.</p>
+                <input type="password" x-model="clearPassword" placeholder="Password admin" class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-center focus:ring-2 focus:ring-red-500 focus:border-transparent mb-3">
+                <p class="text-xs text-yellow-600 dark:text-yellow-400">⚠️ Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
+            <div class="flex items-center justify-center gap-3 p-5 border-t border-gray-200 dark:border-gray-700">
+                <button @click="showClearModal = false; clearPassword = ''" class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+                <button @click="handleClearData()" class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">Clear Data</button>
             </div>
         </div>
     </div>
