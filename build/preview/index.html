@@ -444,133 +444,150 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
             <h1 class="text-xl font-bold">AI Reminder Copilot</h1>
-            <p class="text-sm text-gray-400">Log percakapan customer, AI auto-extract janji bayar & sentiment</p>
+            <p class="text-sm text-gray-400">Auto-detect invoice jatuh tempo &rarr; kirim WA & Email otomatis</p>
         </div>
         <div class="flex gap-2">
-            <button @click="showRemindersAI=true" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium"><i data-lucide="sparkles" class="w-4 h-4"></i> AI Summary</button>
-            <button @click="selectedReminders.length > 0 ? (showSendBatchModal=true) : showToast('Pilih minimal satu reminder','error')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="send" class="w-4 h-4"></i> Send Batch <span x-show="selectedReminders.length>0" x-text="'('+selectedReminders.length+')'" class="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-xs"></span></button>
+            <button @click="runAIScan()" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium"><i data-lucide="scan" class="w-4 h-4"></i> <span x-text="aiScanning ? 'Scanning...' : 'Scan Database'"></span></button>                <button @click="selectedReminders.length > 0 ? (showSendBatchModal=true) : showToast('Pilih invoice terlebih dahulu','error')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="send" class="w-4 h-4"></i> Send Batch <span x-show="selectedReminders.length>0" x-text="'('+selectedReminders.length+')'" class="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-xs"></span></button>
+        </div>
+    </div>
+
+    <!-- AI Scan Status -->
+    <div x-show="aiScanning" class="mb-6 p-4 bg-purple-900/20 border border-purple-600/30 rounded-xl flex items-center gap-3">
+        <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center animate-pulse"><i data-lucide="sparkles" class="w-5 h-5 text-white"></i></div>
+        <div>
+            <p class="text-sm font-medium text-purple-300">AI sedang scan database invoice...</p>
+            <p class="text-xs text-purple-400/70">Mencari invoice jatuh tempo, menghitung tunggakan, menentukan template yang tepat</p>
+        </div>
+    </div>
+    <div x-show="aiScanDone && !aiScanning" class="mb-6 p-4 bg-green-900/20 border border-green-600/30 rounded-xl flex items-center gap-3">
+        <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center"><i data-lucide="check-circle" class="w-5 h-5 text-white"></i></div>
+        <div>
+            <p class="text-sm font-medium text-green-300">Scan selesai! Ditemukan <span x-text="overdueInvoices.length" class="font-bold"></span> invoice jatuh tempo.</p>
+            <p class="text-xs text-green-400/70">AI merekomendasikan template & channel. Pilih invoice lalu klik Send Batch.</p>
         </div>
     </div>
 
     <!-- Stats -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
-            <p class="text-sm text-gray-400">Total Conversation</p>
-            <p class="text-2xl font-bold mt-1" x-text="aiConversations.length"></p>
+            <p class="text-sm text-gray-400">Invoice Jatuh Tempo</p>
+            <p class="text-2xl font-bold mt-1 text-red-400" x-text="overdueInvoices.length"></p>
         </div>
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
-            <p class="text-sm text-gray-400">Janji Bayar</p>
-            <p class="text-2xl font-bold mt-1 text-green-400" x-text="aiConversations.filter(c=>c.promisedDate).length"></p>
+            <p class="text-sm text-gray-400">Total Outstanding</p>
+            <p class="text-2xl font-bold mt-1" x-text="'Rp ' + overdueInvoices.reduce((a,b)=>a+b.amount,0).toLocaleString() + 'M'"></p>
         </div>
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
-            <p class="text-sm text-gray-400">Sentimen Positif</p>
-            <p class="text-2xl font-bold mt-1 text-blue-400" x-text="aiConversations.filter(c=>c.sentiment==='Positive').length"></p>
+            <p class="text-sm text-gray-400">Terkirim Hari Ini</p>
+            <p class="text-2xl font-bold mt-1 text-blue-400" x-text="reminderHistory.length"></p>
         </div>
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
-            <p class="text-sm text-gray-400">Pending Follow-up</p>
-            <p class="text-2xl font-bold mt-1 text-yellow-400" x-text="aiConversations.filter(c=>c.status==='Pending').length"></p>
+            <p class="text-sm text-gray-400">Response Rate</p>
+            <p class="text-2xl font-bold mt-1 text-green-400">78%</p>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Left: AI Chat / Log Conversation -->
-        <div class="lg:col-span-2">
-            <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-                <div class="p-4 border-b border-gray-700 flex items-center justify-between">
-                    <h3 class="font-semibold flex items-center gap-2"><i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i> Log Percakapan Customer</h3>
-                    <select x-model="aiLogCustomer" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1.5 text-sm">
-                        <option value="">Pilih Customer...</option>
-                        <option>PT. Maju Jaya</option>
-                        <option>PT. Sukses Abadi</option>
-                        <option>PT. Makmur Sejahtera</option>
-                        <option>PT. Berkah Mandiri</option>
-                        <option>PT. Sentosa Jaya</option>
-                    </select>
-                </div>
-                <div class="p-4">
-                    <!-- Chat messages -->
-                    <div class="space-y-3 mb-4 max-h-80 overflow-y-auto" id="aiChatLog">
-                        <template x-for="msg in aiChatMessages" :key="msg.id">
-                            <div class="flex gap-3" :class="msg.role==='user'?'justify-end':''">
-                                <div x-show="msg.role==='assistant'" class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0"><i data-lucide="sparkles" class="w-4 h-4 text-white"></i></div>
-                                <div class="max-w-[80%] rounded-xl px-4 py-3 text-sm" :class="msg.role==='user'?'bg-blue-600 text-white':'bg-gray-700 text-gray-200'">
-                                    <p x-text="msg.text"></p>
-                                    <!-- AI extracted data -->
-                                    <div x-show="msg.extracted" class="mt-2 pt-2 border-t" :class="msg.role==='user'?'border-blue-500':'border-gray-600'">
-                                        <p class="text-xs font-medium mb-1" :class="msg.role==='user'?'text-blue-200':'text-purple-400'"><i data-lucide="brain" class="w-3 h-3 inline"></i> AI Extracted:</p>
-                                        <div class="flex flex-wrap gap-1.5" x-show="msg.extracted">
-                                            <span x-show="msg.extracted?.sentiment" class="px-2 py-0.5 rounded-full text-xs" :class="msg.extracted?.sentiment==='Positive'?'bg-green-900/50 text-green-300':msg.extracted?.sentiment==='Negative'?'bg-red-900/50 text-red-300':'bg-yellow-900/50 text-yellow-300'" x-text="msg.extracted?.sentiment"></span>
-                                            <span x-show="msg.extracted?.promisedDate" class="px-2 py-0.5 bg-green-900/50 text-green-300 rounded-full text-xs">📅 <span x-text="msg.extracted?.promisedDate"></span></span>
-                                            <span x-show="msg.extracted?.amount" class="px-2 py-0.5 bg-blue-900/50 text-blue-300 rounded-full text-xs">💰 <span x-text="msg.extracted?.amount"></span></span>
-                                            <span x-show="msg.extracted?.action" class="px-2 py-0.5 bg-orange-900/50 text-orange-300 rounded-full text-xs">📌 <span x-text="msg.extracted?.action"></span></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div x-show="msg.role==='user'" class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0"><i data-lucide="user" class="w-4 h-4 text-white"></i></div>
-                            </div>
+    <!-- Tabs -->
+    <div class="flex gap-1 mb-6 bg-gray-800 rounded-lg p-1 w-fit">
+        <button @click="reminderTab='overdue'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors" :class="reminderTab==='overdue'?'bg-blue-600 text-white':'text-gray-400 hover:text-white'">Jatuh Tempo <span class="ml-1 px-1.5 py-0.5 bg-white/10 rounded text-xs" x-text="overdueInvoices.length"></span></button>
+        <button @click="reminderTab='sent'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors" :class="reminderTab==='sent'?'bg-blue-600 text-white':'text-gray-400 hover:text-white'">Terkirim <span class="ml-1 px-1.5 py-0.5 bg-white/10 rounded text-xs" x-text="reminderHistory.length"></span></button>
+        <button @click="reminderTab='templates'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors" :class="reminderTab==='templates'?'bg-blue-600 text-white':'text-gray-400 hover:text-white'">Templates</button>
+    </div>
+
+    <!-- Tab: Jatuh Tempo -->
+    <div x-show="reminderTab==='overdue'">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+            <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+                <h3 class="font-semibold flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i> Invoice Jatuh Tempo - AI Recommendations</h3>
+                <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                    <input type="checkbox" class="rounded" :checked="selectedReminders.length === overdueInvoices.length && overdueInvoices.length > 0" @change="toggleAllOverdue()"> Pilih Semua
+                </label>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-700/50">
+                        <tr>
+                            <th class="text-left px-4 py-3 font-medium w-10"></th>
+                            <th class="text-left px-4 py-3 font-medium">Customer</th>
+                            <th class="text-left px-4 py-3 font-medium">Invoice</th>
+                            <th class="text-right px-4 py-3 font-medium">Amount</th>
+                            <th class="text-center px-4 py-3 font-medium">Hari Terlambat</th>
+                            <th class="text-center px-4 py-3 font-medium">AI Template</th>
+                            <th class="text-center px-4 py-3 font-medium">Channel</th>
+                            <th class="text-center px-4 py-3 font-medium">AI Message</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        <template x-for="inv in overdueInvoices" :key="inv.id">
+                            <tr class="hover:bg-gray-700/30" :class="selectedReminders.includes(inv.id)?'bg-blue-900/10':''">
+                                <td class="px-4 py-3"><input type="checkbox" class="rounded" :checked="selectedReminders.includes(inv.id)" @change="toggleOverdueSelect(inv.id)"></td>
+                                <td class="px-4 py-3"><div><p class="font-medium" x-text="inv.customer"></p><p class="text-xs text-gray-500" x-text="inv.email"></p></div></td>
+                                <td class="px-4 py-3 font-mono text-xs" x-text="inv.invoice"></td>
+                                <td class="px-4 py-3 text-right font-medium">Rp <span x-text="inv.amount"></span>M</td>
+                                <td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded-full text-xs font-medium" :class="inv.days<=30?'bg-yellow-900/30 text-yellow-400':inv.days<=60?'bg-orange-900/30 text-orange-400':'bg-red-900/30 text-red-400'" x-text="inv.days + ' hari'"></span></td>
+                                <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="inv.template==='Level 1'?'bg-green-900/30 text-green-400':inv.template==='Level 2'?'bg-yellow-900/30 text-yellow-400':'bg-red-900/30 text-red-400'" x-text="inv.template"></span></td>
+                                <td class="px-4 py-3 text-center"><div class="flex gap-1 justify-center"><span class="px-2 py-0.5 bg-blue-900/30 text-blue-400 rounded-full text-xs">WA</span><span class="px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full text-xs">Email</span></div></td>
+                                <td class="px-4 py-3 text-center"><button @click="showAIMessage(inv)" class="text-purple-400 hover:text-purple-300 text-xs underline">Preview</button></td>
+                            </tr>
                         </template>
-                        <!-- Typing indicator -->
-                        <div x-show="aiTyping" class="flex gap-3">
-                            <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0"><i data-lucide="sparkles" class="w-4 h-4 text-white"></i></div>
-                            <div class="bg-gray-700 rounded-xl px-4 py-3 text-sm text-gray-400"><span class="animate-pulse">AI sedang menganalisis...</span></div>
-                        </div>
-                    </div>
-                    <!-- Input -->
-                    <div class="flex gap-2">
-                        <input type="text" x-model="aiLogInput" @keyup.enter="sendAIChatLog()" placeholder="Contoh: "Customer bilang bayar tanggal 25 Agt Rp 45M" atau "PT. Sukses Abadi janji transfer minggu depan"" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                        <button @click="sendAIChatLog()" :disabled="!aiLogInput.trim()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"><i data-lucide="send" class="w-4 h-4"></i></button>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-2">💡 Tip: Tuliskan percakapan apa adanya. AI akan otomatis extract: janji bayar, nominal, sentiment, & action items.</p>
-                </div>
+                    </tbody>
+                </table>
             </div>
         </div>
+    </div>
 
-        <!-- Right: AI Summary Panel -->
-        <div class="space-y-4">
-            <!-- Upcoming Promises -->
-            <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
-                <h3 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="calendar-check" class="w-4 h-4 text-green-400"></i> Janji Bayar Mendatang</h3>
-                <div class="space-y-2">
-                    <template x-for="conv in upcomingPromises" :key="conv.id">
-                        <div class="p-3 bg-gray-700/50 rounded-lg">
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm font-medium" x-text="conv.customer"></span>
-                                <span class="px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full text-xs" x-text="conv.promisedDate"></span>
-                            </div>
-                            <p class="text-xs text-gray-400 mt-1">📝 <span x-text="conv.amount || 'Nominal belum dikonfirmasi'"></span></p>
-                        </div>
-                    </template>
-                    <p x-show="upcomingPromises.length === 0" class="text-sm text-gray-500 text-center py-3">Belum ada janji bayar</p>
-                </div>
+    <!-- Tab: Terkirim -->
+    <div x-show="reminderTab==='sent'">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+            <div class="p-4 border-b border-gray-700"><h3 class="font-semibold flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i> Riwayat Pengiriman</h3></div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-700/50">
+                        <tr>
+                            <th class="text-left px-4 py-3 font-medium">Tanggal</th>
+                            <th class="text-left px-4 py-3 font-medium">Customer</th>
+                            <th class="text-left px-4 py-3 font-medium">Invoice</th>
+                            <th class="text-center px-4 py-3 font-medium">Channel</th>
+                            <th class="text-center px-4 py-3 font-medium">Template</th>
+                            <th class="text-center px-4 py-3 font-medium">Status</th>
+                            <th class="text-center px-4 py-3 font-medium">Read</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        <template x-for="h in reminderHistory" :key="h.id">
+                            <tr class="hover:bg-gray-700/30">
+                                <td class="px-4 py-3 text-gray-400" x-text="h.date"></td>
+                                <td class="px-4 py-3 font-medium" x-text="h.customer"></td>
+                                <td class="px-4 py-3 font-mono text-xs" x-text="h.invoice"></td>
+                                <td class="px-4 py-3 text-center"><div class="flex gap-1 justify-center"><span x-show="h.channels.includes('WA')" class="px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full text-xs">WA</span><span x-show="h.channels.includes('Email')" class="px-2 py-0.5 bg-blue-900/30 text-blue-400 rounded-full text-xs">Email</span></div></td>
+                                <td class="px-4 py-3 text-center text-xs" x-text="h.template"></td>
+                                <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs" :class="h.status==='Sent'?'bg-green-900/30 text-green-400':h.status==='Delivered'?'bg-blue-900/30 text-blue-400':h.status==='Read'?'bg-purple-900/30 text-purple-400':'bg-red-900/30 text-red-400'" x-text="h.status"></span></td>
+                                <td class="px-4 py-3 text-center"><span x-show="h.read" class="text-green-400 text-xs">✓ Dibaca</span><span x-show="!h.read" class="text-gray-500 text-xs">—</span></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
             </div>
+        </div>
+    </div>
 
-            <!-- Sentiment Overview -->
-            <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
-                <h3 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="smile" class="w-4 h-4 text-yellow-400"></i> Sentiment Customer</h3>
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between"><span class="text-sm text-green-400">👍 Positif</span><span class="text-sm font-medium" x-text="aiConversations.filter(c=>c.sentiment==='Positive').length"></span></div>
-                    <div class="w-full bg-gray-700 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full transition-all" :style="'width:' + (aiConversations.length?Math.round(aiConversations.filter(c=>c.sentiment==='Positive').length/aiConversations.length*100):0)+'%'"></div></div>
-                    <div class="flex items-center justify-between"><span class="text-sm text-yellow-400">😐 Netral</span><span class="text-sm font-medium" x-text="aiConversations.filter(c=>c.sentiment==='Neutral').length"></span></div>
-                    <div class="w-full bg-gray-700 rounded-full h-2"><div class="bg-yellow-500 h-2 rounded-full transition-all" :style="'width:' + (aiConversations.length?Math.round(aiConversations.filter(c=>c.sentiment==='Neutral').length/aiConversations.length*100):0)+'%'"></div></div>
-                    <div class="flex items-center justify-between"><span class="text-sm text-red-400">👎 Negatif</span><span class="text-sm font-medium" x-text="aiConversations.filter(c=>c.sentiment==='Negative').length"></span></div>
-                    <div class="w-full bg-gray-700 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full transition-all" :style="'width:' + (aiConversations.length?Math.round(aiConversations.filter(c=>c.sentiment==='Negative').length/aiConversations.length*100):0)+'%'"></div></div>
-                </div>
+    <!-- Tab: Templates -->
+    <div x-show="reminderTab==='templates'">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-3"><h3 class="font-semibold">Level 1 - Friendly</h3><span class="px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full text-xs">1-30 hari</span></div>
+                <p class="text-sm text-gray-400 mb-3">Pengingatan ramah untuk invoice yang baru jatuh tempo.</p>
+                <div class="bg-gray-700/50 rounded-lg p-3 text-xs text-gray-300 space-y-1"><p>Halo Bapak/Ibu,</p><p>Kami ingin mengingatkan bahwa invoice <strong>{INV-NOMOR}</strong> sebesar <strong>{NOMINAL}</strong> telah jatuh tempo.</p><p>Mohon melakukan pembayaran pada kesempatan pertama. Terima kasih.</p></div>
             </div>
-
-            <!-- Recent Activity -->
-            <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
-                <h3 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4 text-blue-400"></i> Aktivitas Terbaru</h3>
-                <div class="space-y-2">
-                    <template x-for="conv in aiConversations.slice(0, 4)" :key="conv.id">
-                        <div class="flex items-start gap-2 text-xs">
-                            <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" :class="conv.sentiment==='Positive'?'bg-green-400':conv.sentiment==='Negative'?'bg-red-400':'bg-yellow-400'"></div>
-                            <div>
-                                <p class="text-gray-300"><span class="font-medium" x-text="conv.customer"></span> - <span x-text="conv.summary"></span></p>
-                                <p class="text-gray-500 mt-0.5" x-text="conv.date"></p>
-                            </div>
-                        </div>
-                    </template>
-                </div>
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-3"><h3 class="font-semibold">Level 2 - Firm</h3><span class="px-2 py-0.5 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">31-60 hari</span></div>
+                <p class="text-sm text-gray-400 mb-3">Pengingatan tegas untuk invoice yang sudah menunggak.</p>
+                <div class="bg-gray-700/50 rounded-lg p-3 text-xs text-gray-300 space-y-1"><p>Yth. Bapak/Ibu,</p><p>Invoice <strong>{INV-NOMOR}</strong> sebesar <strong>{NOMINAL}</strong> telah melewati jatuh tempo <strong>{N_HARI} hari</strong>. Mohon segera lakukan pembayaran.</p></div>
+            </div>
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-3"><h3 class="font-semibold">Level 3 - Urgent</h3><span class="px-2 py-0.5 bg-red-900/30 text-red-400 rounded-full text-xs">&gt;60 hari</span></div>
+                <p class="text-sm text-gray-400 mb-3">Peringatan keras untuk invoice yang sangat overdue.</p>
+                <div class="bg-gray-700/50 rounded-lg p-3 text-xs text-gray-300 space-y-1"><p>PERINGATAN URGENT:</p><p>Invoice <strong>{INV-NOMOR}</strong> sebesar <strong>{NOMINAL}</strong> telah tertunggak <strong>{N_HARI} hari</strong>. Jika tidak ada konfirmasi dalam 3 hari kerja, kami akan melakukan eskalasi.</p></div>
             </div>
         </div>
     </div>
@@ -1243,99 +1260,89 @@ function app() {
 
         /* ===== REMINDERS AI ===== */
         selectedReminders: [],
-        reminderSelectAll: false,
+        reminderTab: 'overdue',
         showSendBatchModal: false,
         showTemplateModal: false,
-        showRemindersAI: false,
+        showAIPreview: false,
         selectedTemplate: null,
         reminderBatchChannel: 'both',
-        aiLogCustomer: '',
-        aiLogInput: '',
-        aiTyping: false,
-        aiChatMessages: [
-            { id: 1, role: 'assistant', text: 'Halo! Saya AI Reminder Copilot. Ketik percakapan customer di sini, saya akan otomatis extract janji bayar, nominal, dan sentiment. 🎯', extracted: null },
+        aiPreviewMsg: '',
+        aiScanning: false,
+        aiScanDone: false,
+        overdueInvoices: [],
+        reminderHistory: [
+            { id: 1, date: '24 Agt 2026, 09:00', customer: 'PT. Makmur Sejahtera', invoice: 'INV-0712', channels: ['WA','Email'], template: 'Level 3', status: 'Read', read: true },
+            { id: 2, date: '23 Agt 2026, 14:00', customer: 'PT. Sukses Abadi', invoice: 'INV-0798', channels: ['WA','Email'], template: 'Level 2', status: 'Delivered', read: true },
+            { id: 3, date: '22 Agt 2026, 10:00', customer: 'PT. Maju Jaya', invoice: 'INV-0847', channels: ['Email'], template: 'Level 1', status: 'Sent', read: false },
         ],
-        aiConversations: [
-            { id: 1, customer: 'PT. Maju Jaya', date: '24 Agt 2026, 10:30', summary: 'Janji bayar tanggal 25 Agt', sentiment: 'Positive', promisedDate: '25 Agt 2026', amount: 'Rp 45.5M', status: 'Pending' },
-            { id: 2, customer: 'PT. Sukses Abadi', date: '23 Agt 2026, 14:15', summary: 'Minta perpanjangan 2 minggu', sentiment: 'Neutral', promisedDate: '7 Sep 2026', amount: 'Rp 89.2M', status: 'Pending' },
-            { id: 3, customer: 'PT. Makmur Sejahtera', date: '22 Agt 2026, 09:00', summary: 'Menolak bayar, claim barang rusak', sentiment: 'Negative', promisedDate: null, amount: null, status: 'Escalated' },
-        ],
-        get upcomingPromises() {
-            return this.aiConversations.filter(c => c.promisedDate).sort((a, b) => new Date(a.promisedDate) - new Date(b.promisedDate));
-        },
-        sendAIChatLog() {
-            if (!this.aiLogInput.trim()) return;
-            const userMsg = { id: Date.now(), role: 'user', text: this.aiLogInput, extracted: null };
-            this.aiChatMessages.push(userMsg);
-            this.aiLogInput = '';
-            this.aiTyping = true;
+        runAIScan() {
+            this.aiScanning = true;
+            this.aiScanDone = false;
+            this.overdueInvoices = [];
             setTimeout(() => {
-                // AI extraction logic (simulated)
-                const text = userMsg.text.toLowerCase();
-                let extracted = {};
-                // Extract sentiment
-                if (text.match(/bayar|transfer|oke|siap|setuju|baik|akan/)) extracted.sentiment = 'Positive';
-                else if (text.match(/tolak|rusak|komplain|tidak|gak|nggak|masalah/)) extracted.sentiment = 'Negative';
-                else extracted.sentiment = 'Neutral';
-                // Extract date
-                const dateMatch = text.match(/(\d{1,2})\s*(jan|feb|mar|apr|mei|jun|jul|agu|ags|sep|okt|nov|des|agustus|september)/i);
-                if (dateMatch) extracted.promisedDate = dateMatch[0];
-                else if (text.match(/minggu depan|week depan/)) extracted.promisedDate = 'Minggu depan';
-                else if (text.match(/besok|lusa/)) extracted.promisedDate = text.match(/besok/) ? 'Besok' : 'Lusa';
-                // Extract amount
-                const amtMatch = text.match(/rp[\s.]*([\d.,]+)\s*[mkMKjuta]/i) || text.match(/(\d+\.?\d*)\s*[mkMKjuta]/i) || text.match(/(\d+\.?\d*)\s*juta/i);
-                if (amtMatch) extracted.amount = 'Rp ' + amtMatch[0];
-                // Extract action
-                if (text.match(/perpanjangan|tunda|undur/)) extracted.action = 'Perpanjangan waktu';
-                else if (text.match(/komplain|rusak|retur/)) extracted.action = 'Komplain barang';
-                else if (text.match(/konfirmasi|bayar|transfer/)) extracted.action = 'Konfirmasi pembayaran';
-                const aiMsg = { id: Date.now() + 1, role: 'assistant', text: '✅ Percakapan berhasil di-log! Berikut yang saya extract:', extracted: extracted };
-                this.aiChatMessages.push(aiMsg);
-                // Add to conversations
-                this.aiConversations.unshift({
-                    id: Date.now(),
-                    customer: this.aiLogCustomer || 'Unknown Customer',
-                    date: new Date().toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                    summary: userMsg.text.substring(0, 50) + (userMsg.text.length > 50 ? '...' : ''),
-                    sentiment: extracted.sentiment,
-                    promisedDate: extracted.promisedDate || null,
-                    amount: extracted.amount || null,
-                    status: extracted.sentiment === 'Negative' ? 'Escalated' : 'Pending'
-                });
-                this.aiTyping = false;
+                // Simulate DB scan - in production this would call API
+                this.overdueInvoices = [
+                    { id: 1, customer: 'PT. Makmur Sejahtera', email: 'makmur@example.com', invoice: 'INV-2026-0712', amount: 156.8, days: 93, template: 'Level 3' },
+                    { id: 2, customer: 'PT. Sukses Abadi', email: 'sukses@example.com', invoice: 'INV-2026-0798', amount: 89.2, days: 52, template: 'Level 2' },
+                    { id: 3, customer: 'PT. Maju Jaya', email: 'maju@example.com', invoice: 'INV-2026-0847', amount: 45.5, days: 7, template: 'Level 1' },
+                    { id: 4, customer: 'PT. Cahaya Abadi', email: 'cahaya@example.com', invoice: 'INV-2026-0865', amount: 32.1, days: 15, template: 'Level 1' },
+                    { id: 5, customer: 'PT. Global Niaga', email: 'global@example.com', invoice: 'INV-2026-0901', amount: 67.3, days: 42, template: 'Level 2' },
+                    { id: 6, customer: 'PT. Sentosa Jaya', email: 'sentosa@example.com', invoice: 'INV-2026-0680', amount: 112.0, days: 110, template: 'Level 3' },
+                ];
+                this.aiScanning = false;
+                this.aiScanDone = true;
+                this.showToast(this.overdueInvoices.length + ' invoice jatuh tempo ditemukan!', 'success');
                 setTimeout(() => lucide.createIcons(), 100);
-            }, 1500);
+            }, 2000);
         },
-        toggleReminderSelect(id) {
+        toggleOverdueSelect(id) {
             if (this.selectedReminders.includes(id)) {
                 this.selectedReminders = this.selectedReminders.filter(i => i !== id);
             } else {
                 this.selectedReminders.push(id);
             }
-            this.reminderSelectAll = this.selectedReminders.length === this.reminders.length;
         },
-        toggleAllReminders() {
-            if (this.reminderSelectAll) {
+        toggleAllOverdue() {
+            if (this.selectedReminders.length === this.overdueInvoices.length) {
                 this.selectedReminders = [];
             } else {
-                this.selectedReminders = this.reminders.map(r => r.id);
+                this.selectedReminders = this.overdueInvoices.map(i => i.id);
             }
-            this.reminderSelectAll = !this.reminderSelectAll;
         },
-        openTemplateDetail(level) {
-            this.selectedTemplate = level;
-            this.showTemplateModal = true;
+        showAIMessage(inv) {
+            const msgs = {
+                'Level 1': 'Halo Bapak/Ibu,\n\nKami ingin mengingatkan bahwa invoice ' + inv.invoice + ' sebesar Rp ' + inv.amount + 'M telah jatuh tempo.\n\nMohon melakukan pembayaran pada kesempatan pertama.\n\nTerima kasih.',
+                'Level 2': 'Yth. Bapak/Ibu,\n\nInvoice ' + inv.invoice + ' sebesar Rp ' + inv.amount + 'M telah melewati jatuh tempo ' + inv.days + ' hari. Mohon segera lakukan pembayaran.\n\nAtas perhatiannya kami ucapkan terima kasih.',
+                'Level 3': 'PERINGATAN URGENT:\n\nInvoice ' + inv.invoice + ' sebesar Rp ' + inv.amount + 'M telah tertunggak ' + inv.days + ' hari. Jika tidak ada konfirmasi dalam 3 hari kerja, kami akan melakukan eskalasi lebih lanjut.'
+            };
+            this.aiPreviewMsg = msgs[inv.template] || msgs['Level 1'];
+            this.showAIPreview = true;
         },
         sendBatchReminder() {
             if (this.selectedReminders.length === 0) {
-                this.showToast('Pilih minimal satu reminder untuk dikirim', 'error');
+                this.showToast('Pilih invoice terlebih dahulu', 'error');
                 return;
             }
-            this.showSendBatchModal = false;
             const count = this.selectedReminders.length;
+            this.selectedReminders.forEach(id => {
+                const inv = this.overdueInvoices.find(i => i.id === id);
+                if (inv) {
+                    this.reminderHistory.unshift({
+                        id: Date.now() + id,
+                        date: new Date().toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        customer: inv.customer,
+                        invoice: inv.invoice,
+                        channels: ['WA', 'Email'],
+                        template: inv.template,
+                        status: 'Sent',
+                        read: false
+                    });
+                }
+            });
             this.selectedReminders = [];
-            this.reminderSelectAll = false;
-            this.showToast(count + ' reminder berhasil dikirim via ' + this.reminderBatchChannel + '!', 'success');
+            this.showSendBatchModal = false;
+            this.showToast(count + ' reminder berhasil dikirim via WA & Email!', 'success');
+            setTimeout(() => lucide.createIcons(), 100);
         },
 
         /* ===== USER MANAGEMENT ===== */
@@ -2185,6 +2192,29 @@ function app() {
         <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
             <button @click="showExportAgingNormalModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
             <button @click="showToast('Export berhasil! File sedang diunduh.', 'success'); showExportAgingNormalModal=false" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Download</button>
+        </div>
+    </div>
+</div>
+</template>
+
+<!-- Modal: AI Message Preview -->
+<template x-if="showAIPreview">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="showAIPreview=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div>
+                <h3 class="text-lg font-semibold flex items-center gap-2"><i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i> AI Generated Message</h3>
+                <p class="text-sm text-gray-400 mt-0.5">Preview pesan yang akan dikirim</p>
+            </div>
+            <button @click="showAIPreview=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5">
+            <div class="bg-gray-700/50 rounded-xl p-4 text-sm text-gray-200 whitespace-pre-line border border-gray-600" x-text="aiPreviewMsg"></div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showAIPreview=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Tutup</button>
+            <button @click="showToast('Pesan disalin ke clipboard!', 'success'); navigator.clipboard?.writeText(aiPreviewMsg)" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">Copy</button>
         </div>
     </div>
 </div>
