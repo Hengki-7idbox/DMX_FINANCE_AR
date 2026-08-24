@@ -1,0 +1,97 @@
+{
+  "meta": {
+    "name": "AR Finance Tools",
+    "version": "1.0.0",
+    "description": "Three-layer design token system"
+  },
+  "primitive": {
+    "color": {
+      "gray": {
+        "50": "#F9FAFB", "100": "#F3F4F6", "200": "#E5E7EB", "300": "#D1D5DB",
+        "400": "#9CA3AF", "500": "#6B7280", "600": "#4B5563", "700": "#374151",
+        "800": "#1F2937", "900": "#111827", "950": "#030712"
+      },
+      "blue": {
+        "50": "#EFF6FF", "100": "#DBEAFE", "200": "#BFDBFE", "300": "#93C5FD",
+        "400": "#60A5FA", "500": "#3B82F6", "600": "#2563EB", "700": "#1D4ED8",
+        "800": "#1E40AF", "900": "#1E3A8A"
+      },
+      "green": {
+        "50": "#F0FDF4", "100": "#DCFCE7", "500": "#22C55E", "600": "#16A34A", "700": "#15803D"
+      },
+      "yellow": {
+        "50": "#FEFCE8", "100": "#FEF9C3", "500": "#EAB308", "600": "#CA8A04", "700": "#A16207"
+      },
+      "orange": {
+        "50": "#FFF7ED", "100": "#FFEDD5", "500": "#F97316", "600": "#EA580C"
+      },
+      "red": {
+        "50": "#FEF2F2", "100": "#FEE2E2", "500": "#EF4444", "600": "#DC2626", "700": "#B91C1C"
+      },
+      "purple": {
+        "400": "#A78BFA", "500": "#8B5CF6", "600": "#7C3AED"
+      }
+    },
+    "spacing": {
+      "0": "0", "1": "0.25rem", "2": "0.5rem", "3": "0.75rem",
+      "4": "1rem", "5": "1.25rem", "6": "1.5rem", "8": "2rem",
+      "10": "2.5rem", "12": "3rem", "16": "4rem"
+    },
+    "fontSize": {
+      "xs": "0.75rem", "sm": "0.875rem", "base": "1rem", "lg": "1.125rem",
+      "xl": "1.25rem", "2xl": "1.5rem", "3xl": "1.875rem"
+    },
+    "radius": {
+      "sm": "0.25rem", "md": "0.375rem", "lg": "0.5rem",
+      "xl": "0.75rem", "2xl": "1rem", "full": "9999px"
+    }
+  },
+  "semantic": {
+    "background": { "value": "{primitive.color.gray.50}", "dark": "{primitive.color.gray.900}" },
+    "foreground": { "value": "{primitive.color.gray.900}", "dark": "{primitive.color.gray.100}" },
+    "primary": { "value": "{primitive.color.blue.600}", "dark": "{primitive.color.blue.500}" },
+    "success": { "value": "{primitive.color.green.600}", "dark": "{primitive.color.green.500}" },
+    "warning": { "value": "{primitive.color.yellow.500}" },
+    "danger": { "value": "{primitive.color.red.600}", "dark": "{primitive.color.red.500}" },
+    "attention": { "value": "{primitive.color.orange.500}" },
+    "border": { "value": "{primitive.color.gray.200}", "dark": "{primitive.color.gray.700}" },
+    "muted": { "value": "{primitive.color.gray.100}", "dark": "{primitive.color.gray.800}" }
+  },
+  "component": {
+    "button": {
+      "primary": {
+        "bg": "{semantic.primary}",
+        "text": "#FFFFFF",
+        "radius": "{primitive.radius.lg}",
+        "padding": "{primitive.spacing.2} {primitive.spacing.4}"
+      },
+      "secondary": {
+        "bg": "{semantic.muted}",
+        "text": "{semantic.foreground}",
+        "border": "{semantic.border}"
+      }
+    },
+    "card": {
+      "bg": "#FFFFFF",
+      "darkBg": "{primitive.color.gray.800}",
+      "border": "{semantic.border}",
+      "radius": "{primitive.radius.xl}",
+      "padding": "{primitive.spacing.5}",
+      "shadow": "0 1px 2px 0 rgb(0 0 0 / 0.05)"
+    },
+    "input": {
+      "bg": "#FFFFFF",
+      "border": "{semantic.border}",
+      "focusBorder": "{semantic.primary}",
+      "radius": "{primitive.radius.lg}",
+      "padding": "{primitive.spacing.2} {primitive.spacing.3}"
+    },
+    "badge": {
+      "radius": "{primitive.radius.full}",
+      "padding": "{primitive.spacing.1} {primitive.spacing.2}",
+      "success": { "bg": "{primitive.color.green.50}", "text": "{primitive.color.green.600}" },
+      "warning": { "bg": "{primitive.color.yellow.50}", "text": "{primitive.color.yellow.600}" },
+      "danger": { "bg": "{primitive.color.red.50}", "text": "{primitive.color.red.600}" }
+    }
+  }
+}

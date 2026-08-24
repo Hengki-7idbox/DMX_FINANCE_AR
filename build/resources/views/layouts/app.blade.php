@@ -25,6 +25,12 @@
         .sidebar-transition { transition: width 0.3s ease, transform 0.3s ease; }
         .fade-in { animation: fadeIn 0.2s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0; }
     </style>
     @yield('styles')
 </head>
@@ -47,7 +53,8 @@
     <!-- Sidebar -->
     <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
            class="fixed top-0 left-0 z-40 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 sidebar-transition"
-           :class="(sidebarExpanded || sidebarLocked) ? 'w-64' : 'w-20'" @mouseenter="if(!sidebarLocked) sidebarExpanded = true" @mouseleave="if(!sidebarLocked) sidebarExpanded = false">
+           :class="(sidebarExpanded || sidebarLocked) ? 'w-64' : 'w-20'" @mouseenter="if(!sidebarLocked) sidebarExpanded = true" @mouseleave="if(!sidebarLocked) sidebarExpanded = false"
+           role="navigation" aria-label="Sidebar Navigation">
 
         <!-- Logo -->
         <div class="flex items-center gap-3 px-4 h-16 border-b border-gray-200 dark:border-gray-700">
@@ -222,14 +229,15 @@
                 <div class="flex items-center gap-2">
                     <!-- Dark Mode Toggle -->
                 <!-- Sidebar Toggle -->
-                <button @click="toggleSidebar()" class="p-2 rounded-lg transition-colors" :class="sidebarLocked ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600' : 'hover:bg-gray-100 dark:hover:bg-gray-700'" :title="sidebarLocked ? 'Buka Kunci Sidebar' : 'Kunci Sidebar'">
+                <button @click="toggleSidebar()" class="p-2 rounded-lg transition-colors" :class="sidebarLocked ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600' : 'hover:bg-gray-100 dark:hover:bg-gray-700'" :title="sidebarLocked ? 'Buka Kunci Sidebar' : 'Kunci Sidebar'" :aria-label="sidebarLocked ? 'Buka kunci sidebar' : 'Kunci sidebar'" role="button">
                     <i :data-lucide="sidebarLocked ? 'lock' : 'unlock'" class="w-5 h-5"></i>
                 </button>
 
                 <!-- Dark Mode Toggle -->
-                <button @click="toggleDark()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <button @click="toggleDark()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'" role="button">
                     <i x-show="!isDark" data-lucide="moon" class="w-5 h-5"></i>
                     <i x-show="isDark" data-lucide="sun" class="w-5 h-5"></i>
+                    <span class="sr-only">Toggle theme</span>
                 </button>
 
                     <!-- Notifications -->

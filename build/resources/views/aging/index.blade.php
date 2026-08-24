@@ -12,7 +12,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">Generate laporan aging berdasarkan periode dan filter</p>
         </div>
         <div class="flex items-center gap-2">
-            <button class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">
+            <button @click="showExportModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
                 <i data-lucide="download" class="w-4 h-4"></i> Export Excel
             </button>
             <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
@@ -131,12 +131,52 @@
         </div>
     </div>
 </div>
+
+    <!-- Modal: Export Excel -->
+    <div x-show="showExportModal" x-cloak x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60" @click="showExportModal=false"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md">
+            <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+                <div><h3 class="text-lg font-semibold">Export Aging Report</h3><p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Pilih format dan periode export</p></div>
+                <button @click="showExportModal=false" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div><label class="block text-sm font-medium mb-1.5">Format File</label>
+                    <select x-model="exportFormat" class="w-full bg-gray-100 dark:bg-gray-700 border-0 rounded-lg px-3 py-2 text-sm">
+                        <option value="xlsx">Excel (.xlsx)</option>
+                        <option value="csv">CSV (.csv)</option>
+                        <option value="pdf">PDF (.pdf)</option>
+                    </select>
+                </div>
+                <div><label class="block text-sm font-medium mb-1.5">Periode</label>
+                    <select x-model="exportPeriod" class="w-full bg-gray-100 dark:bg-gray-700 border-0 rounded-lg px-3 py-2 text-sm">
+                        <option value="thisMonth">Bulan Ini</option>
+                        <option value="lastMonth">Bulan Lalu</option>
+                        <option value="quarter">Quarter Ini</option>
+                        <option value="year">Tahun Ini</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-200 dark:border-gray-700">
+                <button @click="showExportModal=false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium">Batal</button>
+                <button @click="handleExportExcel()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> Download</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
 <script>
 function agingPage() {
     return {
+        showExportModal: false,
+        exportFormat: 'xlsx',
+        exportPeriod: 'thisMonth',
+        handleExportExcel() {
+            this.showExportModal = false;
+            showToast('File aging report.' + this.exportFormat + ' berhasil didownload!', 'success');
+        },
         init() {
             this.$nextTick(() => {
                 lucide.createIcons();

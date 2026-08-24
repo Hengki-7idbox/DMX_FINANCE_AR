@@ -1,113 +1,173 @@
+/*
+ * AR Finance Tools — App CSS
+ * Imports design tokens as single source of truth
+ */
+
+/* ── Design Tokens (must be first) ── */
+@import '../../assets/design-tokens.css';
+
+/* ── Tailwind Layers ── */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
+/* ── Base Layer ── */
 @layer base {
-    body {
-        @apply font-sans antialiased bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
-    }
+  * {
+    font-family: var(--font-family-sans);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-heading);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus ring */
+  *:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-md);
+  }
+
+  /* Screen reader only */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
 }
 
+/* ── Components Layer ── */
 @layer components {
-    .sidebar {
-        @apply fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:translate-x-0;
-    }
+  /* Button base */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--button-primary-padding);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--button-primary-radius);
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    border: none;
+  }
 
-    .sidebar-collapsed {
-        @apply w-20;
-    }
+  .btn-primary {
+    background: var(--button-primary-bg);
+    color: var(--button-primary-text);
+    box-shadow: var(--button-primary-shadow);
+  }
+  .btn-primary:hover { background: var(--button-primary-bg-hover); }
 
-    .main-content {
-        @apply lg:ml-64 min-h-screen transition-all duration-200;
-    }
+  .btn-secondary {
+    background: var(--button-secondary-bg);
+    color: var(--button-secondary-text);
+    border: 1px solid var(--button-secondary-border);
+  }
+  .btn-secondary:hover { background: var(--button-secondary-bg-hover); }
 
-    .main-content-expanded {
-        @apply lg:ml-20;
-    }
+  .btn-ghost {
+    background: var(--button-ghost-bg);
+    color: var(--button-ghost-text);
+    border: 1px solid var(--button-ghost-border);
+  }
+  .btn-ghost:hover { background: var(--button-ghost-bg-hover); }
 
-    .kpi-card {
-        @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow;
-    }
+  .btn-danger {
+    background: var(--button-danger-bg);
+    color: var(--button-danger-text);
+  }
+  .btn-danger:hover { background: var(--button-danger-bg-hover); }
 
-    .nav-item {
-        @apply flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors;
-    }
+  /* Card */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    padding: var(--card-padding);
+    box-shadow: var(--card-shadow);
+  }
 
-    .nav-item-active {
-        @apply bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400;
-    }
+  /* Badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--badge-padding);
+    font-size: var(--badge-font-size);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--badge-radius);
+  }
+  .badge-success { background: var(--badge-success-bg); color: var(--badge-success-text); }
+  .badge-warning { background: var(--badge-warning-bg); color: var(--badge-warning-text); }
+  .badge-danger  { background: var(--badge-danger-bg); color: var(--badge-danger-text); }
+  .badge-info    { background: var(--badge-info-bg); color: var(--badge-info-text); }
+  .badge-muted   { background: var(--badge-muted-bg); color: var(--badge-muted-text); }
 
-    .nav-item-inactive {
-        @apply text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700;
-    }
+  /* Input */
+  .input {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: var(--input-radius);
+    padding: var(--input-padding);
+    color: var(--input-text);
+    font-size: var(--font-size-sm);
+    transition: border-color var(--transition-fast);
+    width: 100%;
+  }
+  .input::placeholder { color: var(--input-placeholder); }
+  .input:focus {
+    border-color: var(--input-border-focus);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+  }
 
-    .btn-primary {
-        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors shadow-sm;
-    }
-
-    .btn-secondary {
-        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors;
-    }
-
-    .btn-danger {
-        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors shadow-sm;
-    }
-
-    .btn-ghost {
-        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium rounded-lg transition-colors;
-    }
-
-    .input-field {
-        @apply w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors;
-    }
-
-    .badge {
-        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-    }
-
-    .badge-green {
-        @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
-    }
-
-    .badge-yellow {
-        @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
-    }
-
-    .badge-red {
-        @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
-    }
-
-    .badge-blue {
-        @apply bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400;
-    }
-
-    .badge-gray {
-        @apply bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300;
-    }
-
-    .table-container {
-        @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden;
-    }
-
-    .table-header {
-        @apply bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700;
-    }
-
-    .table-row {
-        @apply border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors;
-    }
-
-    .card {
-        @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700;
-    }
-
-    .card-header {
-        @apply px-6 py-4 border-b border-gray-200 dark:border-gray-700;
-    }
-
-    .card-body {
-        @apply p-6;
-    }
+  /* KPI Card */
+  .kpi-card {
+    background: var(--kpi-card-bg);
+    border: 1px solid var(--kpi-card-border);
+    border-radius: var(--kpi-card-radius);
+    padding: var(--kpi-card-padding);
+  }
+  .kpi-value {
+    font-size: var(--kpi-value-size);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+  }
+  .kpi-label {
+    font-size: var(--kpi-label-size);
+    color: var(--color-muted-foreground);
+  }
 }
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.fade-in { animation: fadeIn var(--transition-base) ease-in; }
+.slide-in { animation: slideIn var(--transition-slow) ease-out; }

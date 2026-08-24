@@ -11,8 +11,8 @@
             <button class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">
                 <i data-lucide="scroll-text" class="w-4 h-4"></i> View Log
             </button>
-            <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
-                <i data-lucide="send" class="w-4 h-4"></i> Send Batch Reminder
+            <button @click="selected.length > 0 ? (showSendModal=true) : null" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                <i data-lucide="send" class="w-4 h-4"></i> Send Batch <span x-show="selected.length>0" x-text="'('+selected.length+')'" class="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-xs"></span>
             </button>
         </div>
     </div>
@@ -124,12 +124,62 @@
         </div>
     </div>
 </div>
+
+    <!-- Modal: Send Batch -->
+    <div x-show="showSendModal" x-cloak x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60" @click="showSendModal=false"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md">
+            <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+                <div><h3 class="text-lg font-semibold">Kirim Reminder Batch</h3><p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Konfirmasi pengiriman reminder</p></div>
+                <button @click="showSendModal=false" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <p class="text-sm"><span class="font-medium" x-text="selected.length"></span> reminder akan dikirim</p>
+                </div>
+                <div><label class="block text-sm font-medium mb-1.5">Channel</label>
+                    <select x-model="channel" class="w-full bg-gray-100 dark:bg-gray-700 border-0 rounded-lg px-3 py-2 text-sm">
+                        <option value="both">Email + WhatsApp</option>
+                        <option value="email">Email saja</option>
+                        <option value="whatsapp">WhatsApp saja</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-200 dark:border-gray-700">
+                <button @click="showSendModal=false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm font-medium">Batal</button>
+                <button @click="sendBatch()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2"><i data-lucide="send" class="w-4 h-4"></i> Kirim Sekarang</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
 <script>
 function reminderPage() {
-    return { init() { this.$nextTick(() => lucide.createIcons()); } }
+    return {
+        selected: [],
+        showSendModal: false,
+        channel: 'both',
+        selectAll: false,
+        toggleSelect(id) {
+            if (this.selected.includes(id)) { this.selected = this.selected.filter(i => i !== id); }
+            else { this.selected.push(id); }
+        },
+        toggleAll() {
+            if (this.selectAll) { this.selected = []; } else { this.selected = [1,2,3]; }
+            this.selectAll = !this.selectAll;
+        },
+        sendBatch() {
+            if (this.selected.length === 0) { showToast('Pilih minimal satu reminder', 'error'); return; }
+            this.showSendModal = false;
+            const count = this.selected.length;
+            this.selected = [];
+            this.selectAll = false;
+            showToast(count + ' reminder berhasil dikirim via ' + this.channel + '!', 'success');
+        },
+        init() { this.$nextTick(() => lucide.createIcons()); }
+    }
 }
 </script>
 @endsection

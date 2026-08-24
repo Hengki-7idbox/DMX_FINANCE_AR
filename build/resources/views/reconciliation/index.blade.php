@@ -46,7 +46,7 @@
                 <p class="text-sm text-gray-500">Jalankan pencocokan otomatis antara invoice dan transaksi bank</p>
             </div>
         </div>
-        <button class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+        <button @click="runMatching()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
             Run Matching
         </button>
     </div>
@@ -147,12 +147,46 @@
         </div>
     </div>
 </div>
+
+    <!-- Modal: Matching Progress -->
+    <div x-show="matchingStatus !== 'idle'" x-cloak x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-sm p-8 text-center">
+            <template x-if="matchingStatus==='running'">
+                <div>
+                    <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <h3 class="text-lg font-semibold">Running Auto-Matching...</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Mencocokkan transaksi bank dengan invoice AR</p>
+                </div>
+            </template>
+            <template x-if="matchingStatus==='done'">
+                <div>
+                    <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="check-circle" class="w-8 h-8 text-green-500"></i></div>
+                    <h3 class="text-lg font-semibold text-green-600">Matching Selesai!</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">198 matched, 28 review, 8 unmatched</p>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
 <script>
 function reconPage() {
-    return { showImport: false, init() { this.$nextTick(() => lucide.createIcons()); } }
+    return {
+        showImport: false,
+        matchingStatus: 'idle',
+        runMatching() {
+            this.matchingStatus = 'running';
+            setTimeout(() => {
+                this.matchingStatus = 'done';
+                showToast('Auto-matching selesai! 198 matched, 28 review, 8 unmatched.', 'success');
+                setTimeout(() => { this.matchingStatus = 'idle'; }, 2000);
+            }, 2000);
+        },
+        init() { this.$nextTick(() => lucide.createIcons()); }
+    }
 }
 </script>
 @endsection

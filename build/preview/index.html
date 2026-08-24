@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AR Finance Tools - Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -15,6 +18,69 @@
         [x-cloak]{display:none!important}
         .fade-in{animation:fadeIn .2s ease-in}
         @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+        /* ========== ACCESSIBILITY ========== */
+        button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #1E3A5F;
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0; }
+        button, [role="button"], a { cursor: pointer; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+        }
+
+        /* ========== LIGHT MODE OVERRIDES ========== */
+        html:not(.dark) body { background: #f9fafb; color: #111827; }
+        html:not(.dark) .bg-gray-900,
+        html:not(.dark) .bg-gray-800 { background: #ffffff; }
+        html:not(.dark) .bg-gray-800\/80 { background: rgba(255,255,255,0.9); }
+        html:not(.dark) .bg-gray-700,
+        html:not(.dark) .bg-gray-700\/50 { background: #f3f4f6; }
+        html:not(.dark) .bg-gray-900\/50 { background: #f9fafb; }
+        html:not(.dark) .bg-gray-900\/20 { background: #f0fdf4; }
+        html:not(.dark) .bg-gray-600\/30 { background: #e5e7eb; }
+        html:not(.dark) .bg-gray-600 { background: #d1d5db; }
+        html:not(.dark) .border-gray-700 { border-color: #e5e7eb; }
+        html:not(.dark) .border-gray-600 { border-color: #d1d5db; }
+        html:not(.dark) .text-gray-100,
+        html:not(.dark) .text-white { color: #111827; }
+        html:not(.dark) .text-gray-400 { color: #6b7280; }
+        html:not(.dark) .text-gray-500 { color: #9ca3af; }
+        html:not(.dark) .divide-y.divide-gray-700 > :not([hidden])~:not([hidden]) { border-color: #e5e7eb; }
+        html:not(.dark) .divide-y.divide-gray-700\/50 > :not([hidden])~:not([hidden]) { border-color: #f3f4f6; }
+        html:not(.dark) .hover\:bg-gray-700:hover,
+        html:not(.dark) .hover\:bg-gray-600:hover,
+        html:not(.dark) .hover\:bg-gray-700\/30:hover { background: #e5e7eb; }
+        html:not(.dark) input[type=text],
+        html:not(.dark) input[type=email],
+        html:not(.dark) input[type=password] { background: #f3f4f6; color: #111827; border-color: #d1d5db; }
+        html:not(.dark) select { background: #f3f4f6; color: #111827; }
+        html:not(.dark) .bg-green-900\/20 { background: #dcfce7; border-color: #86efac; }
+        html:not(.dark) .bg-yellow-900\/20,
+        html:not(.dark) .bg-yellow-900\/30 { background: #fef9c3; border-color: #fde047; }
+        html:not(.dark) .bg-orange-900\/20 { background: #ffedd5; border-color: #fdba74; }
+        html:not(.dark) .bg-red-900\/20,
+        html:not(.dark) .bg-red-900\/30 { background: #fee2e2; border-color: #fca5a5; }
+        html:not(.dark) .bg-blue-900\/20,
+        html:not(.dark) .bg-blue-900\/30 { background: #dbeafe; border-color: #93c5fd; }
+        html:not(.dark) .bg-green-900\/30 { background: #dcfce7; }
+        html:not(.dark) .bg-red-900\/30 { background: #fee2e2; }
+        html:not(.dark) .bg-yellow-900\/30 { background: #fef9c3; }
+        html:not(.dark) .bg-blue-900\/30 { background: #dbeafe; }
+        html:not(.dark) .text-gray-300 { color: #374151; }
+        html:not(.dark) .bg-blue-900.rounded-full { background: #dbeafe; }
+        html:not(.dark) .text-blue-400 { color: #2563eb; }
+        html:not(.dark) .text-green-400 { color: #16a34a; }
+        html:not(.dark) .text-yellow-400 { color: #ca8a04; }
+        html:not(.dark) .text-red-400 { color: #dc2626; }
+        html:not(.dark) .text-orange-400 { color: #ea580c; }
+        html:not(.dark) .text-purple-400 { color: #9333ea; }
+        html:not(.dark) .bg-red-500 { background: #ef4444; }
+        html:not(.dark) .bg-green-500 { background: #22c55e; }
+        html:not(.dark) .bg-yellow-500 { background: #eab308; }
+        html:not(.dark) .shadow-xl { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen" x-data="app()" x-init="init()">
@@ -39,22 +105,22 @@
                     <label class="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
                     <div class="relative">
                         <i data-lucide="mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
-                        <input type="email" class="w-full pl-10 pr-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="email@dmx.co.id">
+                        <input type="email" x-model="loginEmail" class="w-full pl-10 pr-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="email@dmx.co.id" @keyup.enter="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='hengki@dmx.co.id'||loginPassword!=='password'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)">
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
                     <div class="relative" x-data="{show:false}">
                         <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
-                        <input :type="show?'text':'password'" class="w-full pl-10 pr-10 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="Masukkan password">
+                        <input :type="show?'text':'password'" x-model="loginPassword" class="w-full pl-10 pr-10 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="Masukkan password" @keyup.enter="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='hengki@dmx.co.id'||loginPassword!=='password'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)">
                         <button type="button" @click="show=!show" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"><i data-lucide="eye" class="w-4 h-4"></i></button>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <input type="checkbox" class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600">
                     <span class="text-sm text-gray-400">Ingat saya</span>
-                </div>
-                <button @click="page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors">Masuk</button>
+                </div>                    <p x-show="loginError" x-text="loginError" class="text-red-400 text-sm text-center mb-3"></p>
+                    <button @click="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='hengki@dmx.co.id'||loginPassword!=='password'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors" type="submit">Masuk</button>
             </div>
         </div>
         <p class="text-center text-gray-500 text-xs mt-6">AR Finance Tools v1.0 &copy; 2026</p>
@@ -66,7 +132,7 @@
 <template x-if="page!=='login'">
 <div class="flex min-h-screen">
     <!-- SIDEBAR -->
-    <aside class="fixed top-0 left-0 z-40 h-full bg-gray-800 border-r border-gray-700 transition-all duration-300" :class="(sidebarExpanded || sidebarLocked)?'w-64':'w-20'" @mouseenter="if(!sidebarLocked) sidebarExpanded=true" @mouseleave="if(!sidebarLocked) sidebarExpanded=false">
+    <aside class="fixed top-0 left-0 z-40 h-full bg-gray-800 border-r border-gray-700 transition-all duration-300" role="navigation" aria-label="Sidebar Navigation" :class="(sidebarExpanded || sidebarLocked)?'w-64':'w-20'" @mouseenter="if(!sidebarLocked) sidebarExpanded=true" @mouseleave="if(!sidebarLocked) sidebarExpanded=false">
         <div class="flex items-center gap-3 px-4 h-16 border-b border-gray-700">
             <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0"><i data-lucide="receipt" class="w-6 h-6 text-white"></i></div>
             <div x-show="sidebarExpanded" x-transition><h1 class="font-bold text-sm whitespace-nowrap">AR Finance Tools</h1><p class="text-xs text-gray-400 whitespace-nowrap">PT. DMX Trading</p></div>
@@ -109,8 +175,7 @@
                 </button>
             </template>
         </nav>
-        <div class="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-700 bg-gray-800">
-            <button @click="sidebarLocked=!sidebarLocked" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors" :class="sidebarLocked?'text-blue-400 bg-blue-900/30':'text-gray-400 hover:bg-gray-700'">
+        <div class="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-700 bg-gray-800">                    <button @click="sidebarLocked=!sidebarLocked" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors" :class="sidebarLocked?'text-blue-400 bg-blue-900/30':'text-gray-400 hover:bg-gray-700'" :aria-label="sidebarLocked?'Buka kunci sidebar':'Kunci sidebar'" role="button">
                 <i :data-lucide="sidebarLocked?'lock':'unlock'" class="w-5 h-5 flex-shrink-0"></i>
                 <span x-show="sidebarExpanded || sidebarLocked" x-transition class="whitespace-nowrap" x-text="sidebarLocked?'Kunci Sidebar':'Buka Sidebar'"></span>
             </button>
@@ -129,12 +194,12 @@
             <div class="flex items-center justify-between h-16 px-6">
                 <div><h2 class="text-lg font-semibold" x-text="pageTitle"></h2></div>
                 <div class="flex items-center gap-2">
-                    <button @click="darkMode=!darkMode" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="moon" class="w-5 h-5"></i></button>
+                    <button @click="toggleDarkMode()" class="p-2 rounded-lg hover:bg-gray-700 transition-colors" :aria-label="darkMode?'Switch to light mode':'Switch to dark mode'" role="button"><i x-show="darkMode" data-lucide="sun" class="w-5 h-5"></i><i x-show="!darkMode" data-lucide="moon" class="w-5 h-5"></i><span class="sr-only">Toggle theme</span></button>
                     <button class="relative p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="bell" class="w-5 h-5"></i><span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span></button>
                 </div>
             </div>
         </header>
-        <main class="p-6 fade-in">
+        <main class="p-6 fade-in" role="main">
 
 <!-- =================== DASHBOARD =================== -->
 <template x-if="page==='dashboard'">
@@ -190,14 +255,14 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div><h1 class="text-xl font-bold">Invoice Exclusion / Blacklist</h1><p class="text-sm text-gray-400">Kelola daftar invoice yang dikecualikan dari pengiriman reminder</p></div>
         <div class="flex gap-2">
-            <button class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Bulk Import</button>
-            <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="plus" class="w-4 h-4"></i> Tambah</button>
+            <button @click="showExclusionImportModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Bulk Import</button>
+            <button @click="showExclusionModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="plus" class="w-4 h-4"></i> Tambah</button>
         </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Total Exclusions</p><p class="text-2xl font-bold mt-1">127</p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Active</p><p class="text-2xl font-bold mt-1 text-green-600">98</p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Reverted</p><p class="text-2xl font-bold mt-1 text-gray-400">29</p></div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Total Exclusions</p><p class="text-2xl font-bold mt-1" x-text="exclusions.length"></p></div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Active</p><p class="text-2xl font-bold mt-1 text-green-400" x-text="exclusions.filter(e => e.status === 'Active').length"></p></div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Reverted</p><p class="text-2xl font-bold mt-1 text-gray-400" x-text="exclusions.filter(e => e.status === 'Reverted').length"></p></div>
     </div>
     <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
         <div class="overflow-x-auto">
@@ -206,9 +271,20 @@
                     <th class="text-left px-4 py-3 font-medium">Invoice No</th><th class="text-left px-4 py-3 font-medium">Customer</th><th class="text-right px-4 py-3 font-medium">Amount</th><th class="text-left px-4 py-3 font-medium">Alasan</th><th class="text-left px-4 py-3 font-medium">Status</th><th class="text-left px-4 py-3 font-medium">Date</th><th class="text-right px-4 py-3 font-medium">Aksi</th>
                 </tr></thead>
                 <tbody class="divide-y divide-gray-700">
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs">INV-2026-0847</td><td class="px-4 py-3">PT. Maju Jaya</td><td class="px-4 py-3 text-right font-medium">Rp 45.5M</td><td class="px-4 py-3"><span class="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">Dispute</span></td><td class="px-4 py-3"><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">Active</span></td><td class="px-4 py-3 text-gray-400">2026-08-20</td><td class="px-4 py-3 text-right"><button class="text-gray-400 hover:text-red-500"><i data-lucide="undo-2" class="w-4 h-4"></i></button></td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs">INV-2026-0832</td><td class="px-4 py-3">PT. Sukses Abadi</td><td class="px-4 py-3 text-right font-medium">Rp 128.7M</td><td class="px-4 py-3"><span class="px-2 py-1 bg-red-900/30 text-red-400 rounded-full text-xs">Cancelled</span></td><td class="px-4 py-3"><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">Active</span></td><td class="px-4 py-3 text-gray-400">2026-08-18</td><td class="px-4 py-3 text-right"><button class="text-gray-400 hover:text-red-500"><i data-lucide="undo-2" class="w-4 h-4"></i></button></td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs">INV-2026-0819</td><td class="px-4 py-3">PT. Makmur Sejahtera</td><td class="px-4 py-3 text-right font-medium">Rp 67.2M</td><td class="px-4 py-3"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs">Duplicate</span></td><td class="px-4 py-3"><span class="px-2 py-1 bg-gray-600 text-gray-300 rounded-full text-xs">Reverted</span></td><td class="px-4 py-3 text-gray-400">2026-08-15</td><td class="px-4 py-3 text-right">-</td></tr>
+                    <template x-for="e in exclusions" :key="e.id">
+                        <tr class="hover:bg-gray-700/30">
+                            <td class="px-4 py-3 font-mono text-xs" x-text="e.invoiceNo"></td>
+                            <td class="px-4 py-3" x-text="e.customer"></td>
+                            <td class="px-4 py-3 text-right font-medium" x-text="e.amount"></td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs" :class="e.alasan==='Dispute'?'bg-yellow-900/30 text-yellow-400':e.alasan==='Cancelled'?'bg-red-900/30 text-red-400':'bg-blue-900/30 text-blue-400'" x-text="e.alasan"></span></td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs" :class="e.status==='Active'?'bg-green-900/30 text-green-400':'bg-gray-600 text-gray-300'" x-text="e.status"></span></td>
+                            <td class="px-4 py-3 text-gray-400" x-text="e.date"></td>
+                            <td class="px-4 py-3 text-right">
+                                <button @click="revertExclusion(e.id)" class="text-gray-400 hover:text-yellow-400 mr-2" title="Revert"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+                                <button @click="deleteExclusion(e.id)" class="text-gray-400 hover:text-red-500" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
@@ -222,14 +298,14 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div><h1 class="text-xl font-bold">Data Customer</h1><p class="text-sm text-gray-400">Kelola data master customer</p></div>
         <div class="flex gap-2">
-            <button class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Import</button>
-            <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="plus" class="w-4 h-4"></i> Tambah Customer</button>
+            <button @click="showImportModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Import</button>
+            <button @click="showCustomerModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="plus" class="w-4 h-4"></i> Tambah Customer</button>
         </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Total Customer</p><p class="text-2xl font-bold mt-1">248</p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Aktif</p><p class="text-2xl font-bold mt-1 text-green-400">195</p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Non-aktif</p><p class="text-2xl font-bold mt-1 text-gray-500">53</p></div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Total Customer</p><p class="text-2xl font-bold mt-1" x-text="customers.length"></p></div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Aktif</p><p class="text-2xl font-bold mt-1 text-green-400" x-text="customers.filter(c => c.status === 'Aktif').length"></p></div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Non-aktif</p><p class="text-2xl font-bold mt-1 text-gray-500" x-text="customers.filter(c => c.status === 'Non-aktif').length"></p></div>
     </div>
     <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
@@ -239,13 +315,20 @@
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-gray-900/50 text-gray-400 text-xs uppercase">
-                    <tr><th class="px-4 py-3 text-left">Kode</th><th class="px-4 py-3 text-left">Nama</th><th class="px-4 py-3 text-left">Kota</th><th class="px-4 py-3 text-left">Credit Limit</th><th class="px-4 py-3 text-left">Outstanding</th><th class="px-4 py-3 text-left">Status</th></tr>
+                    <tr><th class="px-4 py-3 text-left">Kode</th><th class="px-4 py-3 text-left">Nama</th><th class="px-4 py-3 text-left">Kota</th><th class="px-4 py-3 text-left">Credit Limit</th><th class="px-4 py-3 text-left">Outstanding</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-right">Aksi</th></tr>
                 </thead>
                 <tbody class="divide-y divide-gray-700/50">
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs">C-001</td><td class="px-4 py-3">PT. Maju Jaya</td><td class="px-4 py-3">Jakarta</td><td class="px-4 py-3">Rp 500M</td><td class="px-4 py-3">Rp 45.5M</td><td class="px-4 py-3"><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">Aktif</span></td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs">C-002</td><td class="px-4 py-3">PT. Sukses Abadi</td><td class="px-4 py-3">Surabaya</td><td class="px-4 py-3">Rp 300M</td><td class="px-4 py-3">Rp 128.7M</td><td class="px-4 py-3"><span class="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">Warning</span></td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs">C-003</td><td class="px-4 py-3">PT. Makmur Sejahtera</td><td class="px-4 py-3">Bandung</td><td class="px-4 py-3">Rp 200M</td><td class="px-4 py-3">Rp 67.2M</td><td class="px-4 py-3"><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">Aktif</span></td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3 font-mono text-xs">C-004</td><td class="px-4 py-3">PT. Berkah Mandiri</td><td class="px-4 py-3">Semarang</td><td class="px-4 py-3">Rp 150M</td><td class="px-4 py-3">Rp 0</td><td class="px-4 py-3"><span class="px-2 py-1 bg-gray-600/30 text-gray-400 rounded-full text-xs">Non-aktif</span></td></tr>
+                    <template x-for="c in customers" :key="c.kode">
+                        <tr class="hover:bg-gray-700/30">
+                            <td class="px-4 py-3 font-mono text-xs" x-text="c.kode"></td>
+                            <td class="px-4 py-3" x-text="c.nama"></td>
+                            <td class="px-4 py-3" x-text="c.kota"></td>
+                            <td class="px-4 py-3" x-text="c.creditLimit"></td>
+                            <td class="px-4 py-3" x-text="c.outstanding"></td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs" :class="c.status==='Aktif'?'bg-green-900/30 text-green-400':c.status==='Warning'?'bg-yellow-900/30 text-yellow-400':'bg-gray-600/30 text-gray-400'" x-text="c.status"></span></td>
+                            <td class="px-4 py-3 text-right"><button @click="deleteCustomer(c.kode)" class="text-gray-400 hover:text-red-500" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
@@ -259,22 +342,14 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div><h1 class="text-xl font-bold">Import Laporan Accurate</h1><p class="text-sm text-gray-400">Import data transaksi dari software Accurate</p></div>
         <div class="flex gap-2">
-            <button class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"><i data-lucide="history" class="w-4 h-4"></i> History Import</button>
-            <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Import Baru</button>
+            <button @click="showAccurateHistoryModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"><i data-lucide="history" class="w-4 h-4"></i> History Import</button>
+            <button @click="showAccurateImportModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Import Baru</button>
         </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Total Import</p><p class="text-2xl font-bold mt-1">18</p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Records Imported</p><p class="text-2xl font-bold mt-1 text-blue-400">12,450</p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Last Import</p><p class="text-lg font-bold mt-1">2026-08-22</p></div>
-    </div>
-    <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6">
-        <h3 class="font-semibold mb-4">Upload File</h3>
-        <div class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer">
-            <i data-lucide="file-spreadsheet" class="w-12 h-12 text-gray-500 mx-auto mb-3"></i>
-            <p class="text-sm text-gray-400">Drag & drop file atau <span class="text-blue-400 font-medium">browse</span></p>
-            <p class="text-xs text-gray-500 mt-1">Format: .xlsx, .csv (maks 10MB)</p>
-        </div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Total Import</p><p class="text-2xl font-bold mt-1" x-text="accurateImportHistory.length"></p></div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Records Imported</p><p class="text-2xl font-bold mt-1 text-blue-400" x-text="accurateImportHistory.reduce((a,b)=>a+b.records,0).toLocaleString()"></p></div>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Last Import</p><p class="text-lg font-bold mt-1" x-text="accurateImportHistory.length > 0 ? accurateImportHistory[0].tanggal : '-'"></p></div>
     </div>
     <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-700"><h3 class="font-semibold">Riwayat Import</h3></div>
@@ -284,9 +359,15 @@
                     <tr><th class="px-4 py-3 text-left">Tanggal</th><th class="px-4 py-3 text-left">File</th><th class="px-4 py-3 text-left">Records</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-left">User</th></tr>
                 </thead>
                 <tbody class="divide-y divide-gray-700/50">
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3">2026-08-22</td><td class="px-4 py-3 font-mono text-xs">accurate_aug2026.xlsx</td><td class="px-4 py-3">1,250</td><td class="px-4 py-3"><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">Success</span></td><td class="px-4 py-3">Hengki</td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3">2026-08-15</td><td class="px-4 py-3 font-mono text-xs">accurate_jul2026.xlsx</td><td class="px-4 py-3">2,100</td><td class="px-4 py-3"><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">Success</span></td><td class="px-4 py-3">Hengki</td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3">2026-08-10</td><td class="px-4 py-3 font-mono text-xs">accurate_jun2026_partial.csv</td><td class="px-4 py-3">850</td><td class="px-4 py-3"><span class="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">Partial</span></td><td class="px-4 py-3">Admin</td></tr>
+                    <template x-for="h in accurateImportHistory" :key="h.id">
+                        <tr class="hover:bg-gray-700/30">
+                            <td class="px-4 py-3" x-text="h.tanggal"></td>
+                            <td class="px-4 py-3 font-mono text-xs" x-text="h.file"></td>
+                            <td class="px-4 py-3" x-text="h.records.toLocaleString()"></td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs" :class="h.status==='Success'?'bg-green-900/30 text-green-400':h.status==='Partial'?'bg-yellow-900/30 text-yellow-400':'bg-red-900/30 text-red-400'" x-text="h.status"></span></td>
+                            <td class="px-4 py-3" x-text="h.user"></td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
@@ -299,7 +380,7 @@
 <div>
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div><h1 class="text-xl font-bold">Aging Report Generator</h1><p class="text-sm text-gray-400">Generate laporan aging berdasarkan periode</p></div>
-        <div class="flex gap-2"><button class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 rounded-lg text-sm font-medium"><i data-lucide="download" class="w-4 h-4"></i> Export Excel</button></div>
+        <div class="flex gap-2"><button @click="showExportModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="download" class="w-4 h-4"></i> Export Excel</button></div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <div class="bg-green-900/20 border border-green-800 rounded-xl p-4"><p class="text-sm text-green-400 font-medium">Current (0-30)</p><p class="text-2xl font-bold mt-1">Rp 15.2M</p><p class="text-xs text-gray-500 mt-1">156 invoices</p></div>
@@ -328,7 +409,7 @@
 <div>
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div><h1 class="text-xl font-bold">AR Reconciliation</h1><p class="text-sm text-gray-400">Rekonstruksi AR dengan bank statement secara otomatis</p></div>
-        <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Import Bank Statement</button>
+        <button @click="showReconImportModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Import Bank Statement</button>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Total Transaksi</p><p class="text-2xl font-bold mt-1">234</p></div>
@@ -338,7 +419,7 @@
     </div>
     <div class="bg-blue-900/20 border border-blue-800 rounded-xl p-4 mb-6 flex items-center justify-between">
         <div class="flex items-center gap-3"><i data-lucide="zap" class="w-5 h-5 text-blue-400"></i><div><p class="font-medium">Auto-Matching</p><p class="text-sm text-gray-400">Jalankan pencocokan otomatis</p></div></div>
-        <button class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">Run Matching</button>
+        <button @click="runMatching()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">Run Matching</button>
     </div>
     <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
         <div class="overflow-x-auto">
@@ -360,7 +441,7 @@
 <div>
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div><h1 class="text-xl font-bold">Auto Email & WhatsApp Reminders</h1><p class="text-sm text-gray-400">Kirim pengingat otomatis ke customer</p></div>
-        <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="send" class="w-4 h-4"></i> Send Batch</button>
+        <button @click="selectedReminders.length > 0 ? (showSendBatchModal=true) : showToast('Pilih minimal satu reminder','error')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="send" class="w-4 h-4"></i> Send Batch <span x-show="selectedReminders.length>0" x-text="'('+selectedReminders.length+')'" class="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-xs"></span></button>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Sent This Month</p><p class="text-2xl font-bold mt-1">342</p></div>
@@ -372,10 +453,10 @@
         <div class="p-4 border-b border-gray-700"><h3 class="font-semibold">Antrian Reminder</h3></div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-gray-700/50"><tr><th class="text-left px-4 py-3 font-medium"><input type="checkbox" class="rounded"></th><th class="text-left px-4 py-3 font-medium">Customer</th><th class="text-left px-4 py-3 font-medium">Invoice</th><th class="text-right px-4 py-3 font-medium">Amount</th><th class="text-center px-4 py-3 font-medium">Tunggakan</th><th class="text-left px-4 py-3 font-medium">Channel</th><th class="text-left px-4 py-3 font-medium">Template</th></tr></thead>
+                <thead class="bg-gray-700/50"><tr><th class="text-left px-4 py-3 font-medium"><input type="checkbox" class="rounded" :checked="reminderSelectAll" @change="toggleAllReminders()"></th><th class="text-left px-4 py-3 font-medium">Customer</th><th class="text-left px-4 py-3 font-medium">Invoice</th><th class="text-right px-4 py-3 font-medium">Amount</th><th class="text-center px-4 py-3 font-medium">Tunggakan</th><th class="text-left px-4 py-3 font-medium">Channel</th><th class="text-left px-4 py-3 font-medium">Template</th></tr></thead>
                 <tbody class="divide-y divide-gray-700">
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3"><input type="checkbox" class="rounded"></td><td class="px-4 py-3">PT. Maju Jaya</td><td class="px-4 py-3 font-mono text-xs">INV-0847</td><td class="px-4 py-3 text-right font-medium">Rp 45.5M</td><td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">7 hari</span></td><td class="px-4 py-3"><div class="flex gap-1"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs">Email</span><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">WA</span></div></td><td class="px-4 py-3 text-gray-400">Level 1</td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3"><input type="checkbox" class="rounded"></td><td class="px-4 py-3">PT. Sukses Abadi</td><td class="px-4 py-3 font-mono text-xs">INV-0798</td><td class="px-4 py-3 text-right font-medium">Rp 89.2M</td><td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-red-900/30 text-red-400 rounded-full text-xs">52 hari</span></td><td class="px-4 py-3"><div class="flex gap-1"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs">Email</span><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">WA</span></div></td><td class="px-4 py-3 text-gray-400">Level 3</td></tr>
+                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3"><input type="checkbox" class="rounded" :checked="selectedReminders.includes(1)" @change="toggleReminderSelect(1)"></td><td class="px-4 py-3">PT. Maju Jaya</td><td class="px-4 py-3 font-mono text-xs">INV-0847</td><td class="px-4 py-3 text-right font-medium">Rp 45.5M</td><td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">7 hari</span></td><td class="px-4 py-3"><div class="flex gap-1"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs">Email</span><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">WA</span></div></td><td class="px-4 py-3 text-gray-400">Level 1</td></tr>
+                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3"><input type="checkbox" class="rounded" :checked="selectedReminders.includes(2)" @change="toggleReminderSelect(2)"></td><td class="px-4 py-3">PT. Sukses Abadi</td><td class="px-4 py-3 font-mono text-xs">INV-0798</td><td class="px-4 py-3 text-right font-medium">Rp 89.2M</td><td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-red-900/30 text-red-400 rounded-full text-xs">52 hari</span></td><td class="px-4 py-3"><div class="flex gap-1"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs">Email</span><span class="px-2 py-1 bg-green-900/30 text-green-400 rounded-full text-xs">WA</span></div></td><td class="px-4 py-3 text-gray-400">Level 3</td></tr>
                 </tbody>
             </table>
         </div>
@@ -383,9 +464,9 @@
     <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
         <h3 class="font-semibold mb-4">Reminder Templates</h3>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="p-4 bg-gray-700/50 rounded-lg border border-gray-600"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">Level 1 - Friendly</span><span class="px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full text-xs">1-30h</span></div><p class="text-xs text-gray-400">Pengingat ramah</p></div>
-            <div class="p-4 bg-gray-700/50 rounded-lg border border-gray-600"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">Level 2 - Firm</span><span class="px-2 py-0.5 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">31-60h</span></div><p class="text-xs text-gray-400">Pengingat tegas</p></div>
-            <div class="p-4 bg-gray-700/50 rounded-lg border border-gray-600"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">Level 3 - Urgent</span><span class="px-2 py-0.5 bg-red-900/30 text-red-400 rounded-full text-xs">&gt;60h</span></div><p class="text-xs text-gray-400">Peringatan keras</p></div>
+            <button @click="openTemplateDetail('Level 1')" class="p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-blue-500 transition-colors text-left"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">Level 1 - Friendly</span><span class="px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full text-xs">1-30h</span></div><p class="text-xs text-gray-400">Pengingat ramah</p></button>
+            <button @click="openTemplateDetail('Level 2')" class="p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-yellow-500 transition-colors text-left"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">Level 2 - Firm</span><span class="px-2 py-0.5 bg-yellow-900/30 text-yellow-400 rounded-full text-xs">31-60h</span></div><p class="text-xs text-gray-400">Pengingat tegas</p></button>
+            <button @click="openTemplateDetail('Level 3')" class="p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-red-500 transition-colors text-left"><div class="flex items-center justify-between mb-2"><span class="font-medium text-sm">Level 3 - Urgent</span><span class="px-2 py-0.5 bg-red-900/30 text-red-400 rounded-full text-xs">&gt;60h</span></div><p class="text-xs text-gray-400">Peringatan keras</p></button>
         </div>
     </div>
 </div>
@@ -497,16 +578,25 @@
 <div>
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div><h1 class="text-xl font-bold">User Management</h1><p class="text-sm text-gray-400">Kelola pengguna dan akses sistem</p></div>
-        <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="user-plus" class="w-4 h-4"></i> Tambah User</button>
+        <button @click="openAddUser()" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="user-plus" class="w-4 h-4"></i> Tambah User</button>
     </div>
     <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-gray-700/50"><tr><th class="text-left px-4 py-3 font-medium">Name</th><th class="text-left px-4 py-3 font-medium">Email</th><th class="text-left px-4 py-3 font-medium">Role</th><th class="text-center px-4 py-3 font-medium">Status</th><th class="text-right px-4 py-3 font-medium">Aksi</th></tr></thead>
                 <tbody class="divide-y divide-gray-700">
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center"><span class="text-xs font-semibold text-blue-400">H</span></div><span class="font-medium">Hengki</span></div></td><td class="px-4 py-3 text-gray-400">hengki@dmx.co.id</td><td class="px-4 py-3"><span class="px-2 py-1 bg-purple-900/30 text-purple-400 rounded-full text-xs font-medium">Admin</span></td><td class="px-4 py-3 text-center"><span class="w-2 h-2 bg-green-500 rounded-full inline-block"></span></td><td class="px-4 py-3 text-right"><button class="text-blue-400 text-xs font-medium">Edit</button></td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 bg-green-900 rounded-full flex items-center justify-center"><span class="text-xs font-semibold text-green-400">A</span></div><span class="font-medium">Ahmad Fauzi</span></div></td><td class="px-4 py-3 text-gray-400">ahmad@dmx.co.id</td><td class="px-4 py-3"><span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs font-medium">AR Accountant</span></td><td class="px-4 py-3 text-center"><span class="w-2 h-2 bg-green-500 rounded-full inline-block"></span></td><td class="px-4 py-3 text-right"><button class="text-blue-400 text-xs font-medium">Edit</button></td></tr>
-                    <tr class="hover:bg-gray-700/30"><td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 bg-yellow-900 rounded-full flex items-center justify-center"><span class="text-xs font-semibold text-yellow-400">S</span></div><span class="font-medium">Siti Rahayu</span></div></td><td class="px-4 py-3 text-gray-400">siti@dmx.co.id</td><td class="px-4 py-3"><span class="px-2 py-1 bg-orange-900/30 text-orange-400 rounded-full text-xs font-medium">AR Collector</span></td><td class="px-4 py-3 text-center"><span class="w-2 h-2 bg-green-500 rounded-full inline-block"></span></td><td class="px-4 py-3 text-right"><button class="text-blue-400 text-xs font-medium">Edit</button></td></tr>
+                    <template x-for="u in users" :key="u.id">
+                        <tr class="hover:bg-gray-700/30">
+                            <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center" :class="u.color==='green'?'bg-green-900':u.color==='yellow'?'bg-yellow-900':u.color==='purple'?'bg-purple-900':u.color==='orange'?'bg-orange-900':'bg-blue-900'"><span class="text-xs font-semibold" :class="u.color==='green'?'text-green-400':u.color==='yellow'?'text-yellow-400':u.color==='purple'?'text-purple-400':u.color==='orange'?'text-orange-400':'text-blue-400'" x-text="u.initial"></span></div><span class="font-medium" x-text="u.name"></span></div></td>
+                            <td class="px-4 py-3 text-gray-400" x-text="u.email"></td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium" :class="u.role==='Admin'?'bg-purple-900/30 text-purple-400':u.role==='AR Accountant'?'bg-blue-900/30 text-blue-400':'bg-orange-900/30 text-orange-400'" x-text="u.role"></span></td>
+                            <td class="px-4 py-3 text-center"><span class="w-2 h-2 bg-green-500 rounded-full inline-block"></span></td>
+                            <td class="px-4 py-3 text-right">
+                                <button @click="openEditUser(u)" class="text-blue-400 text-xs font-medium mr-2">Edit</button>
+                                <button @click="deleteUser(u.id)" class="text-red-400 text-xs font-medium">Delete</button>
+                            </td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
@@ -581,9 +671,139 @@
 function app() {
     return {
         page: 'login',
+        loginEmail: '',
+        loginPassword: '',
+        loginError: '',
         sidebarExpanded: false,
         sidebarLocked: false,
-        darkMode: true,
+        darkMode: localStorage.getItem('darkMode') !== 'false',
+        showCustomerModal: false,
+        showImportModal: false,
+        showExclusionModal: false,
+        showExclusionImportModal: false,
+        exclusionForm: { invoiceNo: '', customer: '', amount: '', alasan: 'Dispute', date: '' },
+        exclusionImportFile: null,
+        showAccurateImportModal: false,
+        showAccurateHistoryModal: false,
+        accurateImportFile: null,
+        accurateImportType: 'journal',
+        accurateImportHistory: [
+            { id: 1, tanggal: '2026-08-22', file: 'accurate_aug2026.xlsx', records: 1250, status: 'Success', user: 'Hengki' },
+            { id: 2, tanggal: '2026-08-15', file: 'accurate_jul2026.xlsx', records: 2100, status: 'Success', user: 'Hengki' },
+            { id: 3, tanggal: '2026-08-10', file: 'accurate_jun2026_partial.csv', records: 850, status: 'Partial', user: 'Admin' },
+        ],
+        handleAccurateImport() {
+            if (!this.accurateImportFile) {
+                this.showToast('Pilih file terlebih dahulu', 'error');
+                return;
+            }
+            const today = new Date().toISOString().split('T')[0];
+            this.accurateImportHistory.unshift({
+                id: Date.now(),
+                tanggal: today,
+                file: this.accurateImportFile.name,
+                records: Math.floor(Math.random() * 2000) + 500,
+                status: 'Success',
+                user: 'Hengki'
+            });
+            this.showAccurateImportModal = false;
+            this.accurateImportFile = null;
+            this.showToast('Import berhasil! ' + this.accurateImportHistory[0].records + ' records diproses.', 'success');
+            setTimeout(() => lucide.createIcons(), 100);
+        },
+        customerForm: { kode: '', nama: '', kota: '', creditLimit: '', email: '', telepon: '', alamat: '' },
+        importFile: null,
+        toast: { show: false, message: '', type: 'success' },
+        customers: [
+            { kode: 'C-001', nama: 'PT. Maju Jaya', kota: 'Jakarta', creditLimit: 'Rp 500M', outstanding: 'Rp 45.5M', status: 'Aktif' },
+            { kode: 'C-002', nama: 'PT. Sukses Abadi', kota: 'Surabaya', creditLimit: 'Rp 300M', outstanding: 'Rp 128.7M', status: 'Warning' },
+            { kode: 'C-003', nama: 'PT. Makmur Sejahtera', kota: 'Bandung', creditLimit: 'Rp 200M', outstanding: 'Rp 67.2M', status: 'Aktif' },
+            { kode: 'C-004', nama: 'PT. Berkah Mandiri', kota: 'Semarang', creditLimit: 'Rp 150M', outstanding: 'Rp 0', status: 'Non-aktif' },
+        ],
+        showToast(message, type) {
+            this.toast = { show: true, message: message, type: type || 'success' };
+            setTimeout(() => { this.toast.show = false; }, 3000);
+        },
+        saveCustomer() {
+            if (!this.customerForm.nama || !this.customerForm.kota) {
+                this.showToast('Nama dan kota harus diisi', 'error');
+                return;
+            }
+            const newKode = 'C-' + String(this.customers.length + 1).padStart(3, '0');
+            this.customers.push({
+                kode: newKode,
+                nama: this.customerForm.nama,
+                kota: this.customerForm.kota,
+                creditLimit: this.customerForm.creditLimit ? 'Rp ' + this.customerForm.creditLimit + 'M' : 'Rp 0',
+                outstanding: 'Rp 0',
+                status: 'Aktif'
+            });
+            this.customerForm = { kode: '', nama: '', kota: '', creditLimit: '', email: '', telepon: '', alamat: '' };
+            this.showCustomerModal = false;
+            this.showToast('Customer berhasil ditambahkan!', 'success');
+            setTimeout(() => lucide.createIcons(), 100);
+        },
+        handleImport() {
+            if (!this.importFile) {
+                this.showToast('Pilih file terlebih dahulu', 'error');
+                return;
+            }
+            this.showImportModal = false;
+            this.importFile = null;
+            this.showToast('Import berhasil! 125 records diproses.', 'success');
+        },
+        deleteCustomer(kode) {
+            this.customers = this.customers.filter(c => c.kode !== kode);
+            this.showToast('Customer ' + kode + ' berhasil dihapus', 'success');
+            setTimeout(() => lucide.createIcons(), 100);
+        },
+        exclusions: [
+            { id: 1, invoiceNo: 'INV-2026-0847', customer: 'PT. Maju Jaya', amount: 'Rp 45.5M', alasan: 'Dispute', status: 'Active', date: '2026-08-20' },
+            { id: 2, invoiceNo: 'INV-2026-0832', customer: 'PT. Sukses Abadi', amount: 'Rp 128.7M', alasan: 'Cancelled', status: 'Active', date: '2026-08-18' },
+            { id: 3, invoiceNo: 'INV-2026-0819', customer: 'PT. Makmur Sejahtera', amount: 'Rp 67.2M', alasan: 'Duplicate', status: 'Reverted', date: '2026-08-15' },
+        ],
+        saveExclusion() {
+            if (!this.exclusionForm.invoiceNo || !this.exclusionForm.customer) {
+                this.showToast('Invoice No dan Customer harus diisi', 'error');
+                return;
+            }
+            const today = new Date().toISOString().split('T')[0];
+            this.exclusions.push({
+                id: Date.now(),
+                invoiceNo: this.exclusionForm.invoiceNo,
+                customer: this.exclusionForm.customer,
+                amount: this.exclusionForm.amount ? 'Rp ' + this.exclusionForm.amount + 'M' : 'Rp 0',
+                alasan: this.exclusionForm.alasan,
+                status: 'Active',
+                date: this.exclusionForm.date || today
+            });
+            this.exclusionForm = { invoiceNo: '', customer: '', amount: '', alasan: 'Dispute', date: '' };
+            this.showExclusionModal = false;
+            this.showToast('Invoice exclusion berhasil ditambahkan!', 'success');
+            setTimeout(() => lucide.createIcons(), 100);
+        },
+        handleExclusionImport() {
+            if (!this.exclusionImportFile) {
+                this.showToast('Pilih file terlebih dahulu', 'error');
+                return;
+            }
+            this.showExclusionImportModal = false;
+            this.exclusionImportFile = null;
+            this.showToast('Import berhasil! 45 exclusion records diproses.', 'success');
+        },
+        revertExclusion(id) {
+            const item = this.exclusions.find(e => e.id === id);
+            if (item) {
+                item.status = item.status === 'Reverted' ? 'Active' : 'Reverted';
+                this.showToast('Status exclusion diubah ke ' + item.status, 'success');
+                setTimeout(() => lucide.createIcons(), 100);
+            }
+        },
+        deleteExclusion(id) {
+            this.exclusions = this.exclusions.filter(e => e.id !== id);
+            this.showToast('Exclusion berhasil dihapus', 'success');
+            setTimeout(() => lucide.createIcons(), 100);
+        },
         openGroup: null,
         navGroups: [
             { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
@@ -609,7 +829,23 @@ function app() {
             return titles[this.page] || 'Dashboard';
         },
         init() {
+            document.documentElement.classList.toggle('dark', this.darkMode);
+            this.$watch('page', (val) => {
+                if (val === 'dashboard') {
+                    this.renderCharts();
+                }
+                if (val === 'aging') {
+                    this.renderAgingChart();
+                }
+                setTimeout(() => lucide.createIcons(), 150);
+            });
             setTimeout(() => lucide.createIcons(), 200);
+        },
+        toggleDarkMode() {
+            this.darkMode = !this.darkMode;
+            document.documentElement.classList.toggle('dark', this.darkMode);
+            localStorage.setItem('darkMode', this.darkMode);
+            setTimeout(() => lucide.createIcons(), 100);
         },
         renderCharts() {
             setTimeout(() => {
@@ -644,9 +880,627 @@ function app() {
                 }
                 lucide.createIcons();
             }, 100);
+        },
+
+        /* ===== EXPORT EXCEL (AGING) ===== */
+        showExportModal: false,
+        exportFormat: 'xlsx',
+        exportPeriod: 'thisMonth',
+        handleExportExcel() {
+            this.showExportModal = false;
+            this.showToast('File aging report.' + this.exportFormat + ' berhasil didownload!', 'success');
+        },
+
+        /* ===== RECONCILIATION ===== */
+        showReconImportModal: false,
+        showRunMatchingModal: false,
+        reconImportFile: null,
+        reconMatchingStatus: 'idle',
+        handleReconImport() {
+            if (!this.reconImportFile) {
+                this.showToast('Pilih file bank statement terlebih dahulu', 'error');
+                return;
+            }
+            this.showReconImportModal = false;
+            this.reconImportFile = null;
+            this.showToast('Bank statement berhasil diimport! 234 transaksi terdeteksi.', 'success');
+        },
+        runMatching() {
+            this.reconMatchingStatus = 'running';
+            this.showRunMatchingModal = true;
+            setTimeout(() => {
+                this.reconMatchingStatus = 'done';
+                this.showToast('Auto-matching selesai! 198 matched, 28 need review, 8 unmatched.', 'success');
+                setTimeout(() => { this.reconMatchingStatus = 'idle'; this.showRunMatchingModal = false; }, 1500);
+            }, 2000);
+        },
+
+        /* ===== REMINDERS ===== */
+        reminderSelectAll: false,
+        selectedReminders: [],
+        showSendBatchModal: false,
+        showTemplateModal: false,
+        selectedTemplate: null,
+        reminderBatchChannel: 'both',
+        reminders: [
+            { id: 1, customer: 'PT. Maju Jaya', invoice: 'INV-0847', amount: 'Rp 45.5M', tunggakan: 7, channels: ['Email','WA'], template: 'Level 1' },
+            { id: 2, customer: 'PT. Sukses Abadi', invoice: 'INV-0798', amount: 'Rp 89.2M', tunggakan: 52, channels: ['Email','WA'], template: 'Level 3' },
+            { id: 3, customer: 'PT. Makmur', invoice: 'INV-0712', amount: 'Rp 156.8M', tunggakan: 93, channels: ['Email','WA'], template: 'Level 3' },
+        ],
+        toggleReminderSelect(id) {
+            if (this.selectedReminders.includes(id)) {
+                this.selectedReminders = this.selectedReminders.filter(i => i !== id);
+            } else {
+                this.selectedReminders.push(id);
+            }
+            this.reminderSelectAll = this.selectedReminders.length === this.reminders.length;
+        },
+        toggleAllReminders() {
+            if (this.reminderSelectAll) {
+                this.selectedReminders = [];
+            } else {
+                this.selectedReminders = this.reminders.map(r => r.id);
+            }
+            this.reminderSelectAll = !this.reminderSelectAll;
+        },
+        openTemplateDetail(level) {
+            this.selectedTemplate = level;
+            this.showTemplateModal = true;
+        },
+        sendBatchReminder() {
+            if (this.selectedReminders.length === 0) {
+                this.showToast('Pilih minimal satu reminder untuk dikirim', 'error');
+                return;
+            }
+            this.showSendBatchModal = false;
+            const count = this.selectedReminders.length;
+            this.selectedReminders = [];
+            this.reminderSelectAll = false;
+            this.showToast(count + ' reminder berhasil dikirim via ' + this.reminderBatchChannel + '!', 'success');
+        },
+
+        /* ===== USER MANAGEMENT ===== */
+        showUserModal: false,
+        editingUser: null,
+        userForm: { name: '', email: '', role: 'viewer', password: '' },
+        users: [
+            { id: 1, name: 'Hengki', email: 'hengki@dmx.co.id', role: 'Admin', status: 'Active', initial: 'H', color: 'blue' },
+            { id: 2, name: 'Ahmad Fauzi', email: 'ahmad@dmx.co.id', role: 'AR Accountant', status: 'Active', initial: 'A', color: 'green' },
+            { id: 3, name: 'Siti Rahayu', email: 'siti@dmx.co.id', role: 'AR Collector', status: 'Active', initial: 'S', color: 'yellow' },
+        ],
+        openAddUser() {
+            this.editingUser = null;
+            this.userForm = { name: '', email: '', role: 'viewer', password: '' };
+            this.showUserModal = true;
+        },
+        openEditUser(user) {
+            this.editingUser = user;
+            this.userForm = { name: user.name, email: user.email, role: user.role.toLowerCase().replace(/ /g, '_'), password: '' };
+            this.showUserModal = true;
+        },
+        saveUser() {
+            if (!this.userForm.name || !this.userForm.email) {
+                this.showToast('Nama dan email harus diisi', 'error');
+                return;
+            }
+            if (this.editingUser) {
+                this.editingUser.name = this.userForm.name;
+                this.editingUser.email = this.userForm.email;
+                this.editingUser.role = this.userForm.role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                this.showToast('User ' + this.userForm.name + ' berhasil diupdate!', 'success');
+            } else {
+                const colors = ['blue','green','yellow','purple','orange','red'];
+                this.users.push({
+                    id: Date.now(),
+                    name: this.userForm.name,
+                    email: this.userForm.email,
+                    role: this.userForm.role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                    status: 'Active',
+                    initial: this.userForm.name.charAt(0).toUpperCase(),
+                    color: colors[this.users.length % colors.length]
+                });
+                this.showToast('User ' + this.userForm.name + ' berhasil ditambahkan!', 'success');
+            }
+            this.showUserModal = false;
+            setTimeout(() => lucide.createIcons(), 100);
+        },
+        deleteUser(id) {
+            this.users = this.users.filter(u => u.id !== id);
+            this.showToast('User berhasil dihapus', 'success');
+            setTimeout(() => lucide.createIcons(), 100);
         }
     }
 }
 </script>
+
+<!-- =================== MODALS =================== -->
+
+<!-- Toast Notification -->
+<div x-show="toast.show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed top-4 right-4 z-50 px-5 py-3 rounded-lg shadow-lg text-sm font-medium" :class="toast.type==='error'?'bg-red-600 text-white':'bg-green-600 text-white'">
+    <div class="flex items-center gap-2">
+        <i :data-lucide="toast.type==='error'?'alert-circle':'check-circle'" class="w-4 h-4"></i>
+        <span x-text="toast.message"></span>
+    </div>
+</div>
+
+<!-- Modal: Tambah Customer -->
+<div x-show="showCustomerModal" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="showCustomerModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg max-h-[90vh] overflow-y-auto" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div>
+                <h3 class="text-lg font-semibold">Tambah Customer Baru</h3>
+                <p class="text-sm text-gray-400 mt-0.5">Isi data customer di bawah ini</p>
+            </div>
+            <button @click="showCustomerModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Nama Customer <span class="text-red-400">*</span></label>
+                    <input type="text" x-model="customerForm.nama" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="PT. Nama Perusahaan">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Kota <span class="text-red-400">*</span></label>
+                    <input type="text" x-model="customerForm.kota" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Jakarta">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Credit Limit (Miliar Rp)</label>
+                    <input type="number" x-model="customerForm.creditLimit" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
+                    <input type="email" x-model="customerForm.email" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="email@perusahaan.com">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">Telepon</label>
+                <input type="tel" x-model="customerForm.telepon" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0812xxxxxxx">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">Alamat</label>
+                <textarea x-model="customerForm.alamat" rows="2" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" placeholder="Alamat lengkap"></textarea>
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showCustomerModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="saveCustomer()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Simpan Customer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Import Customer -->
+<div x-show="showImportModal" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="showImportModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div>
+                <h3 class="text-lg font-semibold">Import Data Customer</h3>
+                <p class="text-sm text-gray-400 mt-0.5">Upload file Excel/CSV</p>
+            </div>
+            <button @click="showImportModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5">
+            <div class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" @click="$refs.importInput.click()" @dragover.prevent="" @drop.prevent="importFile=$event.dataTransfer.files[0]">
+                <template x-if="!importFile">
+                    <div>
+                        <i data-lucide="file-spreadsheet" class="w-12 h-12 text-gray-500 mx-auto mb-3"></i>
+                        <p class="text-sm text-gray-400">Drag & drop file atau <span class="text-blue-400 font-medium">browse</span></p>
+                        <p class="text-xs text-gray-500 mt-1">Format: .xlsx, .csv (maks 10MB)</p>
+                    </div>
+                </template>
+                <template x-if="importFile">
+                    <div>
+                        <i data-lucide="file-check" class="w-12 h-12 text-green-400 mx-auto mb-3"></i>
+                        <p class="text-sm text-green-400 font-medium" x-text="importFile.name"></p>
+                        <p class="text-xs text-gray-500 mt-1">Klik untuk ganti file</p>
+                    </div>
+                </template>
+                <input type="file" x-ref="importInput" accept=".xlsx,.csv" class="hidden" @change="importFile=$event.target.files[0]">
+            </div>
+            <div class="mt-4 p-3 bg-gray-700/50 rounded-lg">
+                <p class="text-xs text-gray-400 font-medium mb-2">Format kolom yang diperlukan:</p>
+                <div class="flex flex-wrap gap-2">
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Kode</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Nama</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Kota</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Credit Limit</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Email</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showImportModal=false;importFile=null" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="handleImport()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Import Sekarang</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Tambah Invoice Exclusion -->
+<div x-show="showExclusionModal" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="showExclusionModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div>
+                <h3 class="text-lg font-semibold">Tambah Invoice Exclusion</h3>
+                <p class="text-sm text-gray-400 mt-0.5">Invoice yang dikecualikan dari reminder</p>
+            </div>
+            <button @click="showExclusionModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Invoice No <span class="text-red-400">*</span></label>
+                    <input type="text" x-model="exclusionForm.invoiceNo" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="INV-2026-XXXX">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Customer <span class="text-red-400">*</span></label>
+                    <input type="text" x-model="exclusionForm.customer" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="PT. Nama Perusahaan">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Amount (Miliar Rp)</label>
+                    <input type="number" x-model="exclusionForm.amount" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="45.5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5">Alasan</label>
+                    <select x-model="exclusionForm.alasan" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="Dispute">Dispute</option>
+                        <option value="Cancelled">Cancelled</option>
+                        <option value="Duplicate">Duplicate</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">Tanggal</label>
+                <input type="date" x-model="exclusionForm.date" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showExclusionModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="saveExclusion()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Bulk Import Exclusion -->
+<template x-if="showExclusionImportModal">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+    <div class="absolute inset-0 bg-black/60" @click="showExclusionImportModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div>
+                <h3 class="text-lg font-semibold">Bulk Import Exclusion</h3>
+                <p class="text-sm text-gray-400 mt-0.5">Upload file Excel/CSV daftar exclusion</p>
+            </div>
+            <button @click="showExclusionImportModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5">
+            <div class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" @click="$refs.exclusionImportInput.click()" @dragover.prevent="" @drop.prevent="exclusionImportFile=$event.dataTransfer.files[0]">
+                <template x-if="!exclusionImportFile">
+                    <div>
+                        <i data-lucide="file-spreadsheet" class="w-12 h-12 text-gray-500 mx-auto mb-3"></i>
+                        <p class="text-sm text-gray-400">Drag & drop file atau <span class="text-blue-400 font-medium">browse</span></p>
+                        <p class="text-xs text-gray-500 mt-1">Format: .xlsx, .csv (maks 10MB)</p>
+                    </div>
+                </template>
+                <template x-if="exclusionImportFile">
+                    <div>
+                        <i data-lucide="file-check" class="w-12 h-12 text-green-400 mx-auto mb-3"></i>
+                        <p class="text-sm text-green-400 font-medium" x-text="exclusionImportFile.name"></p>
+                        <p class="text-xs text-gray-500 mt-1">Klik untuk ganti file</p>
+                    </div>
+                </template>
+                <input type="file" x-ref="exclusionImportInput" accept=".xlsx,.csv" class="hidden" @change="exclusionImportFile=$event.target.files[0]">
+            </div>
+            <div class="mt-4 p-3 bg-gray-700/50 rounded-lg">
+                <p class="text-xs text-gray-400 font-medium mb-2">Format kolom yang diperlukan:</p>
+                <div class="flex flex-wrap gap-2">
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Invoice No</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Customer</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Amount</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Alasan</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showExclusionImportModal=false;exclusionImportFile=null" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="handleExclusionImport()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Import Sekarang</button>
+        </div>
+    </div>
+</div>
+</template>
+
+<!-- Modal: Import Baru Accurate -->
+<template x-if="showAccurateImportModal">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="showAccurateImportModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div>
+                <h3 class="text-lg font-semibold">Import Laporan Accurate</h3>
+                <p class="text-sm text-gray-400 mt-0.5">Upload file export dari software Accurate</p>
+            </div>
+            <button @click="showAccurateImportModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1.5">Tipe Import</label>
+                <select x-model="accurateImportType" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="journal">Journal Entry</option>
+                    <option value="invoice">Sales Invoice</option>
+                    <option value="payment">Payment</option>
+                    <option value="customer">Customer Master</option>
+                </select>
+            </div>
+            <div class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" @click="$refs.accurateInput.click()" @dragover.prevent="" @drop.prevent="accurateImportFile=$event.dataTransfer.files[0]">
+                <template x-if="!accurateImportFile">
+                    <div>
+                        <i data-lucide="file-spreadsheet" class="w-12 h-12 text-gray-500 mx-auto mb-3"></i>
+                        <p class="text-sm text-gray-400">Drag & drop file atau <span class="text-blue-400 font-medium">browse</span></p>
+                        <p class="text-xs text-gray-500 mt-1">Format: .xlsx, .csv (maks 10MB)</p>
+                    </div>
+                </template>
+                <template x-if="accurateImportFile">
+                    <div>
+                        <i data-lucide="file-check" class="w-12 h-12 text-green-400 mx-auto mb-3"></i>
+                        <p class="text-sm text-green-400 font-medium" x-text="accurateImportFile.name"></p>
+                        <p class="text-xs text-gray-500 mt-1">Klik untuk ganti file</p>
+                    </div>
+                </template>
+                <input type="file" x-ref="accurateInput" accept=".xlsx,.csv" class="hidden" @change="accurateImportFile=$event.target.files[0]">
+            </div>
+            <div class="p-3 bg-gray-700/50 rounded-lg">
+                <p class="text-xs text-gray-400 font-medium mb-2">Tips import:</p>
+                <ul class="text-xs text-gray-500 space-y-1">
+                    <li>• Export dari Accurate: Menu File → Export → Pilih tipe data</li>
+                    <li>• Pastikan kolom sesuai dengan format yang dipilih</li>
+                    <li>• File maksimal 10MB</li>
+                </ul>
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showAccurateImportModal=false;accurateImportFile=null" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="handleAccurateImport()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Import Sekarang</button>
+        </div>
+    </div>
+</div>
+</template>
+
+<!-- Modal: History Import Accurate -->
+<template x-if="showAccurateHistoryModal">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="showAccurateHistoryModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div>
+                <h3 class="text-lg font-semibold">Riwayat Import Accurate</h3>
+                <p class="text-sm text-gray-400 mt-0.5">Semua import yang pernah dilakukan</p>
+            </div>
+            <button @click="showAccurateHistoryModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5">
+            <table class="w-full text-sm">
+                <thead class="text-gray-400 text-xs uppercase">
+                    <tr><th class="text-left px-3 py-2 font-medium">Tanggal</th><th class="text-left px-3 py-2 font-medium">File</th><th class="text-left px-3 py-2 font-medium">Records</th><th class="text-left px-3 py-2 font-medium">Status</th><th class="text-left px-3 py-2 font-medium">User</th></tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700/50">
+                    <template x-for="h in accurateImportHistory" :key="h.id">
+                        <tr class="hover:bg-gray-700/30">
+                            <td class="px-3 py-2.5" x-text="h.tanggal"></td>
+                            <td class="px-3 py-2.5 font-mono text-xs" x-text="h.file"></td>
+                            <td class="px-3 py-2.5" x-text="h.records.toLocaleString()"></td>
+                            <td class="px-3 py-2.5"><span class="px-2 py-0.5 rounded-full text-xs" :class="h.status==='Success'?'bg-green-900/30 text-green-400':h.status==='Partial'?'bg-yellow-900/30 text-yellow-400':'bg-red-900/30 text-red-400'" x-text="h.status"></span></td>
+                            <td class="px-3 py-2.5" x-text="h.user"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        <div class="flex items-center justify-end p-5 border-t border-gray-700">
+            <button @click="showAccurateHistoryModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Tutup</button>
+        </div>
+    </div>
+</div>
+</template>
+
+
+<!-- Modal: Export Excel (Aging) -->
+<div x-show="showExportModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+    <div class="absolute inset-0 bg-black/60" @click="showExportModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div><h3 class="text-lg font-semibold">Export Aging Report</h3><p class="text-sm text-gray-400 mt-0.5">Pilih format dan periode export</p></div>
+            <button @click="showExportModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div><label class="block text-sm font-medium text-gray-300 mb-1.5">Format File</label>
+                <select x-model="exportFormat" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="xlsx">Excel (.xlsx)</option>
+                    <option value="csv">CSV (.csv)</option>
+                    <option value="pdf">PDF (.pdf)</option>
+                </select>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-300 mb-1.5">Periode</label>
+                <select x-model="exportPeriod" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="thisMonth">Bulan Ini</option>
+                    <option value="lastMonth">Bulan Lalu</option>
+                    <option value="quarter">Quarter Ini</option>
+                    <option value="year">Tahun Ini</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showExportModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="handleExportExcel()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> Download</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Import Bank Statement -->
+<div x-show="showReconImportModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+    <div class="absolute inset-0 bg-black/60" @click="showReconImportModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div><h3 class="text-lg font-semibold">Import Bank Statement</h3><p class="text-sm text-gray-400 mt-0.5">Upload file bank statement untuk reconciliation</p></div>
+            <button @click="showReconImportModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5">
+            <div class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" @click="$refs.reconInput.click()" @dragover.prevent="" @drop.prevent="reconImportFile=$event.dataTransfer.files[0]">
+                <template x-if="!reconImportFile">
+                    <div>
+                        <i data-lucide="file-spreadsheet" class="w-12 h-12 text-gray-500 mx-auto mb-3"></i>
+                        <p class="text-sm text-gray-400">Drag & drop file atau <span class="text-blue-400 font-medium">browse</span></p>
+                        <p class="text-xs text-gray-500 mt-1">Format: .xlsx, .csv (maks 10MB)</p>
+                    </div>
+                </template>
+                <template x-if="reconImportFile">
+                    <div>
+                        <i data-lucide="file-check" class="w-12 h-12 text-green-400 mx-auto mb-3"></i>
+                        <p class="text-sm text-green-400 font-medium" x-text="reconImportFile.name"></p>
+                        <p class="text-xs text-gray-500 mt-1">Klik untuk ganti file</p>
+                    </div>
+                </template>
+                <input type="file" x-ref="reconInput" accept=".xlsx,.csv" class="hidden" @change="reconImportFile=$event.target.files[0]">
+            </div>
+            <div class="mt-4 p-3 bg-gray-700/50 rounded-lg">
+                <p class="text-xs text-gray-400 font-medium mb-2">Format yang didukung:</p>
+                <div class="flex flex-wrap gap-2">
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">BCA Statement</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Mandiri Statement</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">BRI Statement</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Manual CSV</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showReconImportModal=false;reconImportFile=null" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="handleReconImport()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Import Sekarang</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Run Matching Progress -->
+<template x-if="showRunMatchingModal">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-sm p-8 text-center">
+        <template x-if="reconMatchingStatus==='running'">
+            <div>
+                <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <h3 class="text-lg font-semibold">Running Auto-Matching...</h3>
+                <p class="text-sm text-gray-400 mt-1">Mencocokkan transaksi bank dengan invoice AR</p>
+            </div>
+        </template>
+        <template x-if="reconMatchingStatus==='done'">
+            <div>
+                <div class="w-16 h-16 bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="check-circle" class="w-8 h-8 text-green-400"></i></div>
+                <h3 class="text-lg font-semibold text-green-400">Matching Selesai!</h3>
+                <p class="text-sm text-gray-400 mt-1">198 matched, 28 review, 8 unmatched</p>
+            </div>
+        </template>
+    </div>
+</div>
+</template>
+
+<!-- Modal: Send Batch Reminder -->
+<div x-show="showSendBatchModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+    <div class="absolute inset-0 bg-black/60" @click="showSendBatchModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div><h3 class="text-lg font-semibold">Kirim Reminder Batch</h3><p class="text-sm text-gray-400 mt-0.5">Konfirmasi pengiriman reminder</p></div>
+            <button @click="showSendBatchModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="p-3 bg-gray-700/50 rounded-lg">
+                <p class="text-sm"><span class="font-medium" x-text="selectedReminders.length"></span> reminder akan dikirim</p>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-300 mb-1.5">Channel</label>
+                <select x-model="reminderBatchChannel" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="both">Email + WhatsApp</option>
+                    <option value="email">Email saja</option>
+                    <option value="whatsapp">WhatsApp saja</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2 p-3 bg-yellow-900/20 border border-yellow-800 rounded-lg">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-yellow-400 flex-shrink-0"></i>
+                <p class="text-xs text-yellow-400">Reminder akan dikirim langsung ke customer. Pastikan data sudah benar.</p>
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showSendBatchModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="sendBatchReminder()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"><i data-lucide="send" class="w-4 h-4"></i> Kirim Sekarang</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Template Detail -->
+<div x-show="showTemplateModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+    <div class="absolute inset-0 bg-black/60" @click="showTemplateModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div><h3 class="text-lg font-semibold" x-text="selectedTemplate + ' Template'"></h3><p class="text-sm text-gray-400 mt-0.5">Preview isi pesan reminder</p></div>
+            <button @click="showTemplateModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="p-4 bg-gray-700/50 rounded-lg">
+                <p class="text-xs text-gray-400 mb-2 font-medium">Email Subject:</p>
+                <p class="text-sm" x-text="selectedTemplate==='Level 1'?'[Friendly] Pengingat Pembayaran Invoice':selectedTemplate==='Level 2'?'[Firm] Peringatan Pembayaran - Tindakan Diperlukan':'[URGENT] Final Notice - Pembayaran Harus Dilakukan'" ></p>
+            </div>
+            <div class="p-4 bg-gray-700/50 rounded-lg">
+                <p class="text-xs text-gray-400 mb-2 font-medium">Isi Pesan:</p>
+                <p class="text-sm text-gray-300 leading-relaxed" x-text="selectedTemplate==='Level 1'?'Yth. Bapak/Ibu,\n\nKami ingin mengingatkan bahwa terdapat invoice yang belum dibayar. Mohon lakukan pembayaran sesuai dengan jatuh tempo.\n\nTerima kasih.':selectedTemplate==='Level 2'?'Yth. Bapak/Ibu,\n\nBerdasarkan catatan kami, invoice berikut telah melewati jatuh tempo. Kami mohon segera melakukan pembayaran untuk menghindari penyesuaian credit limit.\n\nHormat kami,':'PERINGATAN: Invoice berikut telah sangat lama belum dibayar.\n\nJika pembayaran tidak diterima dalam 7 hari, kami akan melakukan eskalasi lebih lanjut.\n\nSegera hubungi kami untuk penyelesaian.'"></p>
+            </div>
+            <div x-show="selectedTemplate!=='Level 1'" class="p-3 bg-red-900/20 border border-red-800 rounded-lg flex items-center gap-2">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-red-400 flex-shrink-0"></i>
+                <p class="text-xs text-red-400">Template ini akan mengirim WhatsApp notifikasi juga</p>
+            </div>
+        </div>
+        <div class="flex items-center justify-end p-5 border-t border-gray-700">
+            <button @click="showTemplateModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Tambah/Edit User -->
+<div x-show="showUserModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+    <div class="absolute inset-0 bg-black/60" @click="showUserModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div><h3 class="text-lg font-semibold" x-text="editingUser?'Edit User':'Tambah User Baru'"></h3><p class="text-sm text-gray-400 mt-0.5" x-text="editingUser?'Update data pengguna':'Isi data pengguna baru'"></p></div>
+            <button @click="showUserModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div><label class="block text-sm font-medium text-gray-300 mb-1.5">Nama <span class="text-red-400">*</span></label>
+                <input type="text" x-model="userForm.name" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Nama lengkap">
+            </div>
+            <div><label class="block text-sm font-medium text-gray-300 mb-1.5">Email <span class="text-red-400">*</span></label>
+                <input type="email" x-model="userForm.email" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="email@dmx.co.id">
+            </div>
+            <div><label class="block text-sm font-medium text-gray-300 mb-1.5">Role</label>
+                <select x-model="userForm.role" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="admin">Admin</option>
+                    <option value="finance_manager">Finance Manager</option>
+                    <option value="ar_accountant">AR Accountant</option>
+                    <option value="ar_collector">AR Collector</option>
+                    <option value="sales_manager">Sales Manager</option>
+                    <option value="viewer">Viewer</option>
+                </select>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-300 mb-1.5" x-text="editingUser?'Password (kosongkan jika tidak diubah)':'Password'" ></label>
+                <input type="password" x-model="userForm.password" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Min. 8 karakter">
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showUserModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="saveUser()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors" x-text="editingUser?'Update User':'Simpan User'"></button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

@@ -86,7 +86,7 @@
                 <div><label class="block text-sm font-medium mb-1">Password</label><input type="password" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm"></div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" @click="showModal = false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Simpan</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium" x-text="editingUser ? 'Update User' : 'Simpan User'"></button>
                 </div>
             </form>
         </div>
@@ -96,6 +96,43 @@
 
 @section('scripts')
 <script>
-function usersPage() { return { showModal: false, init() { this.$nextTick(() => lucide.createIcons()); } } }
+function usersPage() {
+    return {
+        showModal: false,
+        editingUser: null,
+        form: { name: '', email: '', role: 'AR Accountant', password: '' },
+        users: [
+            { id: 1, name: 'Hengki', email: 'hengki@dmx.co.id', role: 'Admin', status: 'Active' },
+            { id: 2, name: 'Ahmad Fauzi', email: 'ahmad@dmx.co.id', role: 'AR Accountant', status: 'Active' },
+            { id: 3, name: 'Siti Rahayu', email: 'siti@dmx.co.id', role: 'AR Collector', status: 'Active' },
+        ],
+        openEdit(u) {
+            this.editingUser = u;
+            this.form = { name: u.name, email: u.email, role: u.role, password: '' };
+            this.showModal = true;
+        },
+        saveUser() {
+            if (!this.form.name || !this.form.email) { showToast('Nama dan email harus diisi', 'error'); return; }
+            if (this.editingUser) {
+                this.editingUser.name = this.form.name;
+                this.editingUser.email = this.form.email;
+                this.editingUser.role = this.form.role;
+                showToast('User ' + this.form.name + ' berhasil diupdate!', 'success');
+            } else {
+                this.users.push({ id: Date.now(), name: this.form.name, email: this.form.email, role: this.form.role, status: 'Active' });
+                showToast('User ' + this.form.name + ' berhasil ditambahkan!', 'success');
+            }
+            this.showModal = false;
+            this.editingUser = null;
+            this.form = { name: '', email: '', role: 'AR Accountant', password: '' };
+            this.$nextTick(() => lucide.createIcons());
+        },
+        deleteUser(id) {
+            this.users = this.users.filter(u => u.id !== id);
+            showToast('User berhasil dihapus', 'success');
+        },
+        init() { this.$nextTick(() => lucide.createIcons()); }
+    }
+}
 </script>
 @endsection
