@@ -75,13 +75,35 @@
                 <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Tools AR</p>
             </div>
 
-            <!-- Tool 1: Invoice Exclusion -->
-            <a href="{{ route('exclusions.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                      {{ request()->routeIs('exclusions.*') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
-                <i data-lucide="shield-x" class="w-5 h-5 flex-shrink-0"></i>
-                <span x-show="sidebarExpanded" x-transition class="whitespace-nowrap">Invoice Exclusion</span>
-            </a>
+            <!-- Customer Group -->
+            <div x-data="{ open: {{ request()->routeIs('exclusions.*','accurate.*') ? 'true' : 'false' }} }">
+                <button @click="open = !open" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                       {{ request()->routeIs('exclusions.*','accurate.*') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                    <i data-lucide="database" class="w-5 h-5 flex-shrink-0"></i>
+                    <span x-show="sidebarExpanded" x-transition class="whitespace-nowrap flex-1 text-left">Data</span>
+                    <i x-show="sidebarExpanded" :data-lucide="open ? 'chevron-up' : 'chevron-down'" class="w-4 h-4 flex-shrink-0"></i>
+                </button>
+                <div x-show="open && sidebarExpanded" x-transition class="ml-5 mt-0.5 space-y-0.5 border-l border-gray-200 dark:border-gray-700 pl-3">
+                    <a href="{{ route('customers.index') }}"
+                       class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                              {{ request()->routeIs('customers.*') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200' }}">
+                        <i data-lucide="users" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="whitespace-nowrap">Customer</span>
+                    </a>
+                    <a href="{{ route('exclusions.index') }}"
+                       class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                              {{ request()->routeIs('exclusions.*') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200' }}">
+                        <i data-lucide="shield-x" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="whitespace-nowrap">Invoice Exclusion</span>
+                    </a>
+                    <a href="{{ route('accurate.index') }}"
+                       class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors
+                              {{ request()->routeIs('accurate.*') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200' }}">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="whitespace-nowrap">Import Laporan Accurate</span>
+                    </a>
+                </div>
+            </div>
 
             <!-- Tool 2: Aging Report -->
             <a href="{{ route('aging.index') }}"
