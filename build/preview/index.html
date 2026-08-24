@@ -533,42 +533,38 @@
 <div>
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div><h1 class="text-xl font-bold">Collection Status Tracker</h1><p class="text-sm text-gray-400">Pantau status penagihan dan riwayat aksi</p></div>
-        <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="plus" class="w-4 h-4"></i> Add Action</button>
+        <button @click="openTrackerAction(trackers[0])" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="plus" class="w-4 h-4"></i> Add Action</button>
     </div>
     <div class="flex flex-wrap gap-2 mb-6">
-        <button class="px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium">Semua (89)</button>
-        <button class="px-4 py-2 bg-gray-700 rounded-full text-sm">Open (34)</button>
-        <button class="px-4 py-2 bg-gray-700 rounded-full text-sm">In Progress (28)</button>
-        <button class="px-4 py-2 bg-gray-700 rounded-full text-sm">Escalated (8)</button>
+        <button @click="trackerFilter='all'" class="px-4 py-2 rounded-full text-sm font-medium transition-colors" :class="trackerFilter==='all'?'bg-blue-600 text-white':'bg-gray-700 hover:bg-gray-600'"><span x-text="'Semua ('+trackerCount('all')+')'"></span></button>
+        <button @click="trackerFilter='Open'" class="px-4 py-2 rounded-full text-sm font-medium transition-colors" :class="trackerFilter==='Open'?'bg-blue-600 text-white':'bg-gray-700 hover:bg-gray-600'"><span x-text="'Open ('+trackerCount('Open')+')'"></span></button>
+        <button @click="trackerFilter='In Progress'" class="px-4 py-2 rounded-full text-sm font-medium transition-colors" :class="trackerFilter==='In Progress'?'bg-blue-600 text-white':'bg-gray-700 hover:bg-gray-600'"><span x-text="'In Progress ('+trackerCount('In Progress')+')'"></span></button>
+        <button @click="trackerFilter='Escalated'" class="px-4 py-2 rounded-full text-sm font-medium transition-colors" :class="trackerFilter==='Escalated'?'bg-blue-600 text-white':'bg-gray-700 hover:bg-gray-600'"><span x-text="'Escalated ('+trackerCount('Escalated')+')'"></span></button>
+        <button @click="trackerFilter='Settled'" class="px-4 py-2 rounded-full text-sm font-medium transition-colors" :class="trackerFilter==='Settled'?'bg-blue-600 text-white':'bg-gray-700 hover:bg-gray-600'"><span x-text="'Settled ('+trackerCount('Settled')+')'"></span></button>
     </div>
     <div class="space-y-4">
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
-            <div class="flex items-start gap-4">
-                <div class="w-10 h-10 bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0"><i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i></div>
-                <div class="flex-1">
-                    <div class="flex items-center gap-2"><h3 class="font-semibold">PT. Makmur Sejahtera</h3><span class="px-2 py-0.5 bg-red-900/30 text-red-400 rounded-full text-xs font-medium">Escalated</span></div>
-                    <p class="text-sm text-gray-400 mt-0.5">INV-2026-0712 • Rp 156.8M • 93 hari</p>
-                    <div class="mt-3 pl-4 border-l-2 border-gray-700 space-y-2">
-                        <div class="flex items-start gap-2 text-sm"><span class="text-xs text-gray-500 whitespace-nowrap">20 Agt</span><div class="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div><p>Phone call - Customer janji bayar 25 Agt</p></div>
-                        <div class="flex items-start gap-2 text-sm"><span class="text-xs text-gray-500 whitespace-nowrap">15 Agt</span><div class="w-2 h-2 bg-yellow-500 rounded-full mt-1.5 flex-shrink-0"></div><p>Email reminder Level 3 terkirim</p></div>
-                        <div class="flex items-start gap-2 text-sm"><span class="text-xs text-gray-500 whitespace-nowrap">10 Agt</span><div class="w-2 h-2 bg-gray-400 rounded-full mt-1.5 flex-shrink-0"></div><p>Escalated ke Finance Manager</p></div>
+        <template x-for="t in filteredTrackers" :key="t.id">
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" :class="t.status==='Escalated'?'bg-red-900/30':t.status==='In Progress'?'bg-yellow-900/30':t.status==='Settled'?'bg-green-900/30':'bg-blue-900/30'"><i :data-lucide="t.status==='Escalated'?'alert-circle':t.status==='Settled'?'check-circle':'clock'" class="w-5 h-5" :class="t.status==='Escalated'?'text-red-400':t.status==='In Progress'?'text-yellow-400':t.status==='Settled'?'text-green-400':'text-blue-400'"></i></div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2"><h3 class="font-semibold" x-text="t.customer"></h3><span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="t.status==='Escalated'?'bg-red-900/30 text-red-400':t.status==='In Progress'?'bg-yellow-900/30 text-yellow-400':t.status==='Settled'?'bg-green-900/30 text-green-400':'bg-blue-900/30 text-blue-400'" x-text="t.status"></span></div>
+                        <p class="text-sm text-gray-400 mt-0.5"><span x-text="t.invoice"></span> • <span x-text="t.amount"></span> • <span x-text="t.days"></span> hari</p>
+                        <div class="mt-3 pl-4 border-l-2 border-gray-700 space-y-2">
+                            <template x-for="(a, ai) in t.actions" :key="ai">
+                                <div class="flex items-start gap-2 text-sm">
+                                    <span class="text-xs text-gray-500 whitespace-nowrap" x-text="a.date"></span>
+                                    <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" :class="a.type==='phone'?'bg-blue-500':a.type==='email'?'bg-yellow-500':a.type==='escalate'?'bg-gray-400':a.type==='payment'?'bg-green-500':'bg-purple-500'"></div>
+                                    <p class="flex-1" x-text="a.text"></p>
+                                    <button @click="deleteTrackerAction(t, ai)" class="text-gray-500 hover:text-red-500 flex-shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button>
+                                </div>
+                            </template>
+                        </div>
                     </div>
+                    <button @click="openTrackerAction(t)" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium whitespace-nowrap">Add Action</button>
                 </div>
-                <button class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium">Add Action</button>
             </div>
-        </div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
-            <div class="flex items-start gap-4">
-                <div class="w-10 h-10 bg-yellow-900/30 rounded-full flex items-center justify-center flex-shrink-0"><i data-lucide="clock" class="w-5 h-5 text-yellow-400"></i></div>
-                <div class="flex-1"><div class="flex items-center gap-2"><h3 class="font-semibold">PT. Sukses Abadi</h3><span class="px-2 py-0.5 bg-yellow-900/30 text-yellow-400 rounded-full text-xs font-medium">Promise to Pay</span></div><p class="text-sm text-gray-400 mt-0.5">INV-2026-0798 • Rp 89.2M • 52 hari</p></div>
-            </div>
-        </div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-5">
-            <div class="flex items-start gap-4">
-                <div class="w-10 h-10 bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0"><i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i></div>
-                <div class="flex-1"><div class="flex items-center gap-2"><h3 class="font-semibold">PT. Maju Jaya</h3><span class="px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full text-xs font-medium">Settled</span></div><p class="text-sm text-gray-400 mt-0.5">INV-2026-0847 • Rp 45.5M • Dibayar tepat waktu</p></div>
-            </div>
-        </div>
+        </template>
     </div>
 </div>
 </template>
@@ -1007,6 +1003,84 @@ function app() {
         deleteUser(id) {
             this.users = this.users.filter(u => u.id !== id);
             this.showToast('User berhasil dihapus', 'success');
+            setTimeout(() => lucide.createIcons(), 100);
+        },
+
+        /* ===== COLLECTION TRACKER ===== */
+        trackerFilter: 'all',
+        showTrackerActionModal: false,
+        trackerTarget: null,
+        trackerAction: { type: 'phone', note: '', date: '' },
+        trackers: [
+            {
+                id: 1, customer: 'PT. Makmur Sejahtera', invoice: 'INV-2026-0712', amount: 'Rp 156.8M', days: 93, status: 'Escalated',
+                actions: [
+                    { date: '20 Agt', type: 'phone', text: 'Phone call - Customer janji bayar 25 Agt' },
+                    { date: '15 Agt', type: 'email', text: 'Email reminder Level 3 terkirim' },
+                    { date: '10 Agt', type: 'escalate', text: 'Escalated ke Finance Manager' },
+                ]
+            },
+            {
+                id: 2, customer: 'PT. Sukses Abadi', invoice: 'INV-2026-0798', amount: 'Rp 89.2M', days: 52, status: 'In Progress',
+                actions: [
+                    { date: '18 Agt', type: 'phone', text: 'Phone call - Janji bayar minggu depan' },
+                    { date: '12 Agt', type: 'email', text: 'Email reminder Level 2 terkirim' },
+                ]
+            },
+            {
+                id: 3, customer: 'PT. Maju Jaya', invoice: 'INV-2026-0847', amount: 'Rp 45.5M', days: 7, status: 'Settled',
+                actions: [
+                    { date: '22 Agt', type: 'payment', text: 'Pembayaran diterima - LUNAS' },
+                ]
+            },
+            {
+                id: 4, customer: 'PT. Berkah Mandiri', invoice: 'INV-2026-0819', amount: 'Rp 35.0M', days: 38, status: 'Open',
+                actions: [
+                    { date: '19 Agt', type: 'email', text: 'Email reminder Level 1 terkirim' },
+                ]
+            },
+            {
+                id: 5, customer: 'PT. Sentosa Jaya', invoice: 'INV-2026-0855', amount: 'Rp 22.0M', days: 15, status: 'In Progress',
+                actions: [
+                    { date: '21 Agt', type: 'phone', text: 'Phone call - Konfirmasi jadwal bayar' },
+                    { date: '15 Agt', type: 'email', text: 'Email reminder Level 1 terkirim' },
+                ]
+            },
+        ],
+        get filteredTrackers() {
+            if (this.trackerFilter === 'all') return this.trackers;
+            return this.trackers.filter(t => t.status === this.trackerFilter);
+        },
+        trackerCount(filter) {
+            if (filter === 'all') return this.trackers.length;
+            return this.trackers.filter(t => t.status === filter).length;
+        },
+        openTrackerAction(tracker) {
+            this.trackerTarget = tracker;
+            this.trackerAction = { type: 'phone', note: '', date: new Date().toISOString().split('T')[0] };
+            this.showTrackerActionModal = true;
+        },
+        saveTrackerAction() {
+            if (!this.trackerAction.note) {
+                this.showToast('Catatan aksi harus diisi', 'error');
+                return;
+            }
+            const today = new Date();
+            const dayNames = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+            const dateStr = today.getDate() + ' ' + today.toLocaleString('id-ID', {month:'short'});
+            const typeLabels = { phone: 'Phone call', email: 'Email', escalate: 'Escalated', payment: 'Pembayaran', visit: 'Kunjungan' };
+            this.trackerTarget.actions.unshift({
+                date: dateStr,
+                type: this.trackerAction.type,
+                text: (typeLabels[this.trackerAction.type] || this.trackerAction.type) + ' - ' + this.trackerAction.note
+            });
+            this.showTrackerActionModal = false;
+            this.showToast('Aksi berhasil ditambahkan!', 'success');
+            setTimeout(() => lucide.createIcons(), 100);
+        },
+        deleteTrackerAction(tracker, idx) {
+            tracker.actions.splice(idx, 1);
+            this.showToast('Aksi berhasil dihapus', 'success');
             setTimeout(() => lucide.createIcons(), 100);
         }
     }
@@ -1498,6 +1572,45 @@ function app() {
         <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
             <button @click="showUserModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
             <button @click="saveUser()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors" x-text="editingUser?'Update User':'Simpan User'"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Tracker Action -->
+<div x-show="showTrackerActionModal" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="showTrackerActionModal=false"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md">
+        <div class="flex items-center justify-between p-5 border-b border-gray-700">
+            <div>
+                <h3 class="text-lg font-semibold">Tambah Aksi</h3>
+                <p class="text-sm text-gray-400 mt-0.5">Tambah aksi penagihan baru</p>
+            </div>
+            <button @click="showTrackerActionModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="p-3 bg-gray-700/50 rounded-lg">
+                <p class="text-sm"><span class="font-medium" x-text="trackerTarget?.customer"></span></p>
+                <p class="text-xs text-gray-400 mt-0.5"><span x-text="trackerTarget?.invoice"></span> • <span x-text="trackerTarget?.amount"></span></p>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-300 mb-1.5">Tipe Aksi</label>
+                <select x-model="trackerAction.type" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="phone">Phone Call</option>
+                    <option value="email">Email</option>
+                    <option value="visit">Kunjungan</option>
+                    <option value="escalate">Escalation</option>
+                    <option value="payment">Pembayaran Diterima</option>
+                </select>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-300 mb-1.5">Tanggal</label>
+                <input type="date" x-model="trackerAction.date" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            </div>
+            <div><label class="block text-sm font-medium text-gray-300 mb-1.5">Catatan <span class="text-red-400">*</span></label>
+                <textarea x-model="trackerAction.note" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" placeholder="Deskripsi aksi yang dilakukan..."></textarea>
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
+            <button @click="showTrackerActionModal=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="saveTrackerAction()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Simpan Aksi</button>
         </div>
     </div>
 </div>
