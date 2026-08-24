@@ -310,7 +310,7 @@
     <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
             <h3 class="font-semibold">Daftar Customer</h3>
-            <input type="text" placeholder="Cari customer..." class="bg-gray-700 border-0 rounded-lg px-3 py-1.5 text-sm w-64">
+            <input type="text" x-model="customerSearch" placeholder="Cari customer..." class="bg-gray-700 border-0 rounded-lg px-3 py-1.5 text-sm w-64">
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -318,7 +318,7 @@
                     <tr><th class="px-4 py-3 text-left">Kode</th><th class="px-4 py-3 text-left">Nama</th><th class="px-4 py-3 text-left">Kota</th><th class="px-4 py-3 text-left">Credit Limit</th><th class="px-4 py-3 text-left">Outstanding</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-right">Aksi</th></tr>
                 </thead>
                 <tbody class="divide-y divide-gray-700/50">
-                    <template x-for="c in customers" :key="c.kode">
+                    <template x-for="c in filteredCustomers" :key="c.kode">
                         <tr class="hover:bg-gray-700/30 cursor-pointer" @dblclick="openEditCustomer(c)">
                             <td class="px-4 py-3 font-mono text-xs" x-text="c.kode"></td>
                             <td class="px-4 py-3" x-text="c.nama"></td>
@@ -708,6 +708,12 @@ function app() {
             setTimeout(() => lucide.createIcons(), 100);
         },
         editingCustomer: null,
+        customerSearch: '',
+        get filteredCustomers() {
+            if (!this.customerSearch) return this.customers;
+            const q = this.customerSearch.toLowerCase();
+            return this.customers.filter(c => c.nama.toLowerCase().includes(q) || c.kode.toLowerCase().includes(q) || c.kota.toLowerCase().includes(q));
+        },
         customerForm: { kode: '', nama: '', kota: '', creditLimit: '', email: '', telepon: '', alamat: '' },
         importFile: null,
         toast: { show: false, message: '', type: 'success' },
