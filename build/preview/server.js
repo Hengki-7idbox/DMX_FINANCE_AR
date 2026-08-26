@@ -23,7 +23,7 @@ const server = http.createServer((req, res) => {
             res.end('Not found');
         } else {
             const ext = path.extname(filePath);
-            res.writeHead(200, { 'Content-Type': MIME[ext] || 'text/plain' });
+            res.writeHead(200, { 'Content-Type': MIME[ext] || 'text/plain', 'Cache-Control': 'no-store, no-cache, must-revalidate' });
             res.end(data);
         }
     });

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -105,14 +106,14 @@
                     <label class="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
                     <div class="relative">
                         <i data-lucide="mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
-                        <input type="email" x-model="loginEmail" class="w-full pl-10 pr-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="email@dmx.co.id" @keyup.enter="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='admin@dmx.co.id'||loginPassword!=='admin'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)">
+                        <input type="email" x-model="loginEmail" class="w-full pl-10 pr-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="email@dmx.co.id" @keyup.enter="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='admin'||loginPassword!=='admin'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)">
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
                     <div class="relative" x-data="{show:false}">
                         <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
-                        <input :type="show?'text':'password'" x-model="loginPassword" class="w-full pl-10 pr-10 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="Masukkan password" @keyup.enter="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='admin@dmx.co.id'||loginPassword!=='admin'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)">
+                        <input :type="show?'text':'password'" x-model="loginPassword" class="w-full pl-10 pr-10 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" placeholder="Masukkan password" @keyup.enter="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='admin'||loginPassword!=='admin'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)">
                         <button type="button" @click="show=!show" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"><i data-lucide="eye" class="w-4 h-4"></i></button>
                     </div>
                 </div>
@@ -120,7 +121,7 @@
                     <input type="checkbox" class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600">
                     <span class="text-sm text-gray-400">Ingat saya</span>
                 </div>                    <p x-show="loginError" x-text="loginError" class="text-red-400 text-sm text-center mb-3"></p>
-                    <button @click="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='admin@dmx.co.id'||loginPassword!=='admin'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors" type="submit">Masuk</button>
+                    <button @click="if(!loginEmail||!loginPassword){loginError='Email dan password harus diisi';return;}if(loginEmail!=='admin'||loginPassword!=='admin'){loginError='Email atau password salah';return;}loginError='';page='dashboard';setTimeout(()=>{lucide.createIcons();renderCharts()},100)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors" type="submit">Masuk</button>
             </div>
         </div>
         <p class="text-center text-gray-500 text-xs mt-6">AR Finance Tools v1.0 &copy; 2026</p>
@@ -292,6 +293,8 @@
 </div>
 </template>
 
+<!-- =================== IMPORT ACCURATE =================== -->
+
 <!-- =================== CUSTOMER =================== -->
 <template x-if="page==='customers'">
 <div>
@@ -318,7 +321,7 @@
                     <tr><th class="px-4 py-3 text-left">Kode</th><th class="px-4 py-3 text-left">Nama</th><th class="px-4 py-3 text-left">Kota</th><th class="px-4 py-3 text-left">Credit Limit</th><th class="px-4 py-3 text-left">Outstanding</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-right">Aksi</th></tr>
                 </thead>
                 <tbody class="divide-y divide-gray-700/50">
-                    <template x-for="c in filteredCustomers" :key="c.kode">
+                    <template x-for="c in filteredCustomers()" :key="c.kode">
                         <tr class="hover:bg-gray-700/30 cursor-pointer" @dblclick="openEditCustomer(c)">
                             <td class="px-4 py-3 font-mono text-xs" x-text="c.kode"></td>
                             <td class="px-4 py-3" x-text="c.nama"></td>
@@ -336,39 +339,78 @@
 </div>
 </template>
 
-<!-- =================== IMPORT ACCURATE =================== -->
 <template x-if="page==='import-accurate'">
 <div>
+    <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div><h1 class="text-xl font-bold">Import Laporan Accurate</h1><p class="text-sm text-gray-400">Import data transaksi dari software Accurate</p></div>
+        <div><h1 class="text-xl font-bold">Import Laporan Accurate</h1><p class="text-sm text-gray-500 dark:text-gray-400">Data piutang dari software Accurate</p></div>
         <div class="flex gap-2">
-            <button @click="showAccurateHistoryModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"><i data-lucide="history" class="w-4 h-4"></i> History Import</button>
             <button @click="showClearAccurateModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/30 rounded-lg text-sm font-medium"><i data-lucide="trash-2" class="w-4 h-4"></i> Clear Data</button>
             <button @click="showAccurateImportModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Import Baru</button>
         </div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Total Import</p><p class="text-2xl font-bold mt-1" x-text="accurateImportHistory.length"></p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Records Imported</p><p class="text-2xl font-bold mt-1 text-blue-400" x-text="accurateImportHistory.reduce((a,b)=>a+b.records,0).toLocaleString()"></p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Last Import</p><p class="text-lg font-bold mt-1" x-text="accurateImportHistory.length > 0 ? accurateImportHistory[0].tanggal : '-'"></p></div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Total Invoice</p><p class="text-2xl font-bold mt-1" x-text="accuratePiutang.length"></p></div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Total Outstanding</p><p class="text-2xl font-bold mt-1 text-orange-500" x-text="fmtRp(accuratePiutang.reduce((s,p)=>s+p.total,0))"></p></div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Overdue (&gt;90)</p><p class="text-2xl font-bold mt-1 text-red-500" x-text="accuratePiutang.filter(p=>p.ageInvoice>90).length+' Invoice'"></p></div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Last Import</p><p class="text-lg font-bold mt-1" x-text="accurateLastImport||'-'"></p></div>
     </div>
-    <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-700"><h3 class="font-semibold">Riwayat Import</h3></div>
+
+    <!-- Data Piutang Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="font-semibold">Data Piutang</h3>
+            <input type="text" x-model="accurateSearch" placeholder="Cari customer/invoice..." class="bg-gray-100 dark:bg-gray-700 border-0 rounded-lg px-3 py-1.5 text-sm w-64 focus:ring-2 focus:ring-blue-500">
+        </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-900/50 text-gray-400 text-xs uppercase">
-                    <tr><th class="px-4 py-3 text-left">Tanggal</th><th class="px-4 py-3 text-left">File</th><th class="px-4 py-3 text-left">Records</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-left">User</th></tr>
+            <table class="w-full text-xs">
+                <thead class="bg-gray-100 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 uppercase">
+                    <tr>
+                        <th class="px-3 py-3 text-left">Cust No</th>
+                        <th class="px-3 py-3 text-left">Customer Name</th>
+                        <th class="px-3 py-3 text-left">Invoice No</th>
+                        <th class="px-3 py-3 text-left">Invoice Date</th>
+                        <th class="px-3 py-3 text-right">Total Prime Curr</th>
+                        <th class="px-3 py-3 text-right">1-30</th>
+                        <th class="px-3 py-3 text-right">31-60</th>
+                        <th class="px-3 py-3 text-right">61-90</th>
+                        <th class="px-3 py-3 text-right">91-120</th>
+                        <th class="px-3 py-3 text-right">&gt;120</th>
+                        <th class="px-3 py-3 text-center">Age Invoice</th>
+                        <th class="px-3 py-3 text-center">Age Due</th>
+                        <th class="px-3 py-3 text-center">Suspend</th>
+                        <th class="px-3 py-3 text-right">Credit Limit</th>
+                        <th class="px-3 py-3 text-center">Term Net</th>
+                    </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-700/50">
-                    <template x-for="h in accurateImportHistory" :key="h.id">
-                        <tr class="hover:bg-gray-700/30">
-                            <td class="px-4 py-3" x-text="h.tanggal"></td>
-                            <td class="px-4 py-3 font-mono text-xs" x-text="h.file"></td>
-                            <td class="px-4 py-3" x-text="h.records.toLocaleString()"></td>
-                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs" :class="h.status==='Success'?'bg-green-900/30 text-green-400':h.status==='Partial'?'bg-yellow-900/30 text-yellow-400':'bg-red-900/30 text-red-400'" x-text="h.status"></span></td>
-                            <td class="px-4 py-3" x-text="h.user"></td>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700/50">
+                    <template x-for="p in filteredAccuratePiutang()" :key="p.invoiceNo">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                            <td class="px-3 py-2.5 font-mono" x-text="p.custNo"></td>
+                            <td class="px-3 py-2.5 font-medium" x-text="p.custName"></td>
+                            <td class="px-3 py-2.5 font-mono" x-text="p.invoiceNo"></td>
+                            <td class="px-3 py-2.5 text-gray-500 dark:text-gray-400" x-text="p.invoiceDate"></td>
+                            <td class="px-3 py-2.5 text-right font-medium" x-text="fmtRp(p.total)"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age1_30>0?'text-yellow-600 dark:text-yellow-400':'text-gray-400'" x-text="p.age1_30>0?fmtRp(p.age1_30):'-'"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age31_60>0?'text-orange-600 dark:text-orange-400':'text-gray-400'" x-text="p.age31_60>0?fmtRp(p.age31_60):'-'"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age61_90>0?'text-red-500':'text-gray-400'" x-text="p.age61_90>0?fmtRp(p.age61_90):'-'"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age91_120>0?'text-red-600':'text-gray-400'" x-text="p.age91_120>0?fmtRp(p.age91_120):'-'"></td>
+                            <td class="px-3 py-2.5 text-right font-medium" :class="p.ageOver120>0?'text-red-700 dark:text-red-400':'text-gray-400'" x-text="p.ageOver120>0?fmtRp(p.ageOver120):'-'"></td>
+                            <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs" :class="p.ageInvoice<=30?'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400':p.ageInvoice<=60?'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400':p.ageInvoice<=90?'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400':'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'" x-text="p.ageInvoice+'h'"></span></td>
+                            <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs" :class="p.ageDue<=30?'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400':p.ageDue<=60?'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400':p.ageDue<=90?'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400':'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'" x-text="p.ageDue+'h'"></span></td>
+                            <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs" :class="p.suspend==='Yes'?'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400':'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'" x-text="p.suspend"></span></td>
+                            <td class="px-3 py-2.5 text-right text-gray-500 dark:text-gray-400" x-text="fmtRp(p.creditLimit)"></td>
+                            <td class="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400" x-text="p.termNet+'h'"></td>
                         </tr>
                     </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</template>
                 </tbody>
             </table>
         </div>
@@ -714,7 +756,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
             <p class="text-sm text-gray-400">Total AR China</p>
-            <p class="text-2xl font-bold mt-1" x-text="'Rp ' + agingChinaData.reduce((a,b)=>a+b.outstanding,0).toLocaleString() + 'M'"></p>
+            <p class="text-2xl font-bold mt-1" x-text="fmtRp(agingChinaData.reduce((a,b)=>a+b.outstanding,0))"></p>
         </div>
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
             <p class="text-sm text-gray-400">Total Customer</p>
@@ -745,7 +787,7 @@
                     <tr>
                         <th class="px-4 py-3 text-left">Customer</th>
                         <th class="px-4 py-3 text-left">Kota</th>
-                        <th class="px-4 py-3 text-right">Outstanding (M)</th>
+                        <th class="px-4 py-3 text-right">Outstanding</th>
                         <th class="px-4 py-3 text-right">Current</th>
                         <th class="px-4 py-3 text-right">31-60</th>
                         <th class="px-4 py-3 text-right">61-90</th>
@@ -759,11 +801,11 @@
                         <tr class="hover:bg-gray-700/30">
                             <td class="px-4 py-3 font-medium" x-text="d.customer"></td>
                             <td class="px-4 py-3 text-gray-400" x-text="d.city"></td>
-                            <td class="px-4 py-3 text-right font-mono" x-text="d.outstanding.toLocaleString()"></td>
-                            <td class="px-4 py-3 text-right text-green-400 font-mono" x-text="d.current.toLocaleString()"></td>
-                            <td class="px-4 py-3 text-right text-yellow-400 font-mono" x-text="d.d3160.toLocaleString()"></td>
-                            <td class="px-4 py-3 text-right text-orange-400 font-mono" x-text="d.d6190.toLocaleString()"></td>
-                            <td class="px-4 py-3 text-right text-red-400 font-mono" x-text="d.over90.toLocaleString()"></td>
+                            <td class="px-4 py-3 text-right font-mono" x-text="fmtRp(d.outstanding)"></td>
+                            <td class="px-4 py-3 text-right text-green-400 font-mono" x-text="fmtRp(d.current)"></td>
+                            <td class="px-4 py-3 text-right text-yellow-400 font-mono" x-text="fmtRp(d.d3160)"></td>
+                            <td class="px-4 py-3 text-right text-orange-400 font-mono" x-text="fmtRp(d.d6190)"></td>
+                            <td class="px-4 py-3 text-right text-red-400 font-mono" x-text="fmtRp(d.over90)"></td>
                             <td class="px-4 py-3 text-center">
                                 <span class="px-2 py-0.5 rounded text-xs font-medium" :class="d.days<=30?'bg-green-900/30 text-green-400':d.days<=60?'bg-yellow-900/30 text-yellow-400':d.days<=90?'bg-orange-900/30 text-orange-400':'bg-red-900/30 text-red-400'" x-text="d.days + 'h'"></span>
                             </td>
@@ -802,7 +844,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
             <p class="text-sm text-gray-400">Total AR Domestic</p>
-            <p class="text-2xl font-bold mt-1" x-text="'Rp ' + agingNormalData.reduce((a,b)=>a+b.outstanding,0).toLocaleString() + 'M'"></p>
+            <p class="text-2xl font-bold mt-1" x-text="fmtRp(agingNormalData.reduce((a,b)=>a+b.outstanding,0))"></p>
         </div>
         <div class="bg-gray-800 rounded-xl border border-gray-700 p-4">
             <p class="text-sm text-gray-400">Total Customer</p>
@@ -833,7 +875,7 @@
                     <tr>
                         <th class="px-4 py-3 text-left">Customer</th>
                         <th class="px-4 py-3 text-left">Kota</th>
-                        <th class="px-4 py-3 text-right">Outstanding (M)</th>
+                        <th class="px-4 py-3 text-right">Outstanding</th>
                         <th class="px-4 py-3 text-right">Current</th>
                         <th class="px-4 py-3 text-right">31-60</th>
                         <th class="px-4 py-3 text-right">61-90</th>
@@ -847,11 +889,11 @@
                         <tr class="hover:bg-gray-700/30">
                             <td class="px-4 py-3 font-medium" x-text="d.customer"></td>
                             <td class="px-4 py-3 text-gray-400" x-text="d.city"></td>
-                            <td class="px-4 py-3 text-right font-mono" x-text="d.outstanding.toLocaleString()"></td>
-                            <td class="px-4 py-3 text-right text-green-400 font-mono" x-text="d.current.toLocaleString()"></td>
-                            <td class="px-4 py-3 text-right text-yellow-400 font-mono" x-text="d.d3160.toLocaleString()"></td>
-                            <td class="px-4 py-3 text-right text-orange-400 font-mono" x-text="d.d6190.toLocaleString()"></td>
-                            <td class="px-4 py-3 text-right text-red-400 font-mono" x-text="d.over90.toLocaleString()"></td>
+                            <td class="px-4 py-3 text-right font-mono" x-text="fmtRp(d.outstanding)"></td>
+                            <td class="px-4 py-3 text-right text-green-400 font-mono" x-text="fmtRp(d.current)"></td>
+                            <td class="px-4 py-3 text-right text-yellow-400 font-mono" x-text="fmtRp(d.d3160)"></td>
+                            <td class="px-4 py-3 text-right text-orange-400 font-mono" x-text="fmtRp(d.d6190)"></td>
+                            <td class="px-4 py-3 text-right text-red-400 font-mono" x-text="fmtRp(d.over90)"></td>
                             <td class="px-4 py-3 text-center">
                                 <span class="px-2 py-0.5 rounded text-xs font-medium" :class="d.days<=30?'bg-green-900/30 text-green-400':d.days<=60?'bg-yellow-900/30 text-yellow-400':d.days<=90?'bg-orange-900/30 text-orange-400':'bg-red-900/30 text-red-400'" x-text="d.days + 'h'"></span>
                             </td>
@@ -951,8 +993,7 @@
                 <div class="flex items-center gap-3"><span class="w-3 h-3 bg-red-500 rounded-full"></span><span class="text-sm flex-1">Critical</span><span class="text-sm">95-100%</span></div>
             </div>
         </div>
-    </div>
-    <div class="mt-6 flex justify-end"><button class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">Save Settings</button></div>
+    </div>        <div class="mt-6 flex justify-end"><button @click="saveSettings()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">Save Settings</button></div>
 </div>
 </template>
 
@@ -970,7 +1011,7 @@ function app() {
         loginError: '',
         sidebarExpanded: false,
         sidebarLocked: false,
-        darkMode: localStorage.getItem('darkMode') !== 'false',
+        darkMode: localStorage.getItem('darkMode') === 'true',
         showCustomerModal: false,
         showImportModal: false,
         showExclusionModal: false,
@@ -980,7 +1021,7 @@ function app() {
         showAccurateImportModal: false,
         showAccurateHistoryModal: false,
         accurateImportFile: null,
-        accurateImportType: 'journal',
+        accurateImportType: 'piutang',
         showClearAccurateModal: false,
         clearAccuratePassword: '',
         accurateImportHistory: [
@@ -988,24 +1029,136 @@ function app() {
             { id: 2, tanggal: '2026-08-15', file: 'accurate_jul2026.xlsx', records: 2100, status: 'Success', user: 'Admin' },
             { id: 3, tanggal: '2026-08-10', file: 'accurate_jun2026_partial.csv', records: 850, status: 'Partial', user: 'Admin' },
         ],
+        accurateSearch: '',
+        accurateLastImport: '2026-08-22',
+        accuratePiutang: [
+            { custNo:'C-001', custName:'PT. Maju Jaya', invoiceNo:'INV-2026-0847', invoiceDate:'2026-07-15', total:500, age1_30:0, age31_60:0, age61_90:0, age91_120:0, ageOver120:500, ageInvoice:112, ageDue:95, suspend:'No', creditLimit:800, termNet:30 },
+            { custNo:'C-001', custName:'PT. Maju Jaya', invoiceNo:'INV-2026-0901', invoiceDate:'2026-08-01', total:200, age1_30:0, age31_60:0, age61_90:0, age91_120:200, ageOver120:0, ageInvoice:95, ageDue:78, suspend:'No', creditLimit:800, termNet:30 },
+            { custNo:'C-002', custName:'PT. Sukses Abadi', invoiceNo:'INV-2026-0855', invoiceDate:'2026-06-20', total:750, age1_30:0, age31_60:0, age61_90:0, age91_120:0, ageOver120:750, ageInvoice:137, ageDue:120, suspend:'Yes', creditLimit:500, termNet:45 },
+            { custNo:'C-003', custName:'PT. Makmur Sejahtera', invoiceNo:'INV-2026-0862', invoiceDate:'2026-07-25', total:320, age1_30:0, age31_60:0, age61_90:320, age91_120:0, ageOver120:0, ageInvoice:72, ageDue:55, suspend:'No', creditLimit:600, termNet:30 },
+            { custNo:'C-003', custName:'PT. Makmur Sejahtera', invoiceNo:'INV-2026-0910', invoiceDate:'2026-08-10', total:180, age1_30:0, age31_60:180, age61_90:0, age91_120:0, ageOver120:0, ageInvoice:46, ageDue:29, suspend:'No', creditLimit:600, termNet:30 },
+            { custNo:'C-004', custName:'PT. Mulia Persada', invoiceNo:'INV-2026-0870', invoiceDate:'2026-08-15', total:150, age1_30:150, age31_60:0, age61_90:0, age91_120:0, ageOver120:0, ageInvoice:11, ageDue:5, suspend:'No', creditLimit:400, termNet:15 },
+            { custNo:'C-005', custName:'PT. Berkah Mandiri', invoiceNo:'INV-2026-0878', invoiceDate:'2026-05-10', total:450, age1_30:0, age31_60:0, age61_90:0, age91_120:0, ageOver120:450, ageInvoice:158, ageDue:141, suspend:'Yes', creditLimit:300, termNet:30 },
+            { custNo:'C-006', custName:'PT. Sentosa Jaya', invoiceNo:'INV-2026-0885', invoiceDate:'2026-08-05', total:280, age1_30:0, age31_60:280, age61_90:0, age91_120:0, ageOver120:0, ageInvoice:51, ageDue:34, suspend:'No', creditLimit:500, termNet:30 },
+            { custNo:'C-007', custName:'PT. Gemilang Perkasa', invoiceNo:'INV-2026-0892', invoiceDate:'2026-07-01', total:620, age1_30:0, age31_60:0, age61_90:620, age91_120:0, ageOver120:0, ageInvoice:86, ageDue:69, suspend:'No', creditLimit:700, termNet:45 },
+            { custNo:'C-008', custName:'PT. Nusantara Teknik', invoiceNo:'INV-2026-0899', invoiceDate:'2026-08-20', total:95, age1_30:95, age31_60:0, age61_90:0, age91_120:0, ageOver120:0, ageInvoice:6, ageDue:1, suspend:'No', creditLimit:200, termNet:15 },
+        ],
         handleAccurateImport() {
             if (!this.accurateImportFile) {
                 this.showToast('Pilih file terlebih dahulu', 'error');
                 return;
             }
-            const today = new Date().toISOString().split('T')[0];
-            this.accurateImportHistory.unshift({
-                id: Date.now(),
-                tanggal: today,
-                file: this.accurateImportFile.name,
-                records: Math.floor(Math.random() * 2000) + 500,
-                status: 'Success',
-                user: 'Admin'
-            });
-            this.showAccurateImportModal = false;
-            this.accurateImportFile = null;
-            this.showToast('Import berhasil! ' + this.accurateImportHistory[0].records + ' records diproses.', 'success');
-            setTimeout(() => lucide.createIcons(), 100);
+            const self = this;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    if (jsonData.length < 2) {
+                        self.showToast('File kosong atau format tidak sesuai', 'error');
+                        return;
+                    }
+                    // Find header row
+                    let headerIdx = -1;
+                    for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+                        const row = jsonData[i].map(h => String(h || '').toLowerCase().trim());
+                        if (row.some(h => h.includes('customer') || h.includes('invoice'))) {
+                            headerIdx = i;
+                            break;
+                        }
+                    }
+                    if (headerIdx === -1) { self.showToast('Header tidak ditemukan', 'error'); return; }
+                    const headers = jsonData[headerIdx].map(h => String(h || '').toLowerCase().trim());
+                    // Map columns - try header matching first, fallback to position
+                    const colMap = {};
+                    headers.forEach((h, idx) => {
+                        if (h.includes('customer no') || h.includes('cust no')) colMap.custNo = idx;
+                        if (h.includes('customer name') || h.includes('cust name')) colMap.custName = idx;
+                        if (h.includes('invoice no') || h.includes('inv no')) colMap.invoiceNo = idx;
+                        if (h.includes('invoice date') || h.includes('inv date')) colMap.invoiceDate = idx;
+                        if (h.includes('total prime') || h === 'total') colMap.total = idx;
+                        if (h === 'not yet' || h.includes('1-30') || h === 'current') colMap.age1_30 = idx;
+                        if (h.includes('31-60')) colMap.age31_60 = idx;
+                        if (h.includes('61-90')) colMap.age61_90 = idx;
+                        if (h.includes('91-120')) colMap.age91_120 = idx;
+                        if (h.includes('>120') || h.includes('over 120')) colMap.ageOver120 = idx;
+                        if (h.includes('age') && h.includes('inv')) colMap.ageInvoice = idx;
+                        if (h.includes('age') && h.includes('due')) colMap.ageDue = idx;
+                        if (h.includes('suspend')) colMap.suspend = idx;
+                        if (h.includes('credit')) colMap.creditLimit = idx;
+                        if (h.includes('term') || h.includes('net')) colMap.termNet = idx;
+                    });
+                    // Position-based fallback for Accurate export (16 columns)
+                    if (headers.length >= 13 && !colMap.custNo) {
+                        colMap.custNo = 0; colMap.custName = 1; colMap.invoiceNo = 2;
+                        colMap.invoiceDate = 3; colMap.total = 4; colMap.age1_30 = 5;
+                        colMap.age31_60 = 7; colMap.age61_90 = 8; colMap.age91_120 = 9;
+                        colMap.ageOver120 = 10; colMap.ageInvoice = 11; colMap.ageDue = 12;
+                        if (headers.length >= 14) colMap.suspend = 13;
+                        if (headers.length >= 15) colMap.creditLimit = 14;
+                        if (headers.length >= 16) colMap.termNet = 15;
+                    }
+                    // Parse function for Indonesian number format
+                    const parseNum = (v) => {
+                        if (v === null || v === undefined || v === '') return 0;
+                        if (typeof v === 'number') return Math.round(v / 1000000);
+                        let s = String(v).replace(/[^0-9,.-]/g, '').replace(',', '.');
+                        const n = parseFloat(s);
+                        return isNaN(n) ? 0 : Math.round(n / 1000000);
+                    };
+                    const parseDate = (v) => {
+                        if (!v) return '';
+                        if (typeof v === 'number') {
+                            const d = new Date((v - 25569) * 86400000);
+                            return d.toISOString().split('T')[0];
+                        }
+                        return String(v).trim();
+                    };
+                    const newRecords = [];
+                    for (let i = headerIdx + 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || row.length < 5) continue;
+                        const custNo = String(row[colMap.custNo] || '').trim();
+                        const custName = String(row[colMap.custName] || '').trim();
+                        const invoiceNo = String(row[colMap.invoiceNo] || '').trim();
+                        if (!custNo && !custName && !invoiceNo) continue;
+                        newRecords.push({
+                            custNo: custNo,
+                            custName: custName,
+                            invoiceNo: invoiceNo,
+                            invoiceDate: parseDate(row[colMap.invoiceDate]),
+                            total: parseNum(row[colMap.total]),
+                            age1_30: parseNum(row[colMap.age1_30]),
+                            age31_60: parseNum(row[colMap.age31_60]),
+                            age61_90: parseNum(row[colMap.age61_90]),
+                            age91_120: parseNum(row[colMap.age91_120]),
+                            ageOver120: parseNum(row[colMap.ageOver120]),
+                            ageInvoice: parseNum(row[colMap.ageInvoice]),
+                            ageDue: parseNum(row[colMap.ageDue]),
+                            suspend: String(row[colMap.suspend] || 'No').trim() === 'Active' ? 'No' : 'Yes',
+                            creditLimit: parseNum(row[colMap.creditLimit]),
+                            termNet: parseNum(row[colMap.termNet])
+                        });
+                    }
+                    if (newRecords.length === 0) {
+                        self.showToast('Tidak ada data yang bisa diimport', 'error');
+                        return;
+                    }
+                    self.accuratePiutang = newRecords;
+                    self.accurateLastImport = new Date().toISOString().split('T')[0];
+                    self.showAccurateImportModal = false;
+                    self.accurateImportFile = null;
+                    self.showToast('Import berhasil! ' + newRecords.length + ' data piutang dari file.', 'success');
+                    setTimeout(() => lucide.createIcons(), 100);
+                } catch(err) {
+                    console.error('Import error:', err);
+                    self.showToast('Gagal membaca file: ' + err.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(this.accurateImportFile);
         },
         handleClearAccurateData() {
             if (this.clearAccuratePassword !== 'admin') {
@@ -1013,6 +1166,7 @@ function app() {
                 return;
             }
             this.accurateImportHistory = [];
+            this.accuratePiutang = [];
             this.showClearAccurateModal = false;
             this.clearAccuratePassword = '';
             this.showToast('Semua data import Accurate berhasil dihapus.', 'success');
@@ -1022,10 +1176,15 @@ function app() {
         showDeleteModal: false,
         deleteTarget: null,
         customerSearch: '',
-        get filteredCustomers() {
+        filteredCustomers() {
             if (!this.customerSearch) return this.customers;
             const q = this.customerSearch.toLowerCase();
             return this.customers.filter(c => c.nama.toLowerCase().includes(q) || c.kode.toLowerCase().includes(q) || c.kota.toLowerCase().includes(q));
+        },
+        filteredAccuratePiutang() {
+            if (!this.accurateSearch) return this.accuratePiutang;
+            const q = this.accurateSearch.toLowerCase();
+            return this.accuratePiutang.filter(p => p.custNo.toLowerCase().includes(q) || p.custName.toLowerCase().includes(q) || p.invoiceNo.toLowerCase().includes(q));
         },
         customerForm: { kode: '', nama: '', kota: '', creditLimit: '', email: '', telepon: '', alamat: '' },
         importFile: null,
@@ -1180,6 +1339,9 @@ function app() {
                 if (val === 'aging-normal') {
                     this.renderAgingNormalChart();
                 }
+                if (val === 'analyzer') {
+                    this.renderPaymentChart();
+                }
                 setTimeout(() => lucide.createIcons(), 150);
             });
             setTimeout(() => lucide.createIcons(), 200);
@@ -1210,6 +1372,21 @@ function app() {
                 }
                 lucide.createIcons();
             }, 100);
+        },
+        renderPaymentChart() {
+            setTimeout(() => {
+                const ctx = document.getElementById('paymentChart');
+                if (ctx && !ctx._chart) {
+                    ctx._chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Sep','Okt','Nov','Des','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt'],
+                            datasets: [{ label: 'Hari ke bayar', data: [18,14,16,12,15,11,9,13,10,12,8,12.3], borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.4 }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(156,163,175,0.1)' } }, x: { grid: { display: false } } } }
+                    });
+                }
+            }, 200);
         },
         renderAgingChart() {
             setTimeout(() => {
@@ -1350,7 +1527,7 @@ function app() {
         editingUser: null,
         userForm: { name: '', email: '', role: 'viewer', password: '' },
         users: [
-            { id: 1, name: 'Admin', email: 'admin@dmx.co.id', role: 'Admin', status: 'Active', initial: 'A', color: 'blue' },
+            { id: 1, name: 'Admin', email: 'admin', role: 'Admin', status: 'Active', initial: 'A', color: 'blue' },
             { id: 2, name: 'Ahmad Fauzi', email: 'ahmad@dmx.co.id', role: 'AR Accountant', status: 'Active', initial: 'A', color: 'green' },
             { id: 3, name: 'Siti Rahayu', email: 'siti@dmx.co.id', role: 'AR Collector', status: 'Active', initial: 'S', color: 'yellow' },
         ],
@@ -1472,6 +1649,16 @@ function app() {
             tracker.actions.splice(idx, 1);
             this.showToast('Aksi berhasil dihapus', 'success');
             setTimeout(() => lucide.createIcons(), 100);
+        },
+
+        /* ===== FORMAT RUPIAH ASLI ===== */
+        fmtRp(miliar) {
+            return 'Rp ' + Math.round(miliar * 1000000).toLocaleString('id-ID');
+        },
+
+        /* ===== SETTINGS ===== */
+        saveSettings() {
+            this.showToast('Pengaturan berhasil disimpan!', 'success');
         },
 
         /* ===== AGING CHINA ===== */
@@ -1784,7 +1971,7 @@ function app() {
         <div class="flex items-center justify-between p-5 border-b border-gray-700">
             <div>
                 <h3 class="text-lg font-semibold">Import Laporan Accurate</h3>
-                <p class="text-sm text-gray-400 mt-0.5">Upload file export dari software Accurate</p>
+                <p class="text-sm text-gray-400 mt-0.5">Upload data piutang dari software Accurate</p>
             </div>
             <button @click="showAccurateImportModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
         </div>
@@ -1792,10 +1979,7 @@ function app() {
             <div>
                 <label class="block text-sm font-medium text-gray-300 mb-1.5">Tipe Import</label>
                 <select x-model="accurateImportType" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="journal">Journal Entry</option>
-                    <option value="invoice">Sales Invoice</option>
-                    <option value="payment">Payment</option>
-                    <option value="customer">Customer Master</option>
+                    <option value="piutang">Data Piutang (Accurate)</option>
                 </select>
             </div>
             <div class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" @click="$refs.accurateInput.click()" @dragover.prevent="" @drop.prevent="accurateImportFile=$event.dataTransfer.files[0]">
@@ -1816,11 +2000,13 @@ function app() {
                 <input type="file" x-ref="accurateInput" accept=".xlsx,.csv" class="hidden" @change="accurateImportFile=$event.target.files[0]">
             </div>
             <div class="p-3 bg-gray-700/50 rounded-lg">
-                <p class="text-xs text-gray-400 font-medium mb-2">Tips import:</p>
+                <p class="text-xs text-gray-400 font-medium mb-2">Format kolom yang diimport:</p>
                 <ul class="text-xs text-gray-500 space-y-1">
-                    <li>• Export dari Accurate: Menu File → Export → Pilih tipe data</li>
-                    <li>• Pastikan kolom sesuai dengan format yang dipilih</li>
-                    <li>• File maksimal 10MB</li>
+                    <li>• Customer No, Customer Name, Invoice No</li>
+                    <li>• Invoice Date, Total Prime Curr</li>
+                    <li>• Aging: 1-30, 31-60, 61-90, 91-120, >120</li>
+                    <li>• Age Invoice, Age Due, Suspend, Credit Limit, Term Net</li>
+                    <li>• Export dari Accurate: Menu File → Export → Pilih "Data Piutang"</li>
                 </ul>
             </div>
         </div>
