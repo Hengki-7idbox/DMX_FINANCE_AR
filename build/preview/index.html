@@ -473,6 +473,77 @@
 </div>
 </template>
 
+<!-- =================== QUERY DATA HUTANG =================== -->
+<template x-if="page==='query-hutang'">
+<div>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div><h1 class="text-xl font-bold">Query Data Hutang</h1><p class="text-sm text-gray-500 dark:text-gray-400">Invoice dari Import Laporan Accurate yang BELUM masuk Invoice Exclusion</p></div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Total Invoice (Accurate)</p><p class="text-2xl font-bold mt-1" x-text="accuratePiutang.length"></p></div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Sudah Di-exclude</p><p class="text-2xl font-bold mt-1 text-red-500" x-text="accuratePiutang.filter(p => exclusions.some(e => String(e.invoiceNo||'').trim().toLowerCase() === String(p.invoiceNo||'').trim().toLowerCase())).length"></p></div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Hasil Query</p><p class="text-2xl font-bold mt-1 text-green-600 dark:text-green-400" x-text="filteredQueryHutang().length"></p></div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Total Nilai</p><p class="text-2xl font-bold mt-1 text-orange-500" x-text="fmtRp(filteredQueryHutang().reduce((s,p)=>s+p.total,0))"></p></div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="font-semibold">Data Hutang (Belum Di-exclude)</h3>
+            <input type="text" x-model="queryHutangSearch" placeholder="Cari customer/invoice..." class="bg-gray-100 dark:bg-gray-700 border-0 rounded-lg px-3 py-1.5 text-sm w-64 focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+                <thead class="bg-gray-100 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 uppercase">
+                    <tr>
+                        <th class="px-3 py-3 text-left">Cust No</th>
+                        <th class="px-3 py-3 text-left">Customer Name</th>
+                        <th class="px-3 py-3 text-left">Invoice No</th>
+                        <th class="px-3 py-3 text-left">Invoice Date</th>
+                        <th class="px-3 py-3 text-right">Total Prime Curr</th>
+                        <th class="px-3 py-3 text-right">1-30</th>
+                        <th class="px-3 py-3 text-right">31-60</th>
+                        <th class="px-3 py-3 text-right">61-90</th>
+                        <th class="px-3 py-3 text-right">91-120</th>
+                        <th class="px-3 py-3 text-right">&gt;120</th>
+                        <th class="px-3 py-3 text-center">Age Invoice</th>
+                        <th class="px-3 py-3 text-center">Age Due</th>
+                        <th class="px-3 py-3 text-center">Suspend</th>
+                        <th class="px-3 py-3 text-right">Credit Limit</th>
+                        <th class="px-3 py-3 text-center">Term Net</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700/50">
+                    <template x-for="p in filteredQueryHutang()" :key="p.invoiceNo + '-' + p.custNo">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                            <td class="px-3 py-2.5 font-mono" x-text="p.custNo"></td>
+                            <td class="px-3 py-2.5 font-medium" x-text="p.custName"></td>
+                            <td class="px-3 py-2.5 font-mono" x-text="p.invoiceNo"></td>
+                            <td class="px-3 py-2.5 text-gray-500 dark:text-gray-400" x-text="p.invoiceDate"></td>
+                            <td class="px-3 py-2.5 text-right font-medium" x-text="fmtRp(p.total)"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age1_30>0?'text-yellow-600 dark:text-yellow-400':'text-gray-400'" x-text="p.age1_30>0?fmtRp(p.age1_30):'-'"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age31_60>0?'text-orange-600 dark:text-orange-400':'text-gray-400'" x-text="p.age31_60>0?fmtRp(p.age31_60):'-'"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age61_90>0?'text-red-500':'text-gray-400'" x-text="p.age61_90>0?fmtRp(p.age61_90):'-'"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age91_120>0?'text-red-600':'text-gray-400'" x-text="p.age91_120>0?fmtRp(p.age91_120):'-'"></td>
+                            <td class="px-3 py-2.5 text-right font-medium" :class="p.ageOver120>0?'text-red-700 dark:text-red-400':'text-gray-400'" x-text="p.ageOver120>0?fmtRp(p.ageOver120):'-'"></td>
+                            <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs" :class="p.ageInvoice<=30?'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400':p.ageInvoice<=60?'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400':p.ageInvoice<=90?'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400':'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'" x-text="p.ageInvoice+'h'"></span></td>
+                            <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs" :class="p.ageDue<=30?'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400':p.ageDue<=60?'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400':p.ageDue<=90?'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400':'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'" x-text="p.ageDue+'h'"></span></td>
+                            <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs" :class="p.suspend==='Yes'?'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400':'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'" x-text="p.suspend"></span></td>
+                            <td class="px-3 py-2.5 text-right text-gray-500 dark:text-gray-400" x-text="fmtRp(p.creditLimit)"></td>
+                            <td class="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400" x-text="p.termNet+'h'"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        <div x-show="filteredQueryHutang().length===0" x-cloak class="px-5 py-12 text-center">
+            <i data-lucide="check-circle-2" class="w-10 h-10 mx-auto mb-2 text-green-400"></i>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Semua invoice sudah masuk Invoice Exclusion, atau belum ada data di Import Laporan Accurate.</p>
+        </div>
+    </div>
+</div>
+</template>
+
 <!-- =================== AGING =================== -->
 <template x-if="page==='aging'">
 <div>
@@ -1075,6 +1146,7 @@ function app() {
         exclusionImportFile: null,
         exclusionPiutang: [],
         exclusionSearch: '',
+        queryHutangSearch: '',
         showClearExclusionModal: false,
         clearExclusionPassword: '',
         showAccurateImportModal: false,
@@ -1251,6 +1323,13 @@ function app() {
             const q = this.customerSearch.toLowerCase();
             return this.customers.filter(c => c.nama.toLowerCase().includes(q) || c.kode.toLowerCase().includes(q) || c.kota.toLowerCase().includes(q));
         },
+        filteredQueryHutang() {
+            const exclSet = new Set(this.exclusions.map(e => String(e.invoiceNo || '').trim().toLowerCase()));
+            const base = this.accuratePiutang.filter(p => !exclSet.has(String(p.invoiceNo || '').trim().toLowerCase()));
+            if (!this.queryHutangSearch) return base;
+            const q = this.queryHutangSearch.toLowerCase();
+            return base.filter(p => p.custNo.toLowerCase().includes(q) || p.custName.toLowerCase().includes(q) || p.invoiceNo.toLowerCase().includes(q));
+        },
         filteredExclusionPiutang() {
             if (!this.exclusionSearch) return this.exclusionPiutang;
             const q = this.exclusionSearch.toLowerCase();
@@ -1414,10 +1493,10 @@ function app() {
             { id: 'credit', label: 'Credit Monitor', icon: 'credit-card' },
             { id: 'analyzer', label: 'Customer Analyzer', icon: 'bar-chart-3' },
             { id: 'tracker', label: 'Collection Tracker', icon: 'target' },
-            { id: 'grp-laporan', label: 'Laporan', icon: 'file-text', children: [
-                { id: 'aging-china', label: 'Aging China', icon: 'bar-chart-2' },
-                { id: 'aging-normal', label: 'Aging Normal', icon: 'bar-chart' },
-            ]},
+            { id: 'grp-laporan', label: 'Laporan', icon: 'file-text', children: [{ id: 'aging-china', label: 'Aging China', icon: 'bar-chart-2' },
+{ id: 'aging-normal', label: 'Aging Normal', icon: 'bar-chart' },
+{ id: 'query-hutang', label: 'Query Data Hutang', icon: 'filter' },
+]},
         ],
         adminNav: [
             { id: 'users', label: 'Users', icon: 'users' },
@@ -1425,7 +1504,7 @@ function app() {
             { id: 'settings', label: 'Settings', icon: 'settings' },
         ],
         get pageTitle() {
-            const titles = { dashboard:'Dashboard', customers:'Customer', exclusions:'Invoice Exclusion', 'import-accurate':'Import Laporan Accurate', aging:'Aging Report', reconciliation:'AR Reconciliation', reminders:'Reminders', credit:'Credit Monitor', analyzer:'Customer Analyzer', tracker:'Collection Tracker', 'aging-china':'Aging China', 'aging-normal':'Aging Normal', users:'User Management', audit:'Audit Log', settings:'System Settings' };
+            const titles = { dashboard:'Dashboard', customers:'Customer', exclusions:'Invoice Exclusion', 'import-accurate':'Import Laporan Accurate', aging:'Aging Report', reconciliation:'AR Reconciliation', reminders:'Reminders', credit:'Credit Monitor', analyzer:'Customer Analyzer', tracker:'Collection Tracker', 'aging-china':'Aging China', 'aging-normal':'Aging Normal', 'query-hutang':'Query Data Hutang', users:'User Management', audit:'Audit Log', settings:'System Settings' };
             return titles[this.page] || 'Dashboard';
         },
         init() {
