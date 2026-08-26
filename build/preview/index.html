@@ -260,28 +260,88 @@
             <button @click="showExclusionModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="plus" class="w-4 h-4"></i> Tambah</button>
         </div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Total Exclusions</p><p class="text-2xl font-bold mt-1" x-text="exclusions.length"></p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Active</p><p class="text-2xl font-bold mt-1 text-green-400" x-text="exclusions.filter(e => e.status === 'Active').length"></p></div>
-        <div class="bg-gray-800 rounded-xl border border-gray-700 p-4"><p class="text-sm text-gray-400">Reverted</p><p class="text-2xl font-bold mt-1 text-gray-400" x-text="exclusions.filter(e => e.status === 'Reverted').length"></p></div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Total Invoice</p><p class="text-2xl font-bold mt-1" x-text="exclusionPiutang.length"></p></div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Total Outstanding</p><p class="text-2xl font-bold mt-1 text-orange-500" x-text="fmtRp(exclusionPiutang.reduce((s,p)=>s+p.total,0))"></p></div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Overdue (&gt;90)</p><p class="text-2xl font-bold mt-1 text-red-500" x-text="exclusionPiutang.filter(p=>p.ageInvoice>90).length+' Invoice'"></p></div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"><p class="text-sm text-gray-500 dark:text-gray-400">Exclusions Aktif</p><p class="text-2xl font-bold mt-1 text-green-600 dark:text-green-400" x-text="exclusions.filter(e => e.status === 'Active').length"></p></div>
     </div>
-    <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+
+    <!-- Data Piutang Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="font-semibold">Data Piutang (Invoice Exclusion)</h3>
+            <input type="text" x-model="exclusionSearch" placeholder="Cari customer/invoice..." class="bg-gray-100 dark:bg-gray-700 border-0 rounded-lg px-3 py-1.5 text-sm w-64 focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+                <thead class="bg-gray-100 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 uppercase">
+                    <tr>
+                        <th class="px-3 py-3 text-left">Cust No</th>
+                        <th class="px-3 py-3 text-left">Customer Name</th>
+                        <th class="px-3 py-3 text-left">Invoice No</th>
+                        <th class="px-3 py-3 text-left">Invoice Date</th>
+                        <th class="px-3 py-3 text-right">Total Prime Curr</th>
+                        <th class="px-3 py-3 text-right">1-30</th>
+                        <th class="px-3 py-3 text-right">31-60</th>
+                        <th class="px-3 py-3 text-right">61-90</th>
+                        <th class="px-3 py-3 text-right">91-120</th>
+                        <th class="px-3 py-3 text-right">&gt;120</th>
+                        <th class="px-3 py-3 text-center">Age Invoice</th>
+                        <th class="px-3 py-3 text-center">Age Due</th>
+                        <th class="px-3 py-3 text-center">Suspend</th>
+                        <th class="px-3 py-3 text-right">Credit Limit</th>
+                        <th class="px-3 py-3 text-center">Term Net</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700/50">
+                    <template x-for="p in filteredExclusionPiutang()" :key="p.invoiceNo + '-' + p.custNo">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                            <td class="px-3 py-2.5 font-mono" x-text="p.custNo"></td>
+                            <td class="px-3 py-2.5 font-medium" x-text="p.custName"></td>
+                            <td class="px-3 py-2.5 font-mono" x-text="p.invoiceNo"></td>
+                            <td class="px-3 py-2.5 text-gray-500 dark:text-gray-400" x-text="p.invoiceDate"></td>
+                            <td class="px-3 py-2.5 text-right font-medium" x-text="fmtRp(p.total)"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age1_30>0?'text-yellow-600 dark:text-yellow-400':'text-gray-400'" x-text="p.age1_30>0?fmtRp(p.age1_30):'-'"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age31_60>0?'text-orange-600 dark:text-orange-400':'text-gray-400'" x-text="p.age31_60>0?fmtRp(p.age31_60):'-'"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age61_90>0?'text-red-500':'text-gray-400'" x-text="p.age61_90>0?fmtRp(p.age61_90):'-'"></td>
+                            <td class="px-3 py-2.5 text-right" :class="p.age91_120>0?'text-red-600':'text-gray-400'" x-text="p.age91_120>0?fmtRp(p.age91_120):'-'"></td>
+                            <td class="px-3 py-2.5 text-right font-medium" :class="p.ageOver120>0?'text-red-700 dark:text-red-400':'text-gray-400'" x-text="p.ageOver120>0?fmtRp(p.ageOver120):'-'"></td>
+                            <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs" :class="p.ageInvoice<=30?'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400':p.ageInvoice<=60?'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400':p.ageInvoice<=90?'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400':'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'" x-text="p.ageInvoice+'h'"></span></td>
+                            <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs" :class="p.ageDue<=30?'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400':p.ageDue<=60?'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400':p.ageDue<=90?'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400':'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'" x-text="p.ageDue+'h'"></span></td>
+                            <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs" :class="p.suspend==='Yes'?'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400':'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'" x-text="p.suspend"></span></td>
+                            <td class="px-3 py-2.5 text-right text-gray-500 dark:text-gray-400" x-text="fmtRp(p.creditLimit)"></td>
+                            <td class="px-3 py-2.5 text-center text-gray-500 dark:text-gray-400" x-text="p.termNet+'h'"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        <div x-show="exclusionPiutang.length===0" class="px-5 py-12 text-center">
+            <i data-lucide="file-spreadsheet" class="w-10 h-10 mx-auto mb-2 text-gray-300 dark:text-gray-600"></i>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Belum ada data. Klik "Bulk Import" untuk upload file .xls piutang dari Accurate.</p>
+        </div>
+    </div>
+
+    <!-- Daftar Exclusion -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700"><h3 class="font-semibold">Daftar Exclusion</h3></div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-gray-700/50"><tr>
+                <thead class="bg-gray-100 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400"><tr>
                     <th class="text-left px-4 py-3 font-medium">Invoice No</th><th class="text-left px-4 py-3 font-medium">Customer</th><th class="text-right px-4 py-3 font-medium">Amount</th><th class="text-left px-4 py-3 font-medium">Alasan</th><th class="text-left px-4 py-3 font-medium">Status</th><th class="text-left px-4 py-3 font-medium">Date</th><th class="text-right px-4 py-3 font-medium">Aksi</th>
                 </tr></thead>
-                <tbody class="divide-y divide-gray-700">
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700/50">
                     <template x-for="e in exclusions" :key="e.id">
-                        <tr class="hover:bg-gray-700/30">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                             <td class="px-4 py-3 font-mono text-xs" x-text="e.invoiceNo"></td>
                             <td class="px-4 py-3" x-text="e.customer"></td>
                             <td class="px-4 py-3 text-right font-medium" x-text="e.amount"></td>
-                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs" :class="e.alasan==='Dispute'?'bg-yellow-900/30 text-yellow-400':e.alasan==='Cancelled'?'bg-red-900/30 text-red-400':'bg-blue-900/30 text-blue-400'" x-text="e.alasan"></span></td>
-                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs" :class="e.status==='Active'?'bg-green-900/30 text-green-400':'bg-gray-600 text-gray-300'" x-text="e.status"></span></td>
-                            <td class="px-4 py-3 text-gray-400" x-text="e.date"></td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400" x-text="e.alasan"></span></td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs" :class="e.status==='Active'?'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400':'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300'" x-text="e.status"></span></td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400" x-text="e.date"></td>
                             <td class="px-4 py-3 text-right">
-                                <button @click="revertExclusion(e.id)" class="text-gray-400 hover:text-yellow-400 mr-2" title="Revert"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+                                <button @click="revertExclusion(e.id)" class="text-gray-400 hover:text-yellow-500 mr-2" title="Revert"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
                                 <button @click="deleteExclusion(e.id)" class="text-gray-400 hover:text-red-500" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                             </td>
                         </tr>
@@ -1012,6 +1072,8 @@ function app() {
         showExclusionImportModal: false,
         exclusionForm: { invoiceNo: '', customer: '', amount: '', alasan: 'Dispute', date: '' },
         exclusionImportFile: null,
+        exclusionPiutang: [],
+        exclusionSearch: '',
         showAccurateImportModal: false,
         showAccurateHistoryModal: false,
         accurateImportFile: null,
@@ -1037,8 +1099,10 @@ function app() {
             { custNo:'C-007', custName:'PT. Gemilang Perkasa', invoiceNo:'INV-2026-0892', invoiceDate:'2026-07-01', total:620, age1_30:0, age31_60:0, age61_90:620, age91_120:0, ageOver120:0, ageInvoice:86, ageDue:69, suspend:'No', creditLimit:700, termNet:45 },
             { custNo:'C-008', custName:'PT. Nusantara Teknik', invoiceNo:'INV-2026-0899', invoiceDate:'2026-08-20', total:95, age1_30:95, age31_60:0, age61_90:0, age91_120:0, ageOver120:0, ageInvoice:6, ageDue:1, suspend:'No', creditLimit:200, termNet:15 },
         ],
-        handleAccurateImport() {
-            if (!this.accurateImportFile) {
+        handleAccurateImport(target = 'accurate') {
+            const isExcl = target === 'exclusion';
+            const file = isExcl ? this.exclusionImportFile : this.accurateImportFile;
+            if (!file) {
                 this.showToast('Pilih file terlebih dahulu', 'error');
                 return;
             }
@@ -1088,7 +1152,7 @@ function app() {
                     // Position-based fallback for Accurate export (16 columns)
                     if (headers.length >= 13 && !colMap.custNo) {
                         colMap.custNo = 0; colMap.custName = 1; colMap.invoiceNo = 2;
-                        colMap.invoiceDate = 3; colMap.total = 4; colMap.age1_30 = 5;
+                        colMap.invoiceDate = 3; colMap.total = 4; colMap.age1_30 = headers.length >= 16 ? 6 : 5;
                         colMap.age31_60 = 7; colMap.age61_90 = 8; colMap.age91_120 = 9;
                         colMap.ageOver120 = 10; colMap.ageInvoice = 11; colMap.ageDue = 12;
                         if (headers.length >= 14) colMap.suspend = 13;
@@ -1102,6 +1166,16 @@ function app() {
                         let s = String(v).replace(/[^0-9,.-]/g, '').replace(',', '.');
                         const n = parseFloat(s);
                         return isNaN(n) ? 0 : Math.round(n / 1000000);
+                    };
+                    const parseIntNum = (v) => {
+                        if (v === null || v === undefined || v === '') return 0;
+                        if (typeof v === 'number') return Math.round(v);
+                        let s = String(v).replace(/[^\d.,-]/g, '');
+                        const lastComma = s.lastIndexOf(','), lastDot = s.lastIndexOf('.');
+                        if (lastComma > lastDot) { s = s.replace(/\./g, '').replace(',', '.'); }
+                        else { s = s.replace(/,/g, ''); }
+                        const n = parseFloat(s);
+                        return isNaN(n) ? 0 : Math.round(n);
                     };
                     const parseDate = (v) => {
                         if (!v) return '';
@@ -1130,21 +1204,20 @@ function app() {
                             age61_90: parseNum(row[colMap.age61_90]),
                             age91_120: parseNum(row[colMap.age91_120]),
                             ageOver120: parseNum(row[colMap.ageOver120]),
-                            ageInvoice: parseNum(row[colMap.ageInvoice]),
-                            ageDue: parseNum(row[colMap.ageDue]),
+                            ageInvoice: parseIntNum(row[colMap.ageInvoice]),
+                            ageDue: parseIntNum(row[colMap.ageDue]),
                             suspend: String(row[colMap.suspend] || 'No').trim() === 'Active' ? 'No' : 'Yes',
                             creditLimit: parseNum(row[colMap.creditLimit]),
-                            termNet: parseNum(row[colMap.termNet])
+                            termNet: parseIntNum(row[colMap.termNet])
                         });
                     }
                     if (newRecords.length === 0) {
                         self.showToast('Tidak ada data yang bisa diimport', 'error');
                         return;
                     }
-                    self.accuratePiutang = newRecords;
+                    if (isExcl) { self.exclusionPiutang = newRecords; self.showExclusionImportModal = false; self.exclusionImportFile = null; }
+                    else { self.accuratePiutang = newRecords; self.showAccurateImportModal = false; self.accurateImportFile = null; }
                     self.accurateLastImport = new Date().toISOString().split('T')[0];
-                    self.showAccurateImportModal = false;
-                    self.accurateImportFile = null;
                     self.showToast('Import berhasil! ' + newRecords.length + ' data piutang dari file.', 'success');
                     setTimeout(() => lucide.createIcons(), 100);
                 } catch(err) {
@@ -1152,7 +1225,7 @@ function app() {
                     self.showToast('Gagal membaca file: ' + err.message, 'error');
                 }
             };
-            reader.readAsArrayBuffer(this.accurateImportFile);
+            reader.readAsArrayBuffer(file);
         },
         handleClearAccurateData() {
             if (this.clearAccuratePassword !== 'admin') {
@@ -1174,6 +1247,11 @@ function app() {
             if (!this.customerSearch) return this.customers;
             const q = this.customerSearch.toLowerCase();
             return this.customers.filter(c => c.nama.toLowerCase().includes(q) || c.kode.toLowerCase().includes(q) || c.kota.toLowerCase().includes(q));
+        },
+        filteredExclusionPiutang() {
+            if (!this.exclusionSearch) return this.exclusionPiutang;
+            const q = this.exclusionSearch.toLowerCase();
+            return this.exclusionPiutang.filter(p => p.custNo.toLowerCase().includes(q) || p.custName.toLowerCase().includes(q) || p.invoiceNo.toLowerCase().includes(q));
         },
         filteredAccuratePiutang() {
             if (!this.accurateSearch) return this.accuratePiutang;
@@ -1269,13 +1347,7 @@ function app() {
             setTimeout(() => lucide.createIcons(), 100);
         },
         handleExclusionImport() {
-            if (!this.exclusionImportFile) {
-                this.showToast('Pilih file terlebih dahulu', 'error');
-                return;
-            }
-            this.showExclusionImportModal = false;
-            this.exclusionImportFile = null;
-            this.showToast('Import berhasil! 45 exclusion records diproses.', 'success');
+            this.handleAccurateImport('exclusion');
         },
         revertExclusion(id) {
             const item = this.exclusions.find(e => e.id === id);
@@ -1917,7 +1989,7 @@ function app() {
         <div class="flex items-center justify-between p-5 border-b border-gray-700">
             <div>
                 <h3 class="text-lg font-semibold">Bulk Import Exclusion</h3>
-                <p class="text-sm text-gray-400 mt-0.5">Upload file Excel/CSV daftar exclusion</p>
+                <p class="text-sm text-gray-400 mt-0.5">Upload data piutang (.xls) dari software Accurate</p>
             </div>
             <button @click="showExclusionImportModal=false" class="p-2 rounded-lg hover:bg-gray-700 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
         </div>
@@ -1926,8 +1998,8 @@ function app() {
                 <template x-if="!exclusionImportFile">
                     <div>
                         <i data-lucide="file-spreadsheet" class="w-12 h-12 text-gray-500 mx-auto mb-3"></i>
-                        <p class="text-sm text-gray-400">Drag & drop file atau <span class="text-blue-400 font-medium">browse</span></p>
-                        <p class="text-xs text-gray-500 mt-1">Format: .xlsx, .csv (maks 10MB)</p>
+                        <p class="text-sm text-gray-400">Drag &amp; drop file atau <span class="text-blue-400 font-medium">browse</span></p>
+                        <p class="text-xs text-gray-500 mt-1">Format: .xls, .xlsx, .csv (maks 10MB)</p>
                     </div>
                 </template>
                 <template x-if="exclusionImportFile">
@@ -1937,15 +2009,21 @@ function app() {
                         <p class="text-xs text-gray-500 mt-1">Klik untuk ganti file</p>
                     </div>
                 </template>
-                <input type="file" x-ref="exclusionImportInput" accept=".xlsx,.csv" class="hidden" @change="exclusionImportFile=$event.target.files[0]">
+                <input type="file" x-ref="exclusionImportInput" accept=".xls,.xlsx,.csv" class="hidden" @change="exclusionImportFile=$event.target.files[0]">
             </div>
             <div class="mt-4 p-3 bg-gray-700/50 rounded-lg">
                 <p class="text-xs text-gray-400 font-medium mb-2">Format kolom yang diperlukan:</p>
                 <div class="flex flex-wrap gap-2">
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Customer No</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Customer Name</span>
                     <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Invoice No</span>
-                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Customer</span>
-                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Amount</span>
-                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Alasan</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Invoice Date</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Total Prime Curr</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">1-30 s/d &gt;120</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Age Invoice/Due</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Suspend</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Credit Limit</span>
+                    <span class="px-2 py-0.5 bg-gray-600 rounded text-xs">Term Net Days</span>
                 </div>
             </div>
         </div>
