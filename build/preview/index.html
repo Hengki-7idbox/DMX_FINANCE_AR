@@ -256,6 +256,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div><h1 class="text-xl font-bold">Invoice Exclusion / Blacklist</h1><p class="text-sm text-gray-400">Kelola daftar invoice yang dikecualikan dari pengiriman reminder</p></div>
         <div class="flex gap-2">
+            <button @click="showClearExclusionModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-500 dark:text-red-400 border border-red-600/30 rounded-lg text-sm font-medium"><i data-lucide="trash-2" class="w-4 h-4"></i> Clear Data</button>
             <button @click="showExclusionImportModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"><i data-lucide="upload" class="w-4 h-4"></i> Bulk Import</button>
             <button @click="showExclusionModal=true" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><i data-lucide="plus" class="w-4 h-4"></i> Tambah</button>
         </div>
@@ -1074,6 +1075,8 @@ function app() {
         exclusionImportFile: null,
         exclusionPiutang: [],
         exclusionSearch: '',
+        showClearExclusionModal: false,
+        clearExclusionPassword: '',
         showAccurateImportModal: false,
         showAccurateHistoryModal: false,
         accurateImportFile: null,
@@ -1348,6 +1351,18 @@ function app() {
         },
         handleExclusionImport() {
             this.handleAccurateImport('exclusion');
+        },
+        handleClearExclusionData() {
+            if (this.clearExclusionPassword !== 'admin') {
+                this.showToast('Password salah! Gunakan password admin.', 'error');
+                return;
+            }
+            this.exclusionPiutang = [];
+            this.exclusionSearch = '';
+            this.showClearExclusionModal = false;
+            this.clearExclusionPassword = '';
+            this.showToast('Semua data piutang Invoice Exclusion berhasil dihapus.', 'success');
+            setTimeout(() => lucide.createIcons(), 100);
         },
         revertExclusion(id) {
             const item = this.exclusions.find(e => e.id === id);
@@ -2473,6 +2488,26 @@ function app() {
         <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-700">
             <button @click="showAIPreview=false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Tutup</button>
             <button @click="showToast('Pesan disalin ke clipboard!', 'success'); navigator.clipboard?.writeText(aiPreviewMsg)" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">Copy</button>
+        </div>
+    </div>
+</div>
+</template>
+
+<!-- Modal: Clear Exclusion Data (Password) -->
+<template x-if="showClearExclusionModal">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="showClearExclusionModal=false;clearExclusionPassword=''"></div>
+    <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-sm">
+        <div class="p-6 text-center">
+            <div class="w-14 h-14 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="shield-alert" class="w-7 h-7 text-red-400"></i></div>
+            <h3 class="text-lg font-semibold mb-2">Clear Data Piutang Exclusion?</h3>
+            <p class="text-sm text-gray-400 mb-4">Seluruh data piutang yang di-import di halaman Invoice Exclusion akan dihapus. Masukkan password admin untuk konfirmasi.</p>
+            <input type="password" x-model="clearExclusionPassword" placeholder="Password admin" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-sm text-center focus:ring-2 focus:ring-red-500 focus:border-transparent mb-3">
+            <p class="text-xs text-yellow-400">⚠️ Tindakan ini tidak dapat dibatalkan.</p>
+        </div>
+        <div class="flex items-center justify-center gap-3 p-5 border-t border-gray-700">
+            <button @click="showClearExclusionModal=false;clearExclusionPassword=''" class="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">Batal</button>
+            <button @click="handleClearExclusionData()" class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">Clear Data</button>
         </div>
     </div>
 </div>
