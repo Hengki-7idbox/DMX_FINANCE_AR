@@ -1358,10 +1358,11 @@ function app() {
                 return;
             }
             this.exclusionPiutang = [];
+            this.exclusions = [];
             this.exclusionSearch = '';
             this.showClearExclusionModal = false;
             this.clearExclusionPassword = '';
-            this.showToast('Semua data piutang Invoice Exclusion berhasil dihapus.', 'success');
+            this.showToast('Semua data Invoice Exclusion berhasil dihapus.', 'success');
             setTimeout(() => lucide.createIcons(), 100);
         },
         revertExclusion(id) {
@@ -2500,8 +2501,8 @@ function app() {
     <div class="relative bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-sm">
         <div class="p-6 text-center">
             <div class="w-14 h-14 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="shield-alert" class="w-7 h-7 text-red-400"></i></div>
-            <h3 class="text-lg font-semibold mb-2">Clear Data Piutang Exclusion?</h3>
-            <p class="text-sm text-gray-400 mb-4">Seluruh data piutang yang di-import di halaman Invoice Exclusion akan dihapus. Masukkan password admin untuk konfirmasi.</p>
+            <h3 class="text-lg font-semibold mb-2">Clear Semua Data Exclusion?</h3>
+            <p class="text-sm text-gray-400 mb-4">Seluruh data piutang dan daftar exclusion di halaman ini akan dihapus. Masukkan password admin untuk konfirmasi.</p>
             <input type="password" x-model="clearExclusionPassword" placeholder="Password admin" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-sm text-center focus:ring-2 focus:ring-red-500 focus:border-transparent mb-3">
             <p class="text-xs text-yellow-400">⚠️ Tindakan ini tidak dapat dibatalkan.</p>
         </div>
