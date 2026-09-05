@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id" class="{{ $darkMode ?? 'dark' }}">
+<html lang="id" class="{{ $darkMode ?? '' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +7,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script defer src="https://unpkg.com/lucide@latest"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        primary: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
+                        primary: { 50:'#f0f7ff',100:'#e0efff',200:'#b8dfff',300:'#7cc4ff',400:'#4ba9ff',500:'#2b8eff',600:'#1570e0',700:'#0d56b3',800:'#0a448f',900:'#083366' },
                     }
                 }
             }
@@ -26,7 +26,7 @@
         .fade-in { animation: fadeIn 0.2s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
         button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
-            outline: 2px solid #3b82f6;
+            outline: 2px solid #4ba9ff;
             outline-offset: 2px;
             border-radius: 4px;
         }

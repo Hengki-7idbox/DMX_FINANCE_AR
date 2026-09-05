@@ -133,13 +133,12 @@ Referensi komponen Blade + Alpine.js yang digunakan dalam AR Finance Tools.
 
 ### Dark Mode Toggle
 ```html
-<div x-data="{ dark: localStorage.getItem('theme') === 'dark' }"
-     x-init="$watch('dark', val => {
-         document.documentElement.classList.toggle('dark', val);
-         localStorage.setItem('theme', val ? 'dark' : 'light');
-     })">
-    <button @click="dark = !dark">
-        <span x-text="dark ? '🌙' : '☀️'"></span>
+<div x-data="{ isDark: localStorage.getItem('darkMode') === 'true' }"
+     x-init="if (isDark) document.documentElement.classList.add('dark')">
+    <button @click="isDark = !isDark; localStorage.setItem('darkMode', isDark); document.documentElement.classList.toggle('dark', isDark)">
+        <i x-show="!isDark" data-lucide="moon" class="w-5 h-5"></i>
+        <i x-show="isDark" data-lucide="sun" class="w-5 h-5"></i>
+        <span class="sr-only">Toggle theme</span>
     </button>
 </div>
 ```

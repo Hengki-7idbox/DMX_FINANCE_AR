@@ -10,33 +10,33 @@ Design system untuk AR Finance Tools menggunakan Tailwind CSS 3.4 + Lucide icons
 ### Primary
 | Name | Light | Dark | Usage |
 |------|-------|------|-------|
-| Primary | `blue-600` | `blue-400` | Buttons, links |
-| Primary Light | `blue-100` | `blue-900` | Backgrounds |
-| Primary Dark | `blue-800` | `blue-200` | Text |
+| Primary | `primary-500` (#2b8eff) | `primary-400` (#4ba9ff) | Buttons, links |
+| Primary Light | `primary-100` (#e0efff) | `primary-900` (#083366) | Backgrounds |
+| Primary Dark | `primary-800` (#0a448f) | `primary-200` (#b8dfff) | Text |
 
-### Status Colors
+### Status Colors (Soft)
 | Status | Light | Dark | Usage |
 |--------|-------|------|-------|
-| Success | `green-600` | `green-400` | Settled, Current |
-| Warning | `yellow-600` | `yellow-400` | Caution, 31-60 days |
-| Danger | `red-600` | `red-400` | Overdue, At limit |
-| Info | `blue-600` | `blue-400` | Pending, Info |
+| Success | `green-500` | `green-400` | Settled, Current |
+| Warning | `yellow-500` | `yellow-400` | Caution, 31-60 days |
+| Danger | `red-500` | `red-400` | Overdue, At limit |
+| Info | `blue-500` | `blue-400` | Pending, Info |
 
 ### Aging Colors
 | Bucket | Color | Icon |
 |--------|-------|------|
-| Current (0-30) | 🟢 `green-500` | check-circle |
-| 31-60 days | 🟡 `yellow-500` | alert-triangle |
-| 61-90 days | 🟠 `orange-500` | alert-circle |
-| 90+ days | 🔴 `red-500` | x-circle |
+| Current (0-30) | `green-500` | `check-circle` |
+| 31-60 days | `yellow-500` | `alert-triangle` |
+| 61-90 days | `orange-500` | `alert-circle` |
+| 90+ days | `red-500` | `x-circle` |
 
 ### Credit Limit Colors
 | Status | Color | Range |
 |--------|-------|-------|
-| 🟢 Green | `green-500` | 0-75% |
-| 🟡 Yellow | `yellow-500` | 75-95% |
-| 🔴 Red | `red-500` | 95-100% |
-| ⚫ Blocked | `gray-800` | >100% |
+| `check-circle` Green | `green-500` | 0-75% |
+| `alert-triangle` Yellow | `yellow-500` | 75-95% |
+| `alert-circle` Red | `red-500` | 95-100% |
+| `x-circle` Blocked | `gray-800` | >100% |
 
 ---
 

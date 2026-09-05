@@ -1,5 +1,4 @@
-$dir = 'C:\Users\user\Desktop\Haro\DMX\Finance_ar Software'
-$log = 'C:\Users\user\Desktop\Haro\DMX\Finance_ar Software\.freebuff\preview-server.log'
-Start-Process -FilePath 'node.exe' -ArgumentList "`"$dir\build\preview\server.js`"" -RedirectStandardOutput $log -RedirectStandardError "$log.err" -WindowStyle Hidden -PassThru
-Start-Sleep -Seconds 2
-Write-Host "Server started"
+Start-Process -FilePath "node" -ArgumentList "build\preview\server.js" -WorkingDirectory "C:\Users\user\Desktop\Haro\DMX\Finance_ar Software" -WindowStyle Hidden
+Start-Sleep -Seconds 3
+$port = Get-NetTCPConnection -LocalPort 55400 -ErrorAction SilentlyContinue
+if ($port) { Write-Host "SERVER_OK" } else { Write-Host "SERVER_FAIL" }

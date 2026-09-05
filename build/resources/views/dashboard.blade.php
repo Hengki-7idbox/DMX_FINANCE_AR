@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('styles')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 @endsection
 
 @section('content')
