@@ -1,0 +1,109 @@
+# Default Configuration
+
+**Version:** 1.0  
+**Date:** 22 September 2026
+
+---
+
+## Application Defaults
+
+```text
+APP_NAME="Finance AR"
+APP_DEFAULT_LOCALE=id
+APP_DEFAULT_TIMEZONE=Asia/Jakarta
+APP_DEFAULT_CURRENCY=IDR
+APP_DEFAULT_CURRENCY_SYMBOL=Rp
+```
+
+## DataTables Default
+
+```text
+PAGE_LENGTH=25
+PAGE_LENGTH_OPTIONS=[10, 25, 50, 100]
+SEARCH_DELAY=300
+PROCESSING=true
+SERVER_SIDE=true
+```
+
+## Select2 Default
+
+```text
+MINIMUM_INPUT_LENGTH=2
+MAXIMUM_INPUT_LENGTH=250
+PLACEHOLDER="Pilih..."
+ALLOW_CLEAR=true
+```
+
+## Aging Default Categories
+
+```text
+CURRENT=0
+1-30=30
+31-60=60
+61-90=90
+91-120=120
+>120=999
+```
+
+## Payment Default
+
+```text
+PAYMENT_METHODS=[BANK_TRANSFER, CASH, CHEQUE, GIRO]
+DEFAULT_PAYMENT_METHOD=BANK_TRANSFER
+ALLOW_PARTIAL_PAYMENT=true
+ALLOW_OVERPAYMENT=false
+```
+
+## Import Default
+
+```text
+MAX_FILE_SIZE=10485760 (10MB)
+ALLOWED_EXTENSIONS=[xlsx, xls, csv]
+BATCH_SIZE=1000
+CHUNK_SIZE=500
+```
+
+## Notification Default
+
+```text
+EMAIL_NOTIFICATIONS=true
+WHATSAPP_NOTIFICATIONS=false
+OVERDUE_THRESHOLD_DAYS=7
+REMINDER_BEFORE_DUE_DAYS=3
+```
+
+## Collection Default
+
+```text
+AUTO_ASSIGN_COLLECTOR=true
+MAX_FOLLOW_UP_PER_DAY=50
+REMINDER_INTERVAL_DAYS=3
+ESCALATION_THRESHOLD_DAYS=30
+```
+
+## Reconciliation Default
+
+```text
+AUTO_MATCH_THRESHOLD=0.95
+DATE_TOLERANCE_DAYS=3
+AMOUNT_TOLERANCE=1000
+ALLOW_MANUAL_MATCH=true
+```
+
+## Export Default
+
+```text
+EXPORT_FORMAT=xlsx
+EXPORT_SHEET_NAME="Data"
+EXPORT_DATE_FORMAT=d/m/Y
+EXPORT_CURRENCY_FORMAT="#,##0"
+```
+
+## UI Default
+
+```text
+THEME=light
+SIDEBAR_COLLAPSED=false
+SHOW_NOTIFICATIONS=true
+DEFAULT_VIEW=table
+```

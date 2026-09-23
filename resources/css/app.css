@@ -1,0 +1,179 @@
+@import 'tailwindcss';
+@plugin "daisyui" {
+    themes: dark --default;
+}
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    --color-background: #1a1f2e;
+    --color-foreground: #ffffff;
+    --color-card: #252d3d;
+    --color-card-foreground: #ffffff;
+    --color-popover: #252d3d;
+    --color-popover-foreground: #ffffff;
+    --color-primary: #e8c493;
+    --color-primary-foreground: #1a1f2e;
+    --color-secondary: #2d3548;
+    --color-secondary-foreground: #ffffff;
+    --color-muted: #2d3548;
+    --color-muted-foreground: #b0b8c4;
+    --color-accent: #3a4556;
+    --color-accent-foreground: #ffffff;
+    --color-destructive: #ef4444;
+    --color-destructive-foreground: #ffffff;
+    --color-border: #3d4557;
+    --color-input: #3a4556;
+    --color-ring: #1dd7d7;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-info: #3b82f6;
+    --color-peach-light: #f4d4b0;
+    --color-peach: #e8c493;
+    --color-peach-dark: #d4a574;
+    --color-cyan-bright: #1dd7d7;
+    --color-cyan: #16c0c0;
+    --color-cyan-dark: #0fa8a8;
+
+    --radius-sm: 0.25rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+}
+
+/* Base Styles */
+body {
+    font-family: var(--font-sans);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-muted-foreground);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-foreground);
+}
+
+/* DataTable 2.x Customization */
+div.dt-container {
+    color: #ffffff;
+}
+
+div.dt-container .dt-search input,
+div.dt-container .dt-length select {
+    background-color: #3a4556;
+    border: 1px solid #4a556a;
+    color: #ffffff;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+div.dt-container .dt-search input:focus,
+div.dt-container .dt-length select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #1dd7d7;
+    border-color: #1dd7d7;
+}
+
+div.dt-container .dt-paging button {
+    background-color: transparent;
+    border: 1px solid #3d4557;
+    color: #ffffff;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    margin: 0 0.125rem;
+}
+
+div.dt-container .dt-paging button:hover {
+    background-color: #3a4556;
+}
+
+div.dt-container .dt-paging button.current {
+    background-color: #e8c493;
+    color: #1a1f2e;
+    border-color: #e8c493;
+}
+
+div.dt-container .dt-info {
+    color: #b0b8c4;
+    font-size: 0.875rem;
+}
+
+div.dt-container table.dataTable {
+    color: #ffffff;
+}
+
+div.dt-container table.dataTable thead th {
+    color: #b0b8c4;
+    border-bottom: 1px solid #3d4557;
+}
+
+div.dt-container table.dataTable tbody tr {
+    border-bottom: 1px solid #3d4557;
+}
+
+div.dt-container table.dataTable tbody tr:hover {
+    background-color: rgba(58, 69, 86, 0.5) !important;
+}
+
+div.dt-container .dt-scroll-body {
+    border-bottom: 1px solid #3d4557;
+}
+
+/* Top row layout */
+div.dt-container div.dt-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+/* Bottom row layout */
+div.dt-container div.dt-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+div.dt-container .dt-paging {
+    display: flex;
+    align-items: center;
+}
+
+/* Select2 Customization */
+.select2-container--default .select2-selection--single {
+    @apply h-9 border border-[#4a556a] rounded-md px-3 bg-[#3a4556];
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    @apply leading-9 text-white;
+}
+
+.select2-container--default .select2-results__option--highlighted {
+    @apply bg-[#3a4556] text-white;
+}
