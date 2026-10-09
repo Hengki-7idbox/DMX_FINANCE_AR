@@ -12,18 +12,20 @@ Aturan validasi untuk seluruh input data dalam Finance AR.
 ## Customer Validation
 
 ```text
-customer_code: required|string|max:20|unique:customers,customer_code,except:id
+source_type: required|in:internal,external
+customer_code: required|string|max:20|unique:customers,customer_code + source_type (komposit, kecuali id)
 customer_name: required|string|max:255
 customer_group_id: required|exists:customer_groups,id
 customer_type: required|in:DISTRIBUTOR,CORPORATE,RETAIL,GOVERNMENT,RESELLER,INTERNAL
 tax_number: nullable|string|max:30
 address: nullable|string|max:500
 city: nullable|string|max:100
-phone: nullable|string|max:20
+phone: nullable|string|max:255
 email: nullable|email|max:255
 payment_term_id: required|exists:payment_terms,id
 credit_limit: required|numeric|min:0
 status: required|in:ACTIVE,INACTIVE
+notes: nullable|string|max:500
 ```
 
 ## Invoice Validation
@@ -125,6 +127,15 @@ role: required|exists:roles,name
 
 ```text
 file: required|file|max:10240|mimes:xlsx,xls,csv
+source_type (customer import): required|in:internal,external
+
+Customer import:
+- Format Accurate: auto-detect header "Customer No." (header bisa di baris berikutnya, data mulai baris setelahnya)
+- Format template: auto-detect header "customer_code"
+- Upsert by (customer_code, source_type): kode sama dalam source yang sama → update; soft-delete di-restore
+- Group default DEFAULT / term default COD dibuat otomatis bila tidak ada
+- Mapping type Accurate (contoh): FRUIT/VEGETABLE/FROZEN → DISTRIBUTOR; TOKO/SUPERMARKET/ONLINE → RETAIL
+- NON AKTIF → status INACTIVE; tipe tak dikenal → CORPORATE
 ```
 
 ## Custom Rules

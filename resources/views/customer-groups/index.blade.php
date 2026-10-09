@@ -19,23 +19,23 @@
     <x-card>
         <div class="relative w-full overflow-auto">
             <table id="groups-table" class="w-full caption-bottom text-sm">
-                <thead class="border-b border-[#3d4557]">
+                <thead class="border-b border-border">
                     <tr>
-                        <th class="h-10 px-4 text-left font-medium text-[#b0b8c4]">Kode</th>
-                        <th class="h-10 px-4 text-left font-medium text-[#b0b8c4]">Nama Group</th>
-                        <th class="h-10 px-4 text-left font-medium text-[#b0b8c4]">Description</th>
-                        <th class="h-10 px-4 text-left font-medium text-[#b0b8c4]">Customers</th>
-                        <th class="h-10 px-4 text-left font-medium text-[#b0b8c4]">Status</th>
-                        <th class="h-10 px-4 text-left font-medium text-[#b0b8c4]">Aksi</th>
+                        <th class="h-10 px-4 text-left font-medium text-muted-foreground">Kode</th>
+                        <th class="h-10 px-4 text-left font-medium text-muted-foreground">Nama Group</th>
+                        <th class="h-10 px-4 text-left font-medium text-muted-foreground">Description</th>
+                        <th class="h-10 px-4 text-left font-medium text-muted-foreground">Customers</th>
+                        <th class="h-10 px-4 text-left font-medium text-muted-foreground">Status</th>
+                        <th class="h-10 px-4 text-left font-medium text-muted-foreground">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($groups as $group)
-                        <tr class="border-b border-[#3d4557] transition-colors hover:bg-[#3a4556]/50">
-                            <td class="p-4 text-white">{{ $group->group_code }}</td>
-                            <td class="p-4 font-medium text-white">{{ $group->group_name }}</td>
-                            <td class="p-4 text-[#b0b8c4]">{{ Str::limit($group->description, 50) }}</td>
-                            <td class="p-4 text-[#b0b8c4]">{{ $group->customers_count }}</td>
+                        <tr class="border-b border-border transition-colors hover:bg-accent/50">
+                            <td class="p-4 text-foreground">{{ $group->group_code }}</td>
+                            <td class="p-4 font-medium text-foreground">{{ $group->group_name }}</td>
+                            <td class="p-4 text-muted-foreground">{{ Str::limit($group->description, 50) }}</td>
+                            <td class="p-4 text-muted-foreground">{{ $group->customers_count }}</td>
                             <td class="p-4">
                                 <x-badge :type="$group->status === 'ACTIVE' ? 'success' : 'secondary'">
                                     {{ $group->status }}
@@ -55,7 +55,7 @@
                                         </svg>
                                     </x-button>
                                     <x-button onclick="openDeleteModal('{{ route('customer-groups.destroy', $group) }}')" variant="ghost" size="icon">
-                                        <svg class="h-4 w-4 text-[#ef4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg class="h-4 w-4 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                     </x-button>
@@ -70,9 +70,9 @@
 
     {{-- Delete Modal --}}
     <dialog id="delete_modal" class="modal">
-        <div class="modal-box bg-[#252d3d] border border-[#3d4557]">
-            <h3 class="font-bold text-lg text-white">Konfirmasi Hapus</h3>
-            <p class="py-4 text-[#b0b8c4]">Apakah Anda yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.</p>
+        <div class="modal-box">
+            <h3 class="font-bold text-lg text-foreground">Konfirmasi Hapus</h3>
+            <p class="py-4 text-muted-foreground">Apakah Anda yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.</p>
             <div class="modal-action">
                 <form id="delete-form" method="POST">
                     @csrf

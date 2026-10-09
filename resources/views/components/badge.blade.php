@@ -5,14 +5,14 @@
 
 @php
 $types = [
-    'default' => 'bg-[#e8c493] text-[#1a1f2e]',
-    'secondary' => 'bg-[#3a4556] text-[#b0b8c4]',
-    'destructive' => 'bg-[#ef4444] text-white',
-    'outline' => 'border border-[#4a556a] text-white',
-    'success' => 'bg-[#10b981]/10 text-[#10b981]',
-    'warning' => 'bg-[#f5b041]/10 text-[#f5b041]',
-    'danger' => 'bg-[#ef4444]/10 text-[#ef4444]',
-    'info' => 'bg-[#3b82f6]/10 text-[#3b82f6]',
+    'default' => 'bg-primary text-primary-foreground',
+    'secondary' => 'bg-secondary text-secondary-foreground',
+    'destructive' => 'bg-destructive text-destructive-foreground',
+    'outline' => 'border border-border text-foreground',
+    'success' => 'bg-success/10 text-success',
+    'warning' => 'bg-warning/10 text-warning',
+    'danger' => 'bg-destructive/10 text-destructive',
+    'info' => 'bg-info/10 text-info',
 ];
 @endphp
 

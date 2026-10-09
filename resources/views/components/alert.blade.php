@@ -6,10 +6,10 @@
 
 @php
 $types = [
-    'info' => 'bg-[#3b82f6]/10 text-[#3b82f6] border-[#3b82f6]/30',
-    'success' => 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30',
-    'warning' => 'bg-[#f5b041]/10 text-[#f5b041] border-[#f5b041]/30',
-    'error' => 'bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/30',
+    'info' => 'bg-info/10 text-info border-info/30',
+    'success' => 'bg-success/10 text-success border-success/30',
+    'warning' => 'bg-warning/10 text-warning border-warning/30',
+    'error' => 'bg-destructive/10 text-destructive border-destructive/30',
 ];
 
 $icons = [

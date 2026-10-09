@@ -7,15 +7,15 @@
 ])
 
 @php
-$baseClasses = 'inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1dd7d7] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
+$baseClasses = 'inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
 
 $variants = [
-    'default' => 'bg-[#e8c493] text-[#1a1f2e] hover:bg-[#d4a574]',
-    'destructive' => 'bg-[#ef4444] text-white hover:bg-[#ef4444]/90',
-    'outline' => 'border border-[#4a556a] bg-transparent text-white hover:bg-[#3a4556]',
-    'secondary' => 'bg-[#3a4556] text-white hover:bg-[#4a556a]',
-    'ghost' => 'hover:bg-[#3a4556] hover:text-white',
-    'link' => 'text-[#e8c493] underline-offset-4 hover:underline',
+    'default' => 'bg-primary text-primary-foreground hover:opacity-90',
+    'destructive' => 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+    'outline' => 'border border-border bg-transparent text-foreground hover:bg-accent',
+    'secondary' => 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+    'ghost' => 'hover:bg-accent hover:text-accent-foreground',
+    'link' => 'text-primary underline-offset-4 hover:underline',
 ];
 
 $sizes = [

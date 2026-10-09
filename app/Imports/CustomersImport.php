@@ -173,7 +173,7 @@ class CustomersImport implements ToCollection
                 'payment_term_id' => $this->defaultTerm()->id,
                 'credit_limit' => $creditLimit,
                 'status' => $status,
-                'notes' => $notes !== '' ? $this->limit($notes, 500) : null,
+                'notes' => $notes !== null ? $this->limit($notes, 500) : null,
                 'source_type' => $this->sourceType,
             ];
 

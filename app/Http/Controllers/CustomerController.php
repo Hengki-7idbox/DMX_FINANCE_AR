@@ -19,6 +19,7 @@ class CustomerController extends Controller
         $tab = $this->resolveTab($request);
 
         $query = Customer::with(['customerGroup', 'paymentTerm'])
+            ->withSum('invoices', 'outstanding_amount')
             ->where('source_type', $tab);
 
         if ($request->filled('search')) {
@@ -37,7 +38,7 @@ class CustomerController extends Controller
             $query->where('status', $request->status);
         }
 
-        $customers = $query->latest()->paginate(25)->withQueryString();
+        $customers = $query->latest()->get();
         $groups = CustomerGroup::where('status', 'ACTIVE')->get();
 
         return view('customers.index', compact('customers', 'groups', 'tab'));
@@ -188,6 +189,25 @@ class CustomerController extends Controller
     public function importTemplate()
     {
         return Excel::download(new CustomerTemplateExport(), 'template-import-customer.xlsx');
+    }
+
+    public function clear(Request $request)
+    {
+        $tab = $this->resolveTab($request);
+
+        // forceDelete: SoftDeletes + unique(customer_code, source_type) —
+        // baris soft-deleted masih menempati unique, reimport bisa bentrok.
+        $deleted = Customer::where('source_type', $tab)->forceDelete();
+
+        if ($deleted === 0) {
+            return redirect()
+                ->route('customers.index', ['tab' => $tab])
+                ->with('error', 'Tidak ada data untuk dihapus di tab ' . $tab . '.');
+        }
+
+        return redirect()
+            ->route('customers.index', ['tab' => $tab])
+            ->with('success', "Berhasil menghapus {$deleted} customer tab {$tab}.");
     }
 
     private function resolveTab(Request $request): string
