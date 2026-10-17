@@ -84,6 +84,7 @@
                 <ul tabindex="0" class="dropdown-content menu z-[90] mt-1 w-52 rounded-lg border border-border bg-card p-1 shadow-xl">
                     <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-accent" data-bulk="anomali">Anomali</button></li>
                     <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-warning hover:bg-accent" data-bulk="biaya_bank">Biaya Bank</button></li>
+                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-info hover:bg-accent" data-bulk="sudah_bayar">Sudah Bayar Belum Proses</button></li>
                     <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent" data-bulk="clear">Kembalikan</button></li>
                 </ul>
             </div>
@@ -130,6 +131,8 @@
                 class="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-accent">Anomali</button>
         <button type="button" onclick="applyRowException('biaya_bank')"
                 class="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-warning hover:bg-accent">Biaya Bank</button>
+        <button type="button" onclick="applyRowException('sudah_bayar')"
+                class="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-info hover:bg-accent">Sudah Bayar Belum Proses</button>
         <button type="button" onclick="applyRowException('clear')"
                 class="flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent">Kembalikan</button>
     </div>
@@ -199,6 +202,7 @@
         function exceptionHtml(v) {
             if (v === 'anomali') return '<span class="' + BADGE + 'bg-destructive/10 text-destructive">Anomali</span>';
             if (v === 'biaya_bank') return '<span class="' + BADGE + 'bg-warning/10 text-warning">Biaya Bank</span>';
+            if (v === 'sudah_bayar') return '<span class="' + BADGE + 'bg-info/10 text-info">Sudah Bayar Belum Proses</span>';
             return '-';
         }
 
@@ -206,6 +210,7 @@
             var parts = [];
             if (row.exception_type === 'anomali') parts.push('<span class="' + BADGE + 'bg-destructive/10 text-destructive">Anomali</span>');
             else if (row.exception_type === 'biaya_bank') parts.push('<span class="' + BADGE + 'bg-warning/10 text-warning">Biaya Bank</span>');
+            else if (row.exception_type === 'sudah_bayar') parts.push('<span class="' + BADGE + 'bg-info/10 text-info">Sudah Bayar Belum Proses</span>');
             if (Number(row.missing_count) >= 1) parts.push('<span class="' + BADGE + 'bg-info/10 text-info">Sudah Lunas</span>');
             return parts.length ? parts.join(' ') : '-';
         }
@@ -236,7 +241,11 @@
         fillSelect('f_kode', uniqueAttr('customer_no'));
         fillSelect('f_nama', uniqueAttr('customer_name'));
         if (MODE === 'anomali') {
-            fillSelect('f_status', ['anomali', 'biaya_bank'], function (v) { return v === 'anomali' ? 'Anomali' : 'Biaya Bank'; });
+            fillSelect('f_status', ['anomali', 'biaya_bank', 'sudah_bayar'], function (v) {
+                if (v === 'anomali') return 'Anomali';
+                if (v === 'biaya_bank') return 'Biaya Bank';
+                return 'Sudah Bayar Belum Proses';
+            });
         } else {
             fillSelect('f_lunas', ['sudah_lunas', 'belum_lunas'], function (v) { return v === 'sudah_lunas' ? 'Sudah Lunas' : 'Belum Lunas'; });
             fillSelect('f_tukar', ['sudah', 'belum', 'tidak_ada'], function (v) {

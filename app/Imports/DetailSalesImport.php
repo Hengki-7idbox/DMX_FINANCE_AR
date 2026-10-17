@@ -342,7 +342,23 @@ class DetailSalesImport implements ToCollection, WithChunkReading
             return null;
         }
 
-        $timestamp = strtotime($raw);
+        // Export Accurate locale Indonesia: "02 Des 2025" / "'02 Des 2025"
+        // (apostrophe = text-format prefix di .xls). strtotime hanya mengerti
+        // bulan Inggris — terjemahkan dulu, fallback ke strtotime untuk format lama.
+        $raw = ltrim($raw, "'");
+        $idToEn = [
+            'Jan' => 'Jan', 'Feb' => 'Feb', 'Mar' => 'Mar', 'Apr' => 'Apr',
+            'Mei' => 'May', 'Jun' => 'Jun', 'Jul' => 'Jul',
+            'Agu' => 'Aug', 'Agt' => 'Aug', 'Sep' => 'Sep',
+            'Okt' => 'Oct', 'Nov' => 'Nov', 'Des' => 'Dec',
+        ];
+        $normalized = preg_replace_callback(
+            '/\b(Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Agt|Sep|Okt|Nov|Des)\b/iu',
+            fn ($m) => $idToEn[ucfirst(strtolower($m[1]))] ?? $m[1],
+            $raw
+        );
+
+        $timestamp = strtotime($normalized !== null ? $normalized : $raw);
         if ($timestamp === false) {
             return null;
         }

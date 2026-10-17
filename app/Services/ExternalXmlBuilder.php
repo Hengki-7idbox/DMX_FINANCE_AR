@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\Customer;
 use App\Models\DetailSale;
 use App\Models\DetailSaleItem;
 use App\Models\MappingCustomer;
 use App\Models\MappingProduct;
+use App\Models\PaymentTerm;
 use App\Models\Setting;
 
 /**
@@ -26,6 +28,7 @@ class ExternalXmlBuilder
     private string $arAccount;
     private string $dpAccountId;
     private string $termsId;
+    private string $taxFormNumber;
 
     /** @var array<string,string> */
     private array $custMap = [];
@@ -33,6 +36,8 @@ class ExternalXmlBuilder
     private array $itemCodeMap = [];
     /** @var array<string,string> */
     private array $itemNameMap = [];
+    /** @var array<string,array{name:string,city:string,address:string,phone:string,terms:string}> */
+    private array $custInfo = [];
 
     public function __construct()
     {
@@ -46,6 +51,7 @@ class ExternalXmlBuilder
         $this->arAccount = (string) Setting::get('ar_account', '110311');
         $this->dpAccountId = (string) Setting::get('dp_account_id', '210201');
         $this->termsId = (string) Setting::get('terms_id', '');
+        $this->taxFormNumber = (string) Setting::get('tax_form_number', 'DMXS25110098');
 
         $this->loadMappings();
     }
@@ -101,7 +107,7 @@ class ExternalXmlBuilder
 
     private function wrap(string $transactions): string
     {
-        return '<?xml version="1.0"?>' . "\n"
+        return '<?xml version="1.0" encoding="utf-8"?>' . "\n"
             . '<NMEXML EximID="' . $this->esc($this->eximId) . '" BranchCode="' . $this->esc($this->branchExternal)
             . '" ACCOUNTANTCOPYID=""><TRANSACTIONS OnError="CONTINUE">' . $transactions . '</TRANSACTIONS></NMEXML>';
     }
@@ -113,7 +119,10 @@ class ExternalXmlBuilder
     {
         $doc = (string) $header->doc_number;
         $date = $header->transaction_date?->format('Y-m-d') ?? '';
-        $custId = $this->custMap[$header->customer_code] ?? (string) $header->customer_code;
+        $custCode = (string) $header->customer_code;
+        $custId = $this->custMap[$custCode] ?? $custCode;
+        $terms = $this->termsFor($custCode);
+        $shipto = $this->shiptoTags($custCode);
         $desc = trim((string) $header->description);
         $discount = (float) $header->discount;
 
@@ -129,7 +138,7 @@ class ExternalXmlBuilder
         $orderLines = '';
         $deliveryLines = '';
         $invoiceLines = '';
-        $seq = 1;
+        $seq = 0;
         foreach ($lines as $line) {
             $itemNo = $this->itemCodeMap[$line->item_no] ?? (string) $line->item_no;
             $itemDesc = $this->itemNameMap[$line->item_description] ?? trim((string) $line->item_description);
@@ -138,6 +147,7 @@ class ExternalXmlBuilder
             $unit = $this->esc((string) $line->unit);
             $itemNoE = $this->esc($itemNo);
             $itemDescE = $this->esc($itemDesc);
+            $lineTax = $this->num((float) $line->qty * (float) $line->unit_price * $this->taxRate / 100);
 
             $orderLines .= '<ITEMLINE operation="Add">'
                 . '<KeyID>' . $seq . '</KeyID>'
@@ -151,7 +161,7 @@ class ExternalXmlBuilder
                 . '<DISCPC/>'
                 . '<TAXCODES>' . $this->esc($this->tax1Id) . '</TAXCODES>'
                 . '<GROUPSEQ/>'
-                . '<QTYSHIPPED>' . $qty . '</QTYSHIPPED>'
+                . '<QTYSHIPPED>0</QTYSHIPPED>'
                 . '</ITEMLINE>';
 
             $deliveryLines .= '<ITEMLINE operation="Add">'
@@ -163,9 +173,13 @@ class ExternalXmlBuilder
                 . $this->reservedTags()
                 . '<ITEMOVDESC>' . $itemDescE . '</ITEMOVDESC>'
                 . '<UNITPRICE>' . $price . '</UNITPRICE>'
-                . '<ITEMDISCPC/>'
+                . '<DISCPC/>'
                 . '<TAXCODES>' . $this->esc($this->tax1Id) . '</TAXCODES>'
                 . '<GROUPSEQ/>'
+                . '<TAX1ID>' . $this->esc($this->tax1Id) . '</TAX1ID>'
+                . '<TAX1RATE>' . $this->num($this->taxRate) . '</TAX1RATE>'
+                . '<TAX1AMOUNT>' . $lineTax . '</TAX1AMOUNT>'
+                . '<ITEMDISCPC/>'
                 . '<SOSEQ>' . $seq . '</SOSEQ>'
                 . '<BRUTOUNITPRICE>' . $price . '</BRUTOUNITPRICE>'
                 . '<WAREHOUSEID>' . $this->esc($this->warehouseId) . '</WAREHOUSEID>'
@@ -184,9 +198,13 @@ class ExternalXmlBuilder
                 . $this->reservedTags()
                 . '<ITEMOVDESC>' . $itemDescE . '</ITEMOVDESC>'
                 . '<UNITPRICE>' . $price . '</UNITPRICE>'
-                . '<ITEMDISCPC/>'
+                . '<DISCPC/>'
                 . '<TAXCODES>' . $this->esc($this->tax1Id) . '</TAXCODES>'
                 . '<GROUPSEQ/>'
+                . '<TAX1ID>' . $this->esc($this->tax1Id) . '</TAX1ID>'
+                . '<TAX1RATE>' . $this->num($this->taxRate) . '</TAX1RATE>'
+                . '<TAX1AMOUNT>' . $lineTax . '</TAX1AMOUNT>'
+                . '<ITEMDISCPC/>'
                 . '<SOSEQ>' . $seq . '</SOSEQ>'
                 . '<BRUTOUNITPRICE>' . $price . '</BRUTOUNITPRICE>'
                 . '<WAREHOUSEID>' . $this->esc($this->warehouseId) . '</WAREHOUSEID>'
@@ -218,11 +236,11 @@ class ExternalXmlBuilder
             . '<CASHDISCOUNT>0</CASHDISCOUNT>'
             . '<CASHDISCPC/>'
             . '<FREIGHT>0</FREIGHT>'
-            . '<TERMSID>' . $this->esc($this->termsId) . '</TERMSID>'
+            . '<TERMSID>' . $this->esc($terms) . '</TERMSID>'
             . '<FOB/>'
             . '<ESTSHIPDATE>' . $this->esc($date) . '</ESTSHIPDATE>'
             . '<DESCRIPTION>' . $this->esc($desc) . '</DESCRIPTION>'
-            . '<SHIPTO1/><SHIPTO2/><SHIPTO3/><SHIPTO4/><SHIPTO5/>'
+            . $shipto
             . '<DP>0</DP>'
             . '<DPACCOUNTID>' . $this->esc($this->dpAccountId) . '</DPACCOUNTID>'
             . '<DPUSED/>'
@@ -232,24 +250,22 @@ class ExternalXmlBuilder
             . '</SALESORDER>';
 
         $delivery = '<DELIVERYORDER operation="Add" REQUESTID="1">'
-            . '<TRANSACTIONID>0</TRANSACTIONID>'
             . $deliveryLines
             . '<INVOICENO>' . $this->esc($doc) . '</INVOICENO>'
             . '<INVOICEDATE>' . $this->esc($date) . '</INVOICEDATE>'
             . '<INVOICEAMOUNT>0</INVOICEAMOUNT>'
             . '<PURCHASEORDERNO/>'
             . '<WAREHOUSEID>' . $this->esc($this->warehouseId) . '</WAREHOUSEID>'
-            . '<DESCRIPTION>' . $this->esc($desc) . '</DESCRIPTION>'
+            . '<DESCRIPTION>' . $this->esc($doc) . '</DESCRIPTION>'
             . '<SHIPDATE>' . $this->esc($date) . '</SHIPDATE>'
-            . '<DELIVERYORDER></DELIVERYORDER>'
+            . '<DELIVERYORDER/>'
             . '<CUSTOMERID>' . $this->esc($custId) . '</CUSTOMERID>'
-            . '<SHIPTO1/><SHIPTO2/><SHIPTO3/><SHIPTO4/><SHIPTO5/>'
+            . $shipto
             . '<CURRENCYNAME>IDR</CURRENCYNAME>'
             . '<AUTOMATICINSERTGROUPING/>'
             . '</DELIVERYORDER>';
 
         $invoice = '<SALESINVOICE operation="Add" REQUESTID="1">'
-            . '<TRANSACTIONID>0</TRANSACTIONID>'
             . $invoiceLines
             . '<INVOICENO>' . $this->esc($doc) . '</INVOICENO>'
             . '<INVOICEDATE>' . $this->esc($date) . '</INVOICEDATE>'
@@ -266,20 +282,20 @@ class ExternalXmlBuilder
             . '<CASHDISCPC/>'
             . '<INVOICEAMOUNT>' . $this->num($invoiceAmount) . '</INVOICEAMOUNT>'
             . '<FREIGHT>0</FREIGHT>'
-            . '<TERMSID>' . $this->esc($this->termsId) . '</TERMSID>'
+            . '<TERMSID>' . $this->esc($terms) . '</TERMSID>'
             . '<FOB/>'
             . '<PURCHASEORDERNO/>'
             . '<WAREHOUSEID>' . $this->esc($this->warehouseId) . '</WAREHOUSEID>'
-            . '<DESCRIPTION>' . $this->esc($desc) . '</DESCRIPTION>'
+            . '<DESCRIPTION>' . $this->esc($doc) . '</DESCRIPTION>'
             . '<SHIPDATE>' . $this->esc($date) . '</SHIPDATE>'
-            . '<DELIVERYORDER></DELIVERYORDER>'
+            . '<DELIVERYORDER/>'
             . '<FISCALRATE>1</FISCALRATE>'
             . '<TAXDATE>' . $this->esc($date) . '</TAXDATE>'
             . '<CUSTOMERID>' . $this->esc($custId) . '</CUSTOMERID>'
             . '<PRINTED>0</PRINTED>'
-            . '<SHIPTO1/><SHIPTO2/><SHIPTO3/><SHIPTO4/><SHIPTO5/>'
+            . $shipto
             . '<ARACCOUNT>' . $this->esc($this->arAccount) . '</ARACCOUNT>'
-            . '<TAXFORMNUMBER/>'
+            . '<TAXFORMNUMBER>' . $this->esc($this->taxFormNumber) . '</TAXFORMNUMBER>'
             . '<TAXFORMCODE/>'
             . '<CURRENCYNAME>IDR</CURRENCYNAME>'
             . '<AUTOMATICINSERTGROUPING/>'
@@ -318,6 +334,57 @@ class ExternalXmlBuilder
                 $this->itemNameMap[$name] = (string) $r->nama_item_external;
             }
         }
+
+        $termDays = PaymentTerm::query()->pluck('days', 'id');
+
+        foreach (Customer::where('source_type', Customer::SOURCE_INTERNAL)
+            ->get(['customer_code', 'customer_name', 'city', 'address', 'phone', 'payment_term_id']) as $c) {
+            $code = (string) $c->customer_code;
+            if ($code === '' || array_key_exists($code, $this->custInfo)) {
+                continue;
+            }
+
+            $days = (int) ($termDays[$c->payment_term_id] ?? 0);
+
+            $this->custInfo[$code] = [
+                'name' => (string) $c->customer_name,
+                'city' => (string) $c->city,
+                'address' => (string) $c->address,
+                'phone' => (string) $c->phone,
+                'terms' => $days === 0 ? 'C.O.D' : 'Net ' . $days,
+            ];
+        }
+    }
+
+    private function termsFor(string $customerCode): string
+    {
+        if (isset($this->custInfo[$customerCode])) {
+            return $this->custInfo[$customerCode]['terms'];
+        }
+
+        return $this->termsId;
+    }
+
+    private function shiptoTags(string $customerCode): string
+    {
+        $info = $this->custInfo[$customerCode] ?? null;
+        $values = [
+            $info['name'] ?? '',
+            $info['city'] ?? '',
+            $info['address'] ?? '',
+            $info['phone'] ?? '',
+            '',
+        ];
+
+        $out = '';
+        foreach ($values as $i => $value) {
+            $n = $i + 1;
+            $out .= $value === ''
+                ? '<SHIPTO' . $n . '/>'
+                : '<SHIPTO' . $n . '>' . $this->esc($value) . '</SHIPTO' . $n . '>';
+        }
+
+        return $out;
     }
 
     private function esc(mixed $value): string

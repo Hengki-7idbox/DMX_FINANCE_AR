@@ -152,10 +152,12 @@ class OlahDataController extends Controller
 
         $rows = DetailSale::where('source_type', DetailSale::SOURCE_INTERNAL)
             ->whereDate('transaction_date', $date)
+            ->with('outstanding')
             ->orderBy('doc_number')
             ->get([
                 'id', 'doc_number', 'transaction_date', 'customer_name',
-                'invoice_amount', 'is_received', 'received_note',
+                'invoice_amount', 'is_received', 'is_exchanged', 'received_note',
+                'due_date_manual',
             ]);
 
         $payload = $rows->map(fn ($r) => [
@@ -167,6 +169,9 @@ class OlahDataController extends Controller
             'receive_status' => (int) $r->is_received,
             'is_exchanged' => (int) $r->is_exchanged,
             'note' => (string) ($r->received_note ?? ''),
+            'due_date_acc' => $r->outstanding?->due_date?->format('Y-m-d'),
+            'due_date_manual' => $r->due_date_manual?->format('Y-m-d'),
+            'due_date' => $r->effective_due_date?->format('d/m/Y'),
         ])->values();
 
         $countByStatus = fn (int $status) => $payload->where('receive_status', $status)->count();
@@ -187,7 +192,8 @@ class OlahDataController extends Controller
     }
 
     /**
-     * Update status terima (0=Belum, 1=Sudah, 2=Online, 3=Cash) / catatan dokumen (JSON).
+     * Update status terima (0=Belum, 1=Sudah, 2=Online, 3=Cash) / catatan
+     * dokumen / due date manual (JSON).
      */
     public function updateReceipt(Request $request)
     {
@@ -196,6 +202,7 @@ class OlahDataController extends Controller
             'receive_status' => 'nullable|integer|in:0,1,2,3',
             'is_exchanged' => 'nullable|integer|in:0,1',
             'received_note' => 'nullable|string|max:65000',
+            'due_date_manual' => 'nullable|date',
         ]);
 
         $row = DetailSale::where('source_type', DetailSale::SOURCE_INTERNAL)
@@ -217,6 +224,10 @@ class OlahDataController extends Controller
 
         if (array_key_exists('received_note', $data)) {
             $row->received_note = $data['received_note'];
+        }
+
+        if (array_key_exists('due_date_manual', $data)) {
+            $row->due_date_manual = $data['due_date_manual'];
         }
 
         $row->save();

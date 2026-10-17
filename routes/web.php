@@ -49,6 +49,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('detail-sales/import', [DetailSaleController::class, 'import'])->name('detail-sales.import');
     Route::get('detail-sales/items/{docNumber}', [DetailSaleController::class, 'items'])->name('detail-sales.items');
     Route::delete('detail-sales/clear', [DetailSaleController::class, 'clear'])->name('detail-sales.clear');
+    Route::delete('detail-sales/clear-period', [DetailSaleController::class, 'clearPeriod'])->name('detail-sales.clear-period');
     Route::post('detail-sales/export', [DetailSaleController::class, 'export'])->name('detail-sales.export');
     Route::post('detail-sales/export-xml-external', [DetailSaleController::class, 'exportXmlExternal'])->name('detail-sales.export-xml-external');
     Route::put('detail-sales/faktur-pajak-status', [DetailSaleController::class, 'updateFakturPajakStatus'])->name('detail-sales.fp-status');
@@ -93,16 +94,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('invoices/china-report/export', [InvoiceController::class, 'chinaReportExport'])->name('invoices.china-report.export');
     Route::get('invoices/china-report/print', [InvoiceController::class, 'chinaReportPrint'])->name('invoices.china-report.print');
     Route::get('invoices/china-report/global', [InvoiceController::class, 'chinaReportGlobal'])->name('invoices.china-report.global');
+    Route::get('invoices/china-report/global/export', [InvoiceController::class, 'chinaReportGlobalExport'])->name('invoices.china-report.global.export');
     Route::resource('invoices', InvoiceController::class)->except(['show']);
     
     // Pembayaran
-    Route::get('payments/internal/create', [PaymentController::class, 'createInternal'])->name('payments.internal.create');
-    Route::post('payments/internal', [PaymentController::class, 'storeInternal'])->name('payments.internal.store');
-    Route::get('payments/external/create', [PaymentController::class, 'createExternal'])->name('payments.external.create');
-    Route::post('payments/external', [PaymentController::class, 'storeExternal'])->name('payments.external.store');
-    Route::post('payments/{payment}/allocate', [PaymentController::class, 'allocate'])->name('payments.allocate');
-    Route::post('payments/clone/{payment}', [PaymentController::class, 'clone'])->name('payments.clone');
-    Route::resource('payments', PaymentController::class)->only(['index', 'show']);
+    Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
+    Route::post('payments/upload', [PaymentController::class, 'uploadXml'])->name('payments.upload');
+    Route::post('payments/export', [PaymentController::class, 'exportXml'])->name('payments.export');
+    Route::post('payments/export-external', [PaymentController::class, 'exportExternal'])->name('payments.exportExternal');
+    Route::get('payments/{invoice}/detail', [PaymentController::class, 'detail'])->name('payments.detail');
+    Route::post('payments/{invoice}/pay', [PaymentController::class, 'pay'])->name('payments.pay');
     
     // Bank
     Route::post('bank-transactions/import', [BankTransactionController::class, 'import'])->name('bank-transactions.import');

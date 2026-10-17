@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DetailSale extends Model
@@ -20,6 +22,7 @@ class DetailSale extends Model
         'customer_name',
         'doc_number',
         'transaction_date',
+        'due_date_manual',
         'description',
         'invoice_amount',
         'amount',
@@ -37,6 +40,7 @@ class DetailSale extends Model
 
     protected $casts = [
         'transaction_date' => 'date',
+        'due_date_manual' => 'date',
         'invoice_amount' => 'decimal:2',
         'amount' => 'decimal:2',
         'tax_base' => 'decimal:2',
@@ -52,5 +56,23 @@ class DetailSale extends Model
     {
         return $this->hasMany(DetailSaleItem::class, 'doc_number', 'doc_number')
             ->where('detail_sale_items.source_type', $this->source_type);
+    }
+
+    /** Pasangan invoice outstanding (doc_number = invoice_no). */
+    public function outstanding(): BelongsTo
+    {
+        return $this->belongsTo(OutstandingInvoice::class, 'doc_number', 'invoice_no');
+    }
+
+    /**
+     * Due date efektif: due_date_manual jika diisi, selain itu due date
+     * Outstanding/Accurate. Dipakai fitur lain — outstanding tetap memakai
+     * kolomnya sendiri (tidak ditimpa).
+     */
+    protected function effectiveDueDate(): Attribute
+    {
+        return Attribute::get(function () {
+            return $this->due_date_manual ?? $this->outstanding?->due_date;
+        });
     }
 }

@@ -82,16 +82,18 @@
             </div>
 
             <div class="table-container w-full overflow-x-auto overflow-y-hidden">
-                <table id="receipt-table" class="w-full min-w-[1200px] caption-bottom text-sm whitespace-nowrap">
+                <table id="receipt-table" class="w-full min-w-[1450px] caption-bottom text-sm whitespace-nowrap">
                     <thead class="border-b border-border">
                         <tr>
                             <th class="h-10 px-3 text-left font-medium text-muted-foreground">
                                 <input type="checkbox" id="select_all_rows"
-                                       class="h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                       class="h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                        aria-label="Pilih semua baris" />
                             </th>
                             <th class="h-10 px-3 text-left font-medium text-muted-foreground">Invoice No.</th>
                             <th class="h-10 px-3 text-left font-medium text-muted-foreground">Tanggal</th>
+                            <th class="h-10 px-3 text-left font-medium text-muted-foreground">Due Date</th>
+                            <th class="h-10 px-3 text-left font-medium text-muted-foreground">Due Date Manual</th>
                             <th class="h-10 px-3 text-left font-medium text-muted-foreground">Customer</th>
                             <th class="h-10 px-3 text-left font-medium text-muted-foreground">Nilai Invoice</th>
                             <th class="h-10 px-3 text-left font-medium text-muted-foreground">Sudah Terima</th>
@@ -196,6 +198,12 @@
                     return 'Rp ' + n.toLocaleString('id-ID', { maximumFractionDigits: 0 });
                 }
 
+                function formatDue(v) {
+                    if (!v) return null;
+                    var p = String(v).split('-');
+                    return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : v;
+                }
+
                 function escapeHtml(str) {
                     return String(str)
                         .replace(/&/g, '&amp;')
@@ -288,6 +296,16 @@
                             render: function (v, type) { if (type !== 'display') return v || ''; return escapeHtml(v || '-'); } },
                         { data: 'date', className: 'px-3 py-1.5 text-muted-foreground',
                             render: function (v, type) { if (type !== 'display') return v || ''; return escapeHtml(v || '-'); } },
+                        { data: 'due_date', className: 'px-3 py-1.5 text-muted-foreground',
+                            render: function (v, type) { if (type !== 'display') return v || ''; return escapeHtml(v || '-'); } },
+                        { data: 'due_date_manual', orderable: false, searchable: false, className: 'px-3 py-1.5',
+                            render: function (v, type, row) {
+                                if (type !== 'display') return v || '';
+                                return '<input type="date" class="due-manual-input rounded-lg border border-border bg-card px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"'
+                                    + ' data-doc="' + escapeHtml(row.doc) + '"'
+                                    + ' value="' + escapeHtml(v || '') + '"'
+                                    + ' aria-label="Due date manual ' + escapeHtml(row.doc) + '" />';
+                            } },
                         { data: 'customer', className: 'px-3 py-1.5 max-w-[200px] truncate text-foreground',
                             render: function (v, type) { v = v || ''; if (type !== 'display') return v; return v === '' ? '-' : '<span title="' + escapeHtml(v) + '">' + escapeHtml(v) + '</span>'; } },
                         { data: 'invoice_amount', className: 'px-3 py-1.5 text-foreground',
@@ -397,6 +415,19 @@
                         if (rowEx) rowEx.is_exchanged = valEx;
                         el.className = 'exchange-select rounded-lg border bg-card px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring ' + exchangeClass(valEx);
                         putReceipt(docEx, { is_exchanged: valEx }, refreshSummary);
+                    }
+
+                    // Due Date Manual (per baris): jika diisi → due date efektif = manual
+                    if (el.classList && el.classList.contains('due-manual-input')) {
+                        var docDd = el.getAttribute('data-doc');
+                        var valDd = el.value || null;
+                        var rowDd = findRow(docDd);
+                        if (rowDd) {
+                            rowDd.due_date_manual = valDd;
+                            rowDd.due_date = valDd ? formatDue(valDd) : (rowDd.due_date_acc || null);
+                        }
+                        putReceipt(docDd, { due_date_manual: valDd });
+                        if (receiptTable) receiptTable.draw(false);
                     }
                 });
 

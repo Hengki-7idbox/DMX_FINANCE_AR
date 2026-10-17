@@ -360,23 +360,82 @@
         </form>
     </dialog>
 
-    {{-- Clear Data Modal --}}
+    {{-- Clear Data Modal: Hapus Periode + Hapus Seluruh Tab --}}
+    @php
+        $clearBulanNames = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        $defaultBulan = $filterBulan[0] ?? (int) now()->month;
+        $defaultTahun = $filterTahun[0] ?? (int) now()->year;
+        $clearBulanOpts = collect($availableBulan)->isEmpty() ? range(1, 12) : $availableBulan->all();
+        if (! in_array($defaultBulan, $clearBulanOpts, true)) {
+            $clearBulanOpts[] = $defaultBulan;
+            sort($clearBulanOpts);
+        }
+        $clearTahunOpts = collect($availableTahun)->isEmpty() ? [now()->year] : $availableTahun->all();
+        if (! in_array($defaultTahun, $clearTahunOpts, true)) {
+            $clearTahunOpts[] = $defaultTahun;
+            sort($clearTahunOpts);
+        }
+    @endphp
     <dialog id="clear_modal" class="modal">
         <div class="modal-box">
-            <h3 class="font-bold text-lg text-foreground">Hapus Semua Data?</h3>
-            <p class="py-2 text-sm text-muted-foreground">
-                Semua data Detail Sales <strong>invoice</strong> dan <strong>item</strong> di tab <strong>{{ $tab }}</strong>
-                ({{ number_format($totalAll) }} invoice — seluruh tab, bukan hanya yang tampil) akan dihapus permanen.
-                Data di tab lain tidak terpengaruh.
-            </p>
-            <div class="modal-action">
+            <h3 class="font-bold text-lg text-foreground">Hapus Data Detail Sales</h3>
+
+            {{-- Bagian 1: Hapus Periode --}}
+            <div class="py-3">
+                <p class="text-sm font-semibold text-foreground">Hapus Periode</p>
+                <p class="py-1 text-sm text-muted-foreground">
+                    Hapus invoice <strong>dan item</strong> tab <strong>{{ $tab }}</strong> pada bulan–tahun terpilih saja.
+                    Data bulan lain di tab ini tidak terpengaruh.
+                </p>
+                <form action="{{ route('detail-sales.clear-period') }}" method="POST" class="flex flex-wrap items-end gap-3">
+                    @csrf
+                    @method('DELETE')
+                    <input type="hidden" name="tab" value="{{ $tab }}">
+                    <div class="w-40">
+                        <label for="clear_bulan" class="mb-1 block text-xs font-medium text-muted-foreground">Bulan</label>
+                        <select id="clear_bulan" name="bulan"
+                                class="w-full min-h-9 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                            @foreach ($clearBulanOpts as $b)
+                            <option value="{{ $b }}" @selected((int) $b === (int) $defaultBulan)>{{ $clearBulanNames[(int) $b] ?? $b }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="w-28">
+                        <label for="clear_tahun" class="mb-1 block text-xs font-medium text-muted-foreground">Tahun</label>
+                        <select id="clear_tahun" name="tahun"
+                                class="w-full min-h-9 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                            @foreach ($clearTahunOpts as $t)
+                            <option value="{{ $t }}" @selected((int) $t === (int) $defaultTahun)>{{ $t }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <span class="mb-1 block text-xs invisible select-none" aria-hidden="true">Hapus</span>
+                        <button type="submit" class="btn btn-error" id="clear_period_submit">Ya, Hapus Periode</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="my-2 border-t border-border"></div>
+
+            {{-- Bagian 2: Hapus Seluruh Tab --}}
+            <div class="py-2">
+                <p class="text-sm font-semibold text-destructive">Hapus Seluruh Tab (semua periode!)</p>
+                <p class="py-1 text-sm text-muted-foreground">
+                    Semua data <strong>invoice</strong> dan <strong>item</strong> di tab <strong>{{ $tab }}</strong>
+                    ({{ number_format($totalAll) }} invoice — seluruh tab, bukan hanya yang tampil) akan dihapus permanen.
+                    Data di tab lain tidak terpengaruh.
+                </p>
                 <form action="{{ route('detail-sales.clear') }}" method="POST">
                     @csrf
                     @method('DELETE')
                     <input type="hidden" name="tab" value="{{ $tab }}">
-                    <button type="submit" class="btn btn-error">Ya, Hapus</button>
+                    <button type="submit" class="btn btn-error btn-outline">Ya, Hapus Seluruh Tab {{ $tab }}</button>
                 </form>
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('clear_modal').close()">Batal</button>
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('clear_modal').close()">Tutup</button>
             </div>
         </div>
         <form method="dialog" class="modal-backdrop">
@@ -809,8 +868,10 @@
                 if (fp.length) {
                     var hasFp = !!row.fp_number;
                     var isGung = row.fp_status === 'gung_gung';
-                    if (!((fp.indexOf('ada') !== -1 && hasFp)
-                        || (fp.indexOf('belum') !== -1 && !hasFp)
+                    // "belum" = belum ada FP sama sekali — baris gung_gung
+                    // (sengaja tidak dibuat) punya kategori sendiri.
+                    if (!((fp.indexOf('ada') !== -1 && hasFp && !isGung)
+                        || (fp.indexOf('belum') !== -1 && !hasFp && !isGung)
                         || (fp.indexOf('gung_gung') !== -1 && isGung))) return false;
                 }
                 if (n.length && !n.some(function(x) {

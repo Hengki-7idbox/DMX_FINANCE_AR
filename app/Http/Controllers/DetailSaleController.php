@@ -10,6 +10,8 @@ use App\Models\FakturPajak;
 use App\Models\ImportSession;
 use App\Services\ExternalXmlBuilder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
@@ -111,16 +113,19 @@ class DetailSaleController extends Controller
         if ($isInvoices) {
             $optQuery->where('owing', '!=', 0);
         }
+        // Buang 0 — hasil MONTH/YEAR(NULL) pada baris tanpa tanggal (import rusak).
         $availableBulan = (clone $optQuery)
             ->selectRaw('DISTINCT MONTH(transaction_date) AS m')
             ->pluck('m')
             ->map(fn ($v) => (int) $v)
+            ->filter(fn ($v) => $v >= 1 && $v <= 12)
             ->sort()
             ->values();
         $availableTahun = (clone $optQuery)
             ->selectRaw('DISTINCT YEAR(transaction_date) AS y')
             ->pluck('y')
             ->map(fn ($v) => (int) $v)
+            ->filter(fn ($v) => $v >= 2000)
             ->sort()
             ->values();
         $totalAll = DetailSale::where('source_type', $tab)->count();
@@ -448,6 +453,54 @@ class DetailSaleController extends Controller
         return redirect()
             ->route('detail-sales.index', ['tab' => $tab])
             ->with('success', "Berhasil menghapus {$deleted} invoice dan {$deletedItems} item Detail Sales tab {$tab}.");
+    }
+
+    /**
+     * Hapus data per periode (bulan+tahun) pada tab tertentu — invoice + item.
+     * Untuk koreksi salah upload per bulan tanpa menghapus seluruh tab.
+     */
+    public function clearPeriod(Request $request)
+    {
+        $data = $request->validate([
+            'tab' => ['required', Rule::in([DetailSale::SOURCE_INTERNAL, DetailSale::SOURCE_EXTERNAL])],
+            'bulan' => ['required', 'integer', 'between:1,12'],
+            'tahun' => ['required', 'integer', 'between:2020,2030'],
+        ]);
+
+        $tab = $data['tab'];
+        $start = sprintf('%04d-%02d-01', $data['tahun'], $data['bulan']);
+        $end = date('Y-m-t', strtotime($start));
+
+        [$deleted, $deletedItems] = DB::transaction(function () use ($tab, $start, $end) {
+            $docNumbers = DetailSale::where('source_type', $tab)
+                ->whereBetween('transaction_date', [$start, $end])
+                ->pluck('doc_number');
+
+            $items = 0;
+            if ($docNumbers->isNotEmpty()) {
+                $items = DetailSaleItem::where('source_type', $tab)
+                    ->whereIn('doc_number', $docNumbers)
+                    ->delete();
+            }
+
+            $sales = DetailSale::where('source_type', $tab)
+                ->whereBetween('transaction_date', [$start, $end])
+                ->delete();
+
+            return [$sales, $items];
+        });
+
+        $periode = Carbon::parse($start)->locale('id')->translatedFormat('F Y');
+
+        if ($deleted + $deletedItems === 0) {
+            return redirect()
+                ->route('detail-sales.index', ['tab' => $tab])
+                ->with('error', "Tidak ada data tab {$tab} periode {$periode} untuk dihapus.");
+        }
+
+        return redirect()
+            ->route('detail-sales.index', ['tab' => $tab])
+            ->with('success', "Berhasil menghapus {$deleted} invoice dan {$deletedItems} item tab {$tab} periode {$periode}.");
     }
 
     public function export(Request $request)
