@@ -37,9 +37,9 @@ class ChinaReportExport implements FromArray, WithHeadings, WithStyles
     {
         $months = $data['months'];
         $catch = $data['catch'];
-        $this->lastCol = 4 + count($months);
+        $this->lastCol = 5 + count($months);
 
-        $this->headings = ['Company Name', 'CR. Term'];
+        $this->headings = ['Company Code', 'Company Name', 'CR. Term'];
         foreach ($months as $m) {
             $this->headings[] = $m['label'];
         }
@@ -51,7 +51,7 @@ class ChinaReportExport implements FromArray, WithHeadings, WithStyles
             $this->push(array_merge([$section['title']], array_fill(0, $this->lastCol - 1, '')), true);
 
             foreach ($section['rows'] as $r) {
-                $cells = [$r['name'], $r['term']];
+                $cells = [$r['code'], $r['name'], $r['term']];
                 foreach ($months as $m) {
                     $cells[] = $r['months'][$m['key']];
                 }
@@ -61,7 +61,7 @@ class ChinaReportExport implements FromArray, WithHeadings, WithStyles
                 $this->push($cells);
             }
 
-            $cells = ['Subtotal', ''];
+            $cells = ['', 'Subtotal', ''];
             foreach ($months as $m) {
                 $cells[] = $section['subtotal']['months'][$m['key']];
             }
@@ -74,7 +74,7 @@ class ChinaReportExport implements FromArray, WithHeadings, WithStyles
         }
 
         if (! empty($data['sections'])) {
-            $cells = ['GRAND TOTAL', ''];
+            $cells = ['', 'GRAND TOTAL', ''];
             foreach ($months as $m) {
                 $cells[] = $data['grand']['months'][$m['key']];
             }
@@ -173,8 +173,8 @@ class ChinaReportExport implements FromArray, WithHeadings, WithStyles
             ]);
         }
 
-        // Format angka: kolom bulan s/d Balance (C..M) pada tabel utama.
-        $numStart = Coordinate::stringFromColumnIndex(3);
+        // Format angka: kolom bulan s/d Balance (D..N pada tabel utama; A=code, B=name, C=term).
+        $numStart = Coordinate::stringFromColumnIndex(4);
         $numEnd = Coordinate::stringFromColumnIndex($this->lastCol - 1);
         $sheet->getStyle($numStart . '2:' . $numEnd . $lastRow)->getNumberFormat()->setFormatCode('#,##0');
 
@@ -210,7 +210,7 @@ class ChinaReportExport implements FromArray, WithHeadings, WithStyles
         foreach (range(1, max($this->lastCol, 23)) as $i) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
         }
-        $sheet->freezePane('C2');
+        $sheet->freezePane('D2');
 
         return [];
     }

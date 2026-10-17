@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ChinaGlobalExport;
 use App\Exports\ChinaReportExport;
 use App\Exports\StandardReportExport;
 use App\Imports\OutstandingInvoicesImport;
@@ -140,7 +141,8 @@ class InvoiceController extends Controller
      */
     private function standardReportData(?int $year, array $filters = []): array
     {
-        $query = OutstandingInvoice::whereNull('exception_type');
+        $query = OutstandingInvoice::whereNull('exception_type')
+            ->where('missing_count', '<', 1);
         if ($year !== null) {
             $query->whereYear('invoice_date', $year);
         }
@@ -309,12 +311,22 @@ class InvoiceController extends Controller
         ]);
     }
 
+    /** Export Excel tab Global (Company Code, Company Name, CR. Term, 2024++, Balance, Last Pay Date). */
+    public function chinaReportGlobalExport()
+    {
+        return Excel::download(
+            new ChinaGlobalExport($this->chinaGlobalData()),
+            'china-report-global.xlsx'
+        );
+    }
+
     /**
      * @return array{rows: array<int, array<string, mixed>>, grand: array<string, float>}
      */
     private function chinaGlobalData(): array
     {
         $invoices = OutstandingInvoice::whereNull('exception_type')
+            ->where('missing_count', '<', 1)
             ->whereDate('invoice_date', '<', '2025-01-01')
             ->get(['customer_no', 'customer_name', 'terms_net_days', 'prime_owing']);
 
@@ -391,7 +403,8 @@ class InvoiceController extends Controller
      */
     private function chinaReportData(?int $year): array
     {
-        $query = OutstandingInvoice::whereNull('exception_type');
+        $query = OutstandingInvoice::whereNull('exception_type')
+            ->where('missing_count', '<', 1);
         if ($year !== null) {
             $query->whereYear('invoice_date', $year);
         }
@@ -608,7 +621,7 @@ class InvoiceController extends Controller
 
         $pageTitle = $isAnomali ? 'Anomali Piutang' : 'Outstanding Invoices';
         $pageDescription = $isAnomali
-            ? 'Invoice yang ditandai anomali / biaya bank'
+            ? 'Invoice yang ditandai anomali / biaya bank / sudah bayar belum proses'
             : 'Daftar invoice outstanding (belum lunas) — hasil import Accurate';
 
         return view('invoices.outstanding', compact(
@@ -691,6 +704,13 @@ class InvoiceController extends Controller
                 foreach (array_chunk($present, 1000) as $chunk) {
                     OutstandingInvoice::whereIn('invoice_no', $chunk)->update(['missing_count' => 0]);
                 }
+
+                // "Sudah bayar belum proses" yang tidak ada di file → lunas tervalidasi di
+                // Accurate: clear exception (pindah dari Anomali ke Outstanding, badge "Sudah Lunas").
+                OutstandingInvoice::where('exception_type', 'sudah_bayar')
+                    ->whereNotIn('invoice_no', $present)
+                    ->update(['exception_type' => null, 'exception_at' => null]);
+
                 OutstandingInvoice::where('missing_count', '>=', 3)->delete();
             });
 
@@ -715,14 +735,17 @@ class InvoiceController extends Controller
     }
 
     /**
-     * Set/clear exception (anomali | biaya_bank | clear) untuk baris terpilih.
+     * Set/clear exception (anomali | biaya_bank | sudah_bayar | clear) untuk baris terpilih.
+     *
+     * `sudah_bayar` = sudah bayar tapi belum divalidasi di Accurate; baris pindah ke
+     * halaman Anomali dan otomatis di-clear saat upload berikutnya invoice tidak ada di file.
      */
     public function setException(Request $request)
     {
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer'],
-            'type' => ['required', 'string', 'in:anomali,biaya_bank,clear'],
+            'type' => ['required', 'string', 'in:anomali,biaya_bank,sudah_bayar,clear'],
         ]);
 
         if ($data['type'] === 'clear') {

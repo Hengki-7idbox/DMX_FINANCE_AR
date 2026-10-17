@@ -12,7 +12,7 @@
         .sub { font-size: 11px; color: #444; margin-bottom: 12px; }
         .no-print { margin-bottom: 12px; }
         .no-print button { padding: 6px 14px; font-size: 12px; cursor: pointer; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 6px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 32px; }
         th, td { border: 1px solid #888; padding: 3px 6px; text-align: right; }
         th { background: #eee; }
         th.left, td.left { text-align: left; }
@@ -35,6 +35,7 @@
         <table>
             <thead>
                 <tr>
+                    <th class="left">Company Code</th>
                     <th class="left">Company Name</th>
                     <th class="left">CR. Term</th>
                     @foreach($months as $m)
@@ -47,10 +48,11 @@
             </thead>
             <tbody>
                 <tr class="section">
-                    <td class="left" colspan="{{ 4 + count($months) }}">{{ $section['title'] }}</td>
+                    <td class="left" colspan="{{ 5 + count($months) }}">{{ $section['title'] }}</td>
                 </tr>
                 @foreach($section['rows'] as $r)
                     <tr>
+                        <td class="left">{{ $r['code'] ?: '-' }}</td>
                         <td class="left">{{ $r['name'] ?: '-' }}</td>
                         <td class="left">{{ $r['term'] }}</td>
                         @foreach($months as $m)
@@ -62,6 +64,7 @@
                     </tr>
                 @endforeach
                 <tr>
+                    <td></td>
                     <td class="left">Subtotal</td>
                     <td></td>
                     @foreach($months as $m)
@@ -81,6 +84,7 @@
         <table>
             <tfoot>
                 <tr>
+                    <td></td>
                     <td class="left">GRAND TOTAL</td>
                     <td></td>
                     @foreach($months as $m)

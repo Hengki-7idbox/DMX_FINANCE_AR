@@ -30,74 +30,57 @@
         </div>
     </div>
 
-    @php $colCount = 4 + count($months); @endphp
-
     <x-card>
         <div class="border-b border-border px-3 py-2 text-sm text-muted-foreground">
             *Update on {{ $updatedAt->format('d/m/Y H:i:s') }}
         </div>
-        <div class="table-container w-full overflow-x-auto overflow-y-hidden">
-            <table class="w-full text-sm whitespace-nowrap">
-                @forelse($sections as $section)
-                    <thead class="border-b border-border bg-accent/40">
-                        <tr>
-                            <th class="h-10 px-3 text-left font-medium text-muted-foreground">Company Name</th>
-                            <th class="h-10 px-3 text-left font-medium text-muted-foreground">CR. Term</th>
-                            @foreach($months as $m)
-                                <th class="h-10 px-3 text-right font-medium text-muted-foreground">{{ $m['label'] }}</th>
-                            @endforeach
-                            <th class="h-10 px-3 text-right font-medium text-muted-foreground">{{ $catch['label'] }}</th>
-                            <th class="h-10 px-3 text-right font-medium text-muted-foreground">Balance</th>
-                            <th class="h-10 px-3 text-left font-medium text-muted-foreground">Last Pay Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="border-b border-border bg-accent/70">
-                            <td colspan="{{ $colCount }}" class="h-9 px-3 font-semibold text-foreground">{{ $section['title'] }}</td>
-                        </tr>
-                        @foreach($section['rows'] as $r)
-                            <tr class="border-b border-border hover:bg-accent/40">
-                                <td class="px-3 py-1.5 font-medium text-foreground max-w-[240px] truncate" title="{{ $r['name'] }}">{{ $r['name'] ?: '-' }}</td>
-                                <td class="px-3 py-1.5 text-muted-foreground">{{ $r['term'] }}</td>
-                                @foreach($months as $m)
-                                    <td class="px-3 py-1.5 text-right text-foreground">{{ $r['months'][$m['key']] != 0 ? number_format($r['months'][$m['key']], 0, ',', '.') : '-' }}</td>
-                                @endforeach
-                                <td class="px-3 py-1.5 text-right text-foreground">{{ $r['catch'] != 0 ? number_format($r['catch'], 0, ',', '.') : '-' }}</td>
-                                <td class="px-3 py-1.5 text-right font-medium text-foreground">{{ number_format($r['balance'], 0, ',', '.') }}</td>
-                                <td class="px-3 py-1.5 text-muted-foreground">-</td>
-                            </tr>
-                        @endforeach
-                        <tr class="border-b-2 border-border bg-accent/40 font-semibold">
-                            <td class="px-3 py-2 text-foreground">Subtotal</td>
-                            <td class="px-3 py-2"></td>
-                            @foreach($months as $m)
-                                <td class="px-3 py-2 text-right text-foreground">{{ number_format($section['subtotal']['months'][$m['key']], 0, ',', '.') }}</td>
-                            @endforeach
-                            <td class="px-3 py-2 text-right text-foreground">{{ number_format($section['subtotal']['catch'], 0, ',', '.') }}</td>
-                            <td class="px-3 py-2 text-right text-foreground">{{ number_format($section['subtotal']['balance'], 0, ',', '.') }}</td>
-                            <td class="px-3 py-2"></td>
-                        </tr>
-                    </tbody>
-                @empty
-                    <thead class="border-b border-border bg-accent/40">
-                        <tr>
-                            <th class="h-10 px-3 text-left font-medium text-muted-foreground">Company Name</th>
-                            <th class="h-10 px-3 text-left font-medium text-muted-foreground">CR. Term</th>
-                            @foreach($months as $m)
-                                <th class="h-10 px-3 text-right font-medium text-muted-foreground">{{ $m['label'] }}</th>
-                            @endforeach
-                            <th class="h-10 px-3 text-right font-medium text-muted-foreground">{{ $catch['label'] }}</th>
-                            <th class="h-10 px-3 text-right font-medium text-muted-foreground">Balance</th>
-                            <th class="h-10 px-3 text-left font-medium text-muted-foreground">Last Pay Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td colspan="{{ $colCount }}" class="px-3 py-6 text-center text-muted-foreground">Tidak ada data.</td></tr>
-                    </tbody>
-                @endforelse
-                @if(count($sections))
+
+        @if(count($sections))
+            @foreach($sections as $i => $section)
+                <section class="pt-4 {{ !$loop->last ? 'mb-8' : '' }}">
+                    <div class="mb-1.5 flex items-baseline justify-between">
+                        <h3 class="text-sm font-semibold text-foreground">{{ $section['title'] }}</h3>
+                        <span class="text-xs text-muted-foreground">{{ count($section['rows']) }} customer</span>
+                    </div>
+                    <div class="table-container w-full overflow-x-auto overflow-y-hidden">
+                        <table id="china-sec-{{ $i }}" class="w-full min-w-[1500px] caption-bottom text-sm whitespace-nowrap">
+                            <thead class="border-b border-border bg-accent/40">
+                                <tr>
+                                    <th class="h-10 px-3 text-left font-medium text-muted-foreground">Company Code</th>
+                                    <th class="h-10 px-3 text-left font-medium text-muted-foreground">Company Name</th>
+                                    <th class="h-10 px-3 text-left font-medium text-muted-foreground">CR. Term</th>
+                                    @foreach($months as $m)
+                                        <th class="h-10 px-3 text-right font-medium text-muted-foreground">{{ $m['label'] }}</th>
+                                    @endforeach
+                                    <th class="h-10 px-3 text-right font-medium text-muted-foreground">{{ $catch['label'] }}</th>
+                                    <th class="h-10 px-3 text-right font-medium text-muted-foreground">Balance</th>
+                                    <th class="h-10 px-3 text-left font-medium text-muted-foreground">Last Pay Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>{{-- Baris dirender DataTables dari SEC_DATA --}}</tbody>
+                            <tfoot>
+                                <tr class="border-t-2 border-border bg-accent/40 font-semibold">
+                                    <td class="px-3 py-2"></td>
+                                    <td class="px-3 py-2 text-foreground">Subtotal</td>
+                                    <td class="px-3 py-2"></td>
+                                    @foreach($months as $m)
+                                        <td class="px-3 py-2 text-right text-foreground">{{ number_format($section['subtotal']['months'][$m['key']], 0, ',', '.') }}</td>
+                                    @endforeach
+                                    <td class="px-3 py-2 text-right text-foreground">{{ number_format($section['subtotal']['catch'], 0, ',', '.') }}</td>
+                                    <td class="px-3 py-2 text-right text-foreground">{{ number_format($section['subtotal']['balance'], 0, ',', '.') }}</td>
+                                    <td class="px-3 py-2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </section>
+            @endforeach
+
+            <div class="mt-8 overflow-x-auto">
+                <table class="w-full min-w-[1500px] text-sm whitespace-nowrap">
                     <tfoot>
                         <tr class="border-t-2 border-border bg-accent/70 font-semibold">
+                            <td class="px-3 py-2"></td>
                             <td class="px-3 py-2 text-foreground">GRAND TOTAL</td>
                             <td class="px-3 py-2"></td>
                             @foreach($months as $m)
@@ -108,9 +91,11 @@
                             <td class="px-3 py-2"></td>
                         </tr>
                     </tfoot>
-                @endif
-            </table>
-        </div>
+                </table>
+            </div>
+        @else
+            <div class="px-3 py-6 text-center text-muted-foreground">Tidak ada data.</div>
+        @endif
     </x-card>
 
     @if(count($recap))
@@ -171,10 +156,69 @@
 
     @push('scripts')
     <script>
+        function fmtNum(v) {
+            if (v === null || v === undefined) return '-';
+            return Number(v).toLocaleString('id-ID');
+        }
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        var SEC_DATA = @json(array_values(array_map(fn ($s) => $s['rows'], $sections)));
+        var MONTH_KEYS = @json(array_column($months, 'key'));
+
         document.getElementById('f_tahun').addEventListener('change', function () {
             var p = new URLSearchParams(window.location.search);
             p.set('tahun', this.value);
             window.location.search = p.toString();
+        });
+
+        SEC_DATA.forEach(function (rows, i) {
+            var columns = [
+                { data: 'code', className: 'px-3 py-1.5 font-medium text-foreground max-w-[180px] truncate',
+                    render: function (v, type) { v = v || ''; if (type !== 'display') return v; return v === '' ? '-' : '<span title="' + escapeHtml(v) + '">' + escapeHtml(v) + '</span>'; } },
+                { data: 'name', className: 'px-3 py-1.5 font-medium text-foreground max-w-[240px] truncate',
+                    render: function (v, type) { v = v || ''; if (type !== 'display') return v; return v === '' ? '-' : '<span title="' + escapeHtml(v) + '">' + escapeHtml(v) + '</span>'; } },
+                { data: 'term', className: 'px-3 py-1.5 text-muted-foreground',
+                    render: function (v, type) { v = v || ''; return type === 'display' ? escapeHtml(v) : v; } }
+            ];
+            MONTH_KEYS.forEach(function (k) {
+                columns.push({
+                    data: function (row) { return row.months[k] || 0; },
+                    className: 'px-3 py-1.5 text-right text-foreground',
+                    render: function (v, type) { return type === 'display' ? (v ? fmtNum(v) : '-') : (v || 0); }
+                });
+            });
+            columns.push(
+                { data: 'catch', className: 'px-3 py-1.5 text-right text-foreground',
+                    render: function (v, type) { return type === 'display' ? (v ? fmtNum(v) : '-') : (v || 0); } },
+                { data: 'balance', className: 'px-3 py-1.5 text-right font-medium text-foreground',
+                    render: function (v, type) { return type === 'display' ? fmtNum(v) : (v || 0); } },
+                { data: null, defaultContent: '-', className: 'px-3 py-1.5 text-muted-foreground', orderable: false }
+            );
+
+            $('#china-sec-' + i).DataTable({
+                data: rows,
+                deferRender: true,
+                pageLength: 25,
+                order: [],
+                searching: true,
+                columns: columns,
+                layout: {
+                    topStart: 'search',
+                    topEnd: 'pageLength',
+                    bottomStart: 'info',
+                    bottomEnd: 'paging'
+                },
+                language: {
+                    search: 'Cari:',
+                    lengthMenu: 'Tampilkan _MENU_ data',
+                    info: 'Menampilkan _START_ - _END_ dari _TOTAL_ data',
+                    infoEmpty: 'Tidak ada data',
+                    infoFiltered: '(disaring dari _MAX_ total data)',
+                    paginate: { first: 'Pertama', last: 'Terakhir', next: 'Selanjutnya', previous: 'Sebelumnya' }
+                }
+            });
         });
     </script>
     @endpush
