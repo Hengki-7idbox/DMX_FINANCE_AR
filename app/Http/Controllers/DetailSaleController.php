@@ -14,6 +14,7 @@ use App\Models\MappingCustomer;
 use App\Models\MappingProduct;
 use App\Models\PaymentTerm;
 use App\Models\Setting;
+use App\Models\SalesReturn;
 use App\Services\AccurateApiClient;
 use App\Services\CoretaxXmlBuilder;
 use App\Services\ExternalXmlBuilder;
@@ -38,6 +39,20 @@ class DetailSaleController extends Controller
         $query = DetailSale::where('source_type', $tab);
         if ($isInvoices) {
             $query->where('owing', '!=', 0);
+        }
+
+        // Tab internal: sembunyikan dokumen retur (format SR — bukan DMX/SDMX) beserta
+        // varian sufiks huruf (mis. SR/2610/0043D) yang base-nya ada di sales_returns.
+        if ($tab === DetailSale::SOURCE_INTERNAL) {
+            $returns = SalesReturn::pluck('return_no')->all();
+            $exclude = $returns;
+            foreach ($returns as $r) {
+                for ($c = ord('A'); $c <= ord('Z'); $c++) {
+                    $exclude[] = $r . chr($c);
+                }
+            }
+            $exclude = array_unique($exclude);
+            $query->whereNotIn('doc_number', $exclude);
         }
 
         // Filter tahun & bulan via query param (?bulan=8,9&tahun=2026).
@@ -150,6 +165,17 @@ class DetailSaleController extends Controller
         if ($isInvoices) {
             $optQuery->where('owing', '!=', 0);
         }
+        if ($tab === DetailSale::SOURCE_INTERNAL) {
+            $returns = SalesReturn::pluck('return_no')->all();
+            $exclude = $returns;
+            foreach ($returns as $r) {
+                for ($c = ord('A'); $c <= ord('Z'); $c++) {
+                    $exclude[] = $r . chr($c);
+                }
+            }
+            $exclude = array_unique($exclude);
+            $optQuery->whereNotIn('doc_number', $exclude);
+        }
         // Buang 0 — hasil MONTH/YEAR(NULL) pada baris tanpa tanggal (import rusak).
         $availableBulan = (clone $optQuery)
             ->selectRaw('DISTINCT MONTH(transaction_date) AS m')
@@ -165,7 +191,19 @@ class DetailSaleController extends Controller
             ->filter(fn ($v) => $v >= 2000)
             ->sort()
             ->values();
-        $totalAll = DetailSale::where('source_type', $tab)->count();
+        $totalQuery = DetailSale::where('source_type', $tab);
+        if ($tab === DetailSale::SOURCE_INTERNAL) {
+            $returns = SalesReturn::pluck('return_no')->all();
+            $exclude = $returns;
+            foreach ($returns as $r) {
+                for ($c = ord('A'); $c <= ord('Z'); $c++) {
+                    $exclude[] = $r . chr($c);
+                }
+            }
+            $exclude = array_unique($exclude);
+            $totalQuery->whereNotIn('doc_number', $exclude);
+        }
+        $totalAll = $totalQuery->count();
 
         $pageTitle = $isInvoices ? 'Invoice Belum Lunas' : 'Detail Sales';
         $pageDescription = $isInvoices
