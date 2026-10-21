@@ -7,10 +7,13 @@ use App\Http\Controllers\CustomerGroupController;
 use App\Http\Controllers\PaymentTermController;
 use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\RecapSaleController;
+use App\Http\Controllers\SalesReturnController;
 use App\Http\Controllers\DetailSaleController;
 use App\Http\Controllers\FakturPajakController;
 use App\Http\Controllers\MappingCustomerController;
 use App\Http\Controllers\MappingProductController;
+use App\Http\Controllers\MappingUnitController;
+use App\Http\Controllers\CoretaxKeywordController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BankTransactionController;
@@ -45,6 +48,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('recap-sales', [RecapSaleController::class, 'index'])->name('recap-sales.index');
     Route::post('recap-sales/import', [RecapSaleController::class, 'import'])->name('recap-sales.import');
     Route::delete('recap-sales/clear', [RecapSaleController::class, 'clear'])->name('recap-sales.clear');
+    Route::get('retur-sales', [SalesReturnController::class, 'index'])->name('retur-sales.index');
+    Route::post('retur-sales/import', [SalesReturnController::class, 'import'])->name('retur-sales.import');
     Route::get('detail-sales', [DetailSaleController::class, 'index'])->name('detail-sales.index');
     Route::post('detail-sales/import', [DetailSaleController::class, 'import'])->name('detail-sales.import');
     Route::get('detail-sales/items/{docNumber}', [DetailSaleController::class, 'items'])->name('detail-sales.items');
@@ -52,6 +57,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('detail-sales/clear-period', [DetailSaleController::class, 'clearPeriod'])->name('detail-sales.clear-period');
     Route::post('detail-sales/export', [DetailSaleController::class, 'export'])->name('detail-sales.export');
     Route::post('detail-sales/export-xml-external', [DetailSaleController::class, 'exportXmlExternal'])->name('detail-sales.export-xml-external');
+    Route::post('detail-sales/export-xml-coretax', [DetailSaleController::class, 'exportXmlCoretax'])->name('detail-sales.export-xml-coretax');
+    Route::post('detail-sales/create-ext', [DetailSaleController::class, 'createExternalDoc'])->name('detail-sales.create-ext');
+    Route::post('detail-sales/delete-ext', [DetailSaleController::class, 'deleteExternalDoc'])->name('detail-sales.delete-ext');
     Route::put('detail-sales/faktur-pajak-status', [DetailSaleController::class, 'updateFakturPajakStatus'])->name('detail-sales.fp-status');
     Route::get('faktur-pajak', [FakturPajakController::class, 'index'])->name('faktur-pajak.index');
     Route::post('faktur-pajak/import', [FakturPajakController::class, 'import'])->name('faktur-pajak.import');
@@ -69,6 +77,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('mapping-products/clear', [MappingProductController::class, 'clear'])->name('mapping-products.clear');
     Route::put('mapping-products/{mappingProduct}', [MappingProductController::class, 'update'])->name('mapping-products.update');
     Route::delete('mapping-products/{mappingProduct}', [MappingProductController::class, 'destroy'])->name('mapping-products.destroy');
+    Route::get('mapping-units', [MappingUnitController::class, 'index'])->name('mapping-units.index');
+    Route::post('mapping-units', [MappingUnitController::class, 'store'])->name('mapping-units.store');
+    Route::post('mapping-units/import', [MappingUnitController::class, 'import'])->name('mapping-units.import');
+    Route::delete('mapping-units/clear', [MappingUnitController::class, 'clear'])->name('mapping-units.clear');
+    Route::put('mapping-units/{mappingUnit}', [MappingUnitController::class, 'update'])->name('mapping-units.update');
+    Route::delete('mapping-units/{mappingUnit}', [MappingUnitController::class, 'destroy'])->name('mapping-units.destroy');
+    Route::get('coretax-keywords', [CoretaxKeywordController::class, 'index'])->name('coretax-keywords.index');
+    Route::post('coretax-keywords', [CoretaxKeywordController::class, 'store'])->name('coretax-keywords.store');
+    Route::delete('coretax-keywords/clear', [CoretaxKeywordController::class, 'clear'])->name('coretax-keywords.clear');
+    Route::delete('coretax-keywords/{coretaxKeyword}', [CoretaxKeywordController::class, 'destroy'])->name('coretax-keywords.destroy');
 
     // Olah Data
     Route::prefix('olah-data')->name('olah-data.')->group(function () {

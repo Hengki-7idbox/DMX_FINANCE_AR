@@ -93,6 +93,51 @@
             </div>
         </x-card>
 
+        <x-card class="mb-4">
+            <div class="border-b border-border px-4 py-3">
+                <h3 class="text-sm font-semibold text-foreground">Coretax</h3>
+            </div>
+            <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
+                <div>
+                    <label for="seller_tin" class="mb-1 block text-xs font-medium text-muted-foreground">NPWP / TIN Penjual (16 digit)</label>
+                    <input type="text" id="seller_tin" name="seller_tin" value="{{ old('seller_tin', $settings['seller_tin']) }}"
+                           class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    <p class="mt-1 text-xs text-tertiary">ID TKU Penjual = TIN + "000000".</p>
+                </div>
+            </div>
+        </x-card>
+
+        <x-card class="mb-4">
+            <div class="border-b border-border px-4 py-3">
+                <h3 class="text-sm font-semibold text-foreground">Accurate Online API (DMX EXT)</h3>
+            </div>
+            <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
+                <div>
+                    <label for="accurate_host" class="mb-1 block text-xs font-medium text-muted-foreground">Host</label>
+                    <input type="text" id="accurate_host" name="accurate_host" value="{{ old('accurate_host', $settings['accurate_host'] ?? 'https://zeus.accurate.id') }}"
+                           class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+                <div>
+                    <label for="accurate_warehouse_name" class="mb-1 block text-xs font-medium text-muted-foreground">Gudang (Nama)</label>
+                    <input type="text" id="accurate_warehouse_name" name="accurate_warehouse_name" value="{{ old('accurate_warehouse_name', $settings['accurate_warehouse_name'] ?? 'Utama') }}"
+                           class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    <p class="mt-1 text-xs text-tertiary">Nama gudang Accurate untuk DO &amp; Invoice (mis. Utama).</p>
+                </div>
+                <div>
+                    <label for="accurate_api_token" class="mb-1 block text-xs font-medium text-muted-foreground">API Token</label>
+                    <input type="password" id="accurate_api_token" name="accurate_api_token" value="{{ old('accurate_api_token', $settings['accurate_api_token'] ?? '') }}" autocomplete="off"
+                           class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    <p class="mt-1 text-xs text-tertiary">Kosongkan bila tidak ingin mengubah token tersimpan.</p>
+                </div>
+                <div>
+                    <label for="accurate_signature_secret" class="mb-1 block text-xs font-medium text-muted-foreground">Signature Secret</label>
+                    <input type="password" id="accurate_signature_secret" name="accurate_signature_secret" value="{{ old('accurate_signature_secret', $settings['accurate_signature_secret'] ?? '') }}" autocomplete="off"
+                           class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    <p class="mt-1 text-xs text-tertiary">Dipakai untuk X-Api-Signature = base64(HMAC_SHA256(secret, timestamp)).</p>
+                </div>
+            </div>
+        </x-card>
+
         <div class="flex justify-end">
             <button type="submit"
                     class="inline-flex min-h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">

@@ -143,6 +143,7 @@
                     @else
                     <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-format="xml">Export XML</button></li>
                     @endif
+                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-format="xml_coretax">XML Coretax</button></li>
                     <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-format="csv">Export CSV</button></li>
                     <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-format="xls">Export XLS</button></li>
                 </ul>
@@ -153,7 +154,7 @@
     <x-card>
         {{-- Horizontally scrollable data table: card tetap di batas, scroll hanya di wrapper --}}
         <div class="table-container w-full overflow-x-auto overflow-y-hidden">
-            <table id="detail-sales-table" class="w-full min-w-[1100px] caption-bottom text-sm whitespace-nowrap">
+            <table id="detail-sales-table" class="w-full min-w-[1320px] caption-bottom text-sm whitespace-nowrap">
                 <thead class="border-b border-border">
                     <tr>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Aksi</th>
@@ -162,8 +163,14 @@
                                    class="h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                    aria-label="Pilih semua baris" />
                         </th>
+                        @if($tab === 'internal')
+                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">SO EXT</th>
+                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">DO EXT</th>
+                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">INV EXT</th>
+                        @endif
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Status</th>
                         @if($tab === 'external')
+                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">Tahap</th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Faktur Pajak</th>
                         @endif
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Customer No.</th>
@@ -203,6 +210,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
             Lihat Produk
+        </button>
+        <button type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                onclick="exportXmlCoretaxDocFromMenu()">
+            <svg class="h-4 w-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export XML Coretax
         </button>
         @if($tab === 'external')
         <button type="button"
@@ -691,6 +706,146 @@
             if (doc) downloadExternalXml({ doc_number: doc });
         }
 
+        var CREATE_EXT_URL = @json(route('detail-sales.create-ext'));
+
+        function createExtDoc(btn) {
+            if (!btn || btn.disabled) return;
+            var doc = btn.getAttribute('data-doc');
+            var type = btn.getAttribute('data-type');
+            if (!doc) return;
+
+            var original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Proses...';
+
+            fetch(CREATE_EXT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                },
+                body: JSON.stringify({ doc_number: doc, type: type })
+            })
+                .then(function (res) {
+                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                })
+                .then(function (r) {
+                    if (!r.ok || !r.body.ok) {
+                        btn.disabled = false;
+                        btn.textContent = original;
+                        importToast('error', (r.body && r.body.message) || 'Gagal membuat dokumen di Accurate.');
+                        return;
+                    }
+                    btn.textContent = 'Terkirim';
+                    btn.className = 'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-success/10 text-success ring-1 ring-success/40 cursor-default';
+                    importToast('success', r.body.message || 'Dokumen dibuat di Accurate.');
+                    setTimeout(function () { window.location.reload(); }, 700);
+                })
+                .catch(function () {
+                    btn.disabled = false;
+                    btn.textContent = original;
+                    importToast('error', 'Gagal menghubungi server.');
+                });
+        }
+
+        var DELETE_EXT_URL = @json(route('detail-sales.delete-ext'));
+
+        function deleteExtDoc(btn) {
+            if (!btn || btn.disabled) return;
+            var doc = btn.getAttribute('data-doc');
+            var type = btn.getAttribute('data-type');
+            if (!doc || !type) return;
+
+            var label = type.toUpperCase();
+            if (!window.confirm('Hapus ' + label + ' ' + doc + ' di Accurate?')) return;
+
+            btn.disabled = true;
+            fetch(DELETE_EXT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                },
+                body: JSON.stringify({ doc_number: doc, type: type })
+            })
+                .then(function (res) {
+                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                })
+                .then(function (r) {
+                    if (!r.ok || !r.body.ok) {
+                        btn.disabled = false;
+                        importToast('error', (r.body && r.body.message) || 'Gagal menghapus dokumen di Accurate.');
+                        return;
+                    }
+                    var cell = btn.closest('td');
+                    if (cell) {
+                        cell.innerHTML = '<button type="button" class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-error/10 text-error ring-1 ring-error/40 hover:bg-error/20" data-doc="'
+                            + escapeHtml(doc) + '" data-type="' + type + '" onclick="createExtDoc(this)">Create</button>';
+                    }
+                    importToast('success', r.body.message || 'Dokumen dihapus dari Accurate.');
+                    setTimeout(function () { window.location.reload(); }, 700);
+                })
+                .catch(function () {
+                    btn.disabled = false;
+                    importToast('error', 'Gagal menghubungi server.');
+                });
+        }
+
+        var EXPORT_CORETAX_URL = @json(route('detail-sales.export-xml-coretax'));
+        var EXPORT_CORETAX_TAB = @json($tab);
+
+        // Unduh 1 file XML Coretax (TaxInvoiceBulk) dari invoice terpilih.
+        function downloadCoretaxXml(payload) {
+            payload = payload || {};
+            payload.tab = EXPORT_CORETAX_TAB;
+            fetch(EXPORT_CORETAX_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(function (res) {
+                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                })
+                .then(function (r) {
+                    if (!r.ok || !r.body.ok) {
+                        importToast('error', (r.body && r.body.message) || 'Gagal membuat XML Coretax.');
+                        return;
+                    }
+                    r.body.files.forEach(function (f, i) {
+                        setTimeout(function () {
+                            var blob = new Blob([f.content], { type: 'text/xml' });
+                            var url = URL.createObjectURL(blob);
+                            var a = document.createElement('a');
+                            a.href = url;
+                            a.download = f.name;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        }, i * 350);
+                    });
+                    importToast('success', r.body.count + ' invoice → XML Coretax diunduh.');
+                })
+                .catch(function () {
+                    importToast('error', 'Gagal membuat XML Coretax.');
+                });
+        }
+
+        function exportXmlCoretaxDocFromMenu() {
+            var doc = actionMenuDoc;
+            closeActionMenu();
+            if (doc) downloadCoretaxXml({ doc_number: doc });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             document.addEventListener('click', function(e) {
                 var btn = e.target.closest('[data-doc][onclick*="openActionMenu"]');
@@ -739,6 +894,43 @@
                 }
             };
 
+            var HAS_STAGE = @json($tab === 'external');
+            var STAGE_LABEL = { so: 'SO', do: 'SO \u2192 DO', inv: 'SO \u2192 DO \u2192 INV' };
+            var STAGE_CLASS = { so: 'bg-info/10 text-info', do: 'bg-info/15 text-info', inv: 'bg-success/10 text-success' };
+            var TAHAP_COL = {
+                data: 'ext_stage',
+                orderable: false,
+                searchable: false,
+                className: 'px-2 py-1.5',
+                render: function (v, type) {
+                    if (!v || !STAGE_LABEL[v]) return type === 'display' ? '<span class="text-muted-foreground">-</span>' : '';
+                    if (type !== 'display') return STAGE_LABEL[v];
+                    return '<span class="' + BADGE_BASE + (STAGE_CLASS[v] || 'border border-border text-foreground') + '">' + STAGE_LABEL[v] + '</span>';
+                }
+            };
+
+            var HAS_EXT = @json($tab === 'internal');
+            function extCol(type) {
+                return {
+                    data: 'ext_' + type,
+                    orderable: false,
+                    searchable: false,
+                    className: 'px-2 py-1.5',
+                    render: function (v, t, row) {
+                        if (t !== 'display') return v ? 'data exists' : 'Create';
+                        if (v) {
+                            return '<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-success/10 text-success ring-1 ring-success/40">data exists</span>'
+                                + '<button type="button" class="ml-1 inline-flex h-6 w-6 items-center justify-center rounded-md bg-error/10 text-error ring-1 ring-error/40 hover:bg-error/20" data-doc="'
+                                + escapeHtml(row.doc_number || '') + '" data-type="' + type + '" onclick="deleteExtDoc(this)" title="Hapus ' + type.toUpperCase() + ' di Accurate" aria-label="Hapus ' + type.toUpperCase() + '">'
+                                + '<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" /></svg>'
+                                + '</button>';
+                        }
+                        return '<button type="button" class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-error/10 text-error ring-1 ring-error/40 hover:bg-error/20" data-doc="'
+                            + escapeHtml(row.doc_number || '') + '" data-type="' + type + '" onclick="createExtDoc(this)">Create</button>';
+                    }
+                };
+            }
+
             $('#detail-sales-table').DataTable({
                 data: DS_DATA,
                 deferRender: true,
@@ -785,7 +977,9 @@
                     { data: 'payment_amount', className: 'px-2 py-1.5 text-foreground', render: function (v, type) { return type === 'display' ? formatRp(v) : v; } },
                     { data: 'calculate_field', className: 'px-2 py-1.5 text-foreground', render: function (v, type) { return type === 'display' ? formatRp(v) : v; } }
                     ];
-                    if (HAS_FP) cols.splice(3, 0, FP_COL);
+                    if (HAS_EXT) cols.splice(2, 0, extCol('so'), extCol('do'), extCol('inv'));
+                    if (HAS_STAGE) cols.splice(3, 0, TAHAP_COL);
+                    if (HAS_FP) cols.splice(4, 0, FP_COL);
                     return cols;
                 })(),
                 layout: {
@@ -998,6 +1192,11 @@
 
                     if (item.getAttribute('data-format') === 'xml_external') {
                         downloadExternalXml({ ids: ids });
+                        return;
+                    }
+
+                    if (item.getAttribute('data-format') === 'xml_coretax') {
+                        downloadCoretaxXml({ ids: ids });
                         return;
                     }
 

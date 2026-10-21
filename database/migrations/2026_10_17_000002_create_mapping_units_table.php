@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('mapping_units', function (Blueprint $table) {
+            $table->id();
+            $table->string('unit_internal', 50)->unique();
+            $table->string('unit_coretax', 50);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('mapping_units');
+    }
+};

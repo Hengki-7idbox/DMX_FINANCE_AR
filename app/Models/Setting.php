@@ -25,6 +25,7 @@ class Setting extends Model
             'warehouse_id' => 'CENTRE',
             'ar_account' => '110311',
             'dp_account_id' => '210201',
+            'seller_tin' => '0029327129041000',
         ];
     }
 
