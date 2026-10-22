@@ -272,16 +272,29 @@ class DetailSaleController extends Controller
             ->keyBy('doc_number');
 
         // Nilai internal per doc_number (hanya dibutuhkan saat tab = external).
-        $internalVals = $tab === DetailSale::SOURCE_INTERNAL
+        // calculate_field export internal sudah net return_amount → jangan dipulihkan.
+        $internalRows = $tab === DetailSale::SOURCE_INTERNAL
             ? collect()
             : DetailSale::where('source_type', DetailSale::SOURCE_INTERNAL)
                 ->whereIn('doc_number', $docNumbers)
-                ->get(['doc_number', 'tax_base', 'invoice_amount', 'calculate_field'])
-                ->mapWithKeys(fn ($r) => [
-                    $r->doc_number => (float) $r->tax_base > 0
-                        ? (float) $r->invoice_amount
-                        : (float) $r->calculate_field,
-                ]);
+                ->get(['doc_number', 'tax_base', 'invoice_amount', 'calculate_field', 'return_amount']);
+        $internalVals = $internalRows->mapWithKeys(fn ($r) => [
+            $r->doc_number => (float) $r->tax_base > 0
+                ? (float) $r->invoice_amount
+                : (float) $r->calculate_field,
+        ]);
+        $internalReturns = $internalRows->mapWithKeys(fn ($r) => [
+            $r->doc_number => (float) $r->return_amount,
+        ]);
+
+        // Total retur per invoice (amount retur sudah negatif). Koreksi hanya untuk
+        // invoice yang punya dokumen SR di sales_returns — calculate_field export
+        // internal sudah net return_amount kolom export, jadi hindari potong ganda.
+        $returnDeductions = SalesReturn::query()
+            ->whereIn('invoice_no', $docNumbers)
+            ->groupBy('invoice_no')
+            ->selectRaw('invoice_no, SUM(amount) AS total')
+            ->pluck('total', 'invoice_no');
 
         foreach ($detailSales as $row) {
             $partner = $others[$row->doc_number] ?? null;
@@ -291,19 +304,28 @@ class DetailSaleController extends Controller
                 continue;
             }
 
+            $doc = (string) $row->doc_number;
+
             if ($tab === DetailSale::SOURCE_INTERNAL) {
-                $nilaiInternal = (float) $row->tax_base > 0
+                $base = (float) $row->tax_base > 0
                     ? (float) $row->invoice_amount
                     : (float) $row->calculate_field;
+                $koreksi = array_key_exists($doc, $returnDeductions->all())
+                    ? (float) $returnDeductions[$doc] + (float) $row->return_amount
+                    : 0.0;
+                $nilaiInternal = $base + $koreksi;
                 $nilaiExternal = (float) $partner->amount;
             } else {
-                $nilaiInternal = $internalVals[$row->doc_number] ?? null;
+                $internalRowBase = $internalVals[$doc] ?? null;
+                if ($internalRowBase === null) {
+                    $row->match_status = 'no_pair';
+                    continue;
+                }
+                $koreksi = array_key_exists($doc, $returnDeductions->all())
+                    ? (float) $returnDeductions[$doc] + (float) ($internalReturns[$doc] ?? 0)
+                    : 0.0;
+                $nilaiInternal = (float) $internalRowBase + $koreksi;
                 $nilaiExternal = (float) $row->amount;
-            }
-
-            if ($nilaiInternal === null) {
-                $row->match_status = 'no_pair';
-                continue;
             }
 
             $row->match_status = abs($nilaiInternal - $nilaiExternal) < 0.01
