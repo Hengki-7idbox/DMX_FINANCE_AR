@@ -41,17 +41,11 @@ class DetailSaleController extends Controller
             $query->where('owing', '!=', 0);
         }
 
-        // Tab internal: sembunyikan dokumen retur (format SR — bukan DMX/SDMX) beserta
-        // varian sufiks huruf (mis. SR/2610/0043D) yang base-nya ada di sales_returns.
+        // Tab internal: sembunyikan dokumen retur (format SR — bukan DMX/SDMX) persis.
+        // Varian sufiks huruf (mis. ...D) disaring di PHP setelah fetch agar query cepat.
         if ($tab === DetailSale::SOURCE_INTERNAL) {
-            $query->whereNotExists(function ($sub) {
-                $sub->select(\DB::raw(1))
-                    ->from('sales_returns as r')
-                    ->whereRaw('r.return_no = detail_sales.doc_number')
-                    ->orWhere(function ($q2) {
-                        $q2->whereRaw('r.return_no = LEFT(detail_sales.doc_number, LENGTH(detail_sales.doc_number) - 1)')
-                           ->whereRaw("SUBSTRING(detail_sales.doc_number, LENGTH(detail_sales.doc_number), 1) REGEXP '[A-Z]'");
-                    });
+            $query->whereNotIn('doc_number', function ($sub) {
+                $sub->select('return_no')->from('sales_returns');
             });
         }
 
@@ -90,6 +84,27 @@ class DetailSaleController extends Controller
             ]);
 
         $this->annotateMatch($detailSales, $tab);
+
+        // Filter PHP: varian sufiks huruf retur (mis. ...D) yang base-nya ada di sales_returns.
+        if ($tab === DetailSale::SOURCE_INTERNAL) {
+            $returnNumbers = \DB::table('sales_returns')->pluck('return_no')->all();
+            $detailSales = $detailSales->filter(function ($r) use ($returnNumbers) {
+                $doc = (string) $r->doc_number;
+                if (in_array($doc, $returnNumbers, true)) {
+                    return false;
+                }
+                if (str_starts_with($doc, 'SR/') && strlen($doc) > 4) {
+                    $lastChar = substr($doc, -1);
+                    if (ctype_alpha($lastChar)) {
+                        $base = substr($doc, 0, -1);
+                        if (in_array($base, $returnNumbers, true)) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            })->values();
+        }
 
         // Kolom Faktur Pajak (tab external): cocokkan doc_number dengan reference faktur_pajak.
         // Reference double (2 faktur) dipetakan ke nomor pajak faktur pertama.
@@ -166,14 +181,8 @@ class DetailSaleController extends Controller
             $optQuery->where('owing', '!=', 0);
         }
         if ($tab === DetailSale::SOURCE_INTERNAL) {
-            $optQuery->whereNotExists(function ($sub) {
-                $sub->select(\DB::raw(1))
-                    ->from('sales_returns as r')
-                    ->whereRaw('r.return_no = detail_sales.doc_number')
-                    ->orWhere(function ($q2) {
-                        $q2->whereRaw('r.return_no = LEFT(detail_sales.doc_number, LENGTH(detail_sales.doc_number) - 1)')
-                           ->whereRaw("SUBSTRING(detail_sales.doc_number, LENGTH(detail_sales.doc_number), 1) REGEXP '[A-Z]'");
-                    });
+            $optQuery->whereNotIn('doc_number', function ($sub) {
+                $sub->select('return_no')->from('sales_returns');
             });
         }
         // Buang 0 — hasil MONTH/YEAR(NULL) pada baris tanpa tanggal (import rusak).
@@ -193,14 +202,8 @@ class DetailSaleController extends Controller
             ->values();
         $totalQuery = DetailSale::where('source_type', $tab);
         if ($tab === DetailSale::SOURCE_INTERNAL) {
-            $totalQuery->whereNotExists(function ($sub) {
-                $sub->select(\DB::raw(1))
-                    ->from('sales_returns as r')
-                    ->whereRaw('r.return_no = detail_sales.doc_number')
-                    ->orWhere(function ($q2) {
-                        $q2->whereRaw('r.return_no = LEFT(detail_sales.doc_number, LENGTH(detail_sales.doc_number) - 1)')
-                           ->whereRaw("SUBSTRING(detail_sales.doc_number, LENGTH(detail_sales.doc_number), 1) REGEXP '[A-Z]'");
-                    });
+            $totalQuery->whereNotIn('doc_number', function ($sub) {
+                $sub->select('return_no')->from('sales_returns');
             });
         }
         $totalAll = $totalQuery->count();
