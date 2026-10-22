@@ -758,10 +758,7 @@ class DetailSaleController extends Controller
             ->first();
 
         if (! $header) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Dokumen ' . $doc . ' tidak ditemukan di tab internal.',
-            ], 422);
+            return $this->externalFailure(['Dokumen ' . $doc . ' tidak ditemukan di tab internal.']);
         }
 
         $lines = DetailSaleItem::where('source_type', DetailSaleItem::SOURCE_INTERNAL)
@@ -770,25 +767,18 @@ class DetailSaleController extends Controller
             ->get();
 
         if ($lines->isEmpty()) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Item dokumen ' . $doc . ' tidak ditemukan.',
-            ], 422);
+            return $this->externalFailure(['Item dokumen ' . $doc . ' tidak ditemukan.']);
         }
 
+        $reasons = [];
+
         if ($header->transaction_date === null) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Tanggal transaksi ' . $doc . ' kosong.',
-            ], 422);
+            $reasons[] = 'Tanggal transaksi ' . $doc . ' kosong.';
         }
 
         $client = new AccurateApiClient();
         if (! $client->configured()) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'API Token dan Signature Secret Accurate belum diisi di Settings.',
-            ], 422);
+            $reasons[] = 'API Token dan Signature Secret Accurate belum diisi di Settings.';
         }
 
         $existing = ExternalDocument::where('doc_number', $doc)->where('type', $type)->first();
@@ -801,6 +791,14 @@ class DetailSaleController extends Controller
             ]);
         }
 
+        [$custMap, $itemCodeMap, $itemNameMap] = $this->externalMaps();
+
+        $custCode = (string) $header->customer_code;
+        $customerNo = trim((string) ($custMap[$custCode] ?? ''));
+        if ($customerNo === '') {
+            $reasons[] = 'Mapping Customer ' . $custCode . ' (' . $header->customer_name . ') tidak ditemukan.';
+        }
+
         $soDoc = $type === ExternalDocument::TYPE_SO
             ? null
             : ExternalDocument::where('doc_number', $doc)->where('type', ExternalDocument::TYPE_SO)->first();
@@ -808,26 +806,99 @@ class DetailSaleController extends Controller
             ? ExternalDocument::where('doc_number', $doc)->where('type', ExternalDocument::TYPE_DO)->first()
             : null;
 
-        if ($type === ExternalDocument::TYPE_DO && ! $soDoc
-            && $client->findByNumber(ExternalDocument::MODULES[ExternalDocument::TYPE_SO], $doc) === null) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'SO ' . $doc . ' belum ada di Accurate. Buat SO terlebih dahulu.',
-            ], 422);
+        if ($client->configured()) {
+            if ($type === ExternalDocument::TYPE_DO && ! $soDoc
+                && $client->findByNumber(ExternalDocument::MODULES[ExternalDocument::TYPE_SO], $doc) === null) {
+                $reasons[] = 'SO ' . $doc . ' belum ada di Accurate. Buat SO terlebih dahulu.';
+            }
+
+            if ($type === ExternalDocument::TYPE_INV && ! $doDoc
+                && $client->findByNumber(ExternalDocument::MODULES[ExternalDocument::TYPE_DO], $doc) === null) {
+                $reasons[] = 'DO ' . $doc . ' belum ada di Accurate. Buat DO terlebih dahulu.';
+            }
         }
 
-        if ($type === ExternalDocument::TYPE_INV && ! $doDoc
-            && $client->findByNumber(ExternalDocument::MODULES[ExternalDocument::TYPE_DO], $doc) === null) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'DO ' . $doc . ' belum ada di Accurate. Buat DO terlebih dahulu.',
-            ], 422);
+        // Kurangi qty per item dengan qty retur (retur bernilai negatif).
+        $prepared = [];
+        foreach ($lines as $line) {
+            $prepared[] = ['line' => $line, 'qty' => (float) $line->qty];
         }
+
+        $notes = [];
+        $returns = SalesReturn::where('invoice_no', $doc)->orderBy('id')->get();
+
+        foreach ($returns as $ret) {
+            $remaining = (float) $ret->quantity;
+            $found = false;
+            $retExternal = trim((string) ($itemCodeMap[(string) $ret->item_no] ?? ''));
+
+            foreach ($prepared as &$row) {
+                $sameItem = (string) $row['line']->item_no === (string) $ret->item_no;
+
+                if (! $sameItem && $retExternal !== '') {
+                    $rowExternal = trim((string) ($itemCodeMap[(string) $row['line']->item_no] ?? ''));
+                    $sameItem = $rowExternal !== '' && $rowExternal === $retExternal;
+                }
+
+                if (! $sameItem) {
+                    continue;
+                }
+
+                $found = true;
+
+                if ($remaining >= -0.00001) {
+                    break;
+                }
+
+                $deduct = min($row['qty'], -$remaining);
+                if ($deduct <= 0) {
+                    continue;
+                }
+
+                $before = $row['qty'];
+                $row['qty'] -= $deduct;
+                $remaining += $deduct;
+                $notes[] = $ret->return_no . ' - ' . $ret->item_no . ': qty '
+                    . $this->formatQty($before) . ' → ' . $this->formatQty($row['qty']);
+            }
+            unset($row);
+
+            if ($remaining < -0.00001) {
+                $reasons[] = 'Qty retur ' . $ret->item_no . ' (' . $ret->return_no . ') melebihi qty sales.';
+            } elseif (! $found) {
+                $reasons[] = $retExternal === ''
+                    ? 'Item retur ' . $ret->item_no . ' (' . $ret->return_no . ') tidak ada di mapping item.'
+                    : 'Item retur ' . $ret->item_no . ' (' . $ret->return_no . ') tidak cocok dengan item invoice.';
+            }
+        }
+
+        $prepared = array_values(array_filter($prepared, fn ($row) => $row['qty'] > 0.00001));
+
+        if ($prepared === [] && $returns->isNotEmpty()) {
+            $reasons[] = 'Semua item invoice sudah diretur (qty 0).';
+        }
+
+        foreach ($prepared as $row) {
+            $code = (string) $row['line']->item_no;
+            if (trim((string) ($itemCodeMap[$code] ?? '')) === '') {
+                $reasons[] = 'Mapping Item ' . $code . ' (' . $row['line']->item_description . ') tidak ditemukan.';
+            }
+        }
+
+        if ($reasons !== []) {
+            return $this->externalFailure($reasons);
+        }
+
+        foreach ($prepared as &$row) {
+            $row['item_no_external'] = (string) $itemCodeMap[(string) $row['line']->item_no];
+            $row['item_name_external'] = $this->externalItemName($row['line'], $itemNameMap);
+        }
+        unset($row);
 
         $soNumber = $soDoc?->accurate_number ?? $doc;
         $doNumber = $doDoc?->accurate_number ?? $doc;
 
-        $payload = $this->buildExternalPayload($type, $header, $lines, $soNumber, $doNumber);
+        $payload = $this->buildExternalPayload($type, $header, $prepared, $customerNo, $soNumber, $doNumber);
 
         // Dokumen sudah pernah dibuat di Accurate (mis. sebelum fitur ini) -> adopsi nomornya.
         $found = $client->findByNumber($module, $doc);
@@ -848,15 +919,19 @@ class DetailSaleController extends Controller
                 'already' => true,
                 'number' => (string) ($found['number'] ?? $doc),
                 'message' => strtoupper($type) . ' ' . ($found['number'] ?? $doc) . ' sudah ada di Accurate.',
+                'notes' => $notes,
             ]);
         }
 
         $result = $client->post('/accurate/api/' . $module . '/save.do', $payload);
 
         if (! $result['ok']) {
+            $reason = $result['message'] ?? ('Accurate menolak pembuatan ' . strtoupper($type) . '.');
+
             return response()->json([
                 'ok' => false,
-                'message' => $result['message'] ?? ('Accurate menolak pembuatan ' . strtoupper($type) . '.'),
+                'message' => $reason,
+                'errors' => [$reason],
             ], 422);
         }
 
@@ -874,6 +949,7 @@ class DetailSaleController extends Controller
             'number' => $number,
             'status' => $r['status'] ?? null,
             'message' => strtoupper($type) . ' ' . $number . ' berhasil dibuat di Accurate.',
+            'notes' => $notes,
         ]);
     }
 
@@ -985,10 +1061,8 @@ class DetailSaleController extends Controller
         return false;
     }
 
-    private function buildExternalPayload(string $type, DetailSale $header, $lines, string $soNumber, string $doNumber): array
+    private function buildExternalPayload(string $type, DetailSale $header, array $prepared, string $customerNo, string $soNumber, string $doNumber): array
     {
-        [$custMap, $itemCodeMap, $itemNameMap] = $this->externalMaps();
-
         $termId = Customer::where('source_type', Customer::SOURCE_INTERNAL)
             ->where('customer_code', $header->customer_code)
             ->value('payment_term_id');
@@ -999,13 +1073,13 @@ class DetailSaleController extends Controller
         $doc = (string) $header->doc_number;
 
         $items = [];
-        foreach ($lines as $line) {
+        foreach ($prepared as $row) {
             $item = [
-                'itemNo' => $itemCodeMap[$line->item_no] ?? (string) $line->item_no,
-                'detailName' => $this->externalItemName($line, $itemNameMap),
-                'quantity' => (float) $line->qty,
-                'itemUnitName' => (string) $line->unit,
-                'unitPrice' => (float) $line->unit_price,
+                'itemNo' => (string) $row['item_no_external'],
+                'detailName' => (string) $row['item_name_external'],
+                'quantity' => (float) $row['qty'],
+                'itemUnitName' => (string) $row['line']->unit,
+                'unitPrice' => (float) $row['line']->unit_price,
                 'itemDiscPercent' => '0',
                 'useTax1' => true,
             ];
@@ -1025,7 +1099,7 @@ class DetailSaleController extends Controller
         $payload = [
             'transDate' => $date,
             'number' => $doc,
-            'customerNo' => $custMap[(string) $header->customer_code] ?? (string) $header->customer_code,
+            'customerNo' => $customerNo,
             'currencyCode' => 'IDR',
             'rate' => 1,
             'taxable' => true,
@@ -1045,6 +1119,22 @@ class DetailSaleController extends Controller
         }
 
         return $payload;
+    }
+
+    private function externalFailure(array $reasons)
+    {
+        return response()->json([
+            'ok' => false,
+            'message' => 'Tidak bisa membuat transaksi external.',
+            'errors' => array_values($reasons),
+        ], 422);
+    }
+
+    private function formatQty(float $value): string
+    {
+        $formatted = rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
+
+        return $formatted === '' ? '0' : $formatted;
     }
 
     private function externalMaps(): array

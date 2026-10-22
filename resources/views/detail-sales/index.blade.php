@@ -458,6 +458,17 @@
         </form>
     </dialog>
 
+    <dialog id="ext_result_modal" class="modal">
+        <div class="modal-box max-w-lg">
+            <h3 id="ext_result_title" class="text-lg font-bold">Hasil</h3>
+            <div id="ext_result_body" class="py-3 text-sm"></div>
+            <div class="modal-action">
+                <button type="button" class="btn btn-primary" onclick="closeExtResult()">Tutup</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
     @push('scripts')
     <script>
         (function () {
@@ -707,6 +718,45 @@
         }
 
         var CREATE_EXT_URL = @json(route('detail-sales.create-ext'));
+        var extReloadOnClose = false;
+
+        function showExtResult(title, items, type, reload) {
+            extReloadOnClose = !!reload;
+            var dlg = document.getElementById('ext_result_modal');
+            var head = document.getElementById('ext_result_title');
+            var body = document.getElementById('ext_result_body');
+            head.textContent = title;
+            head.className = 'text-lg font-bold ' + (type === 'error' ? 'text-destructive' : 'text-success');
+            if (items && items.length) {
+                body.innerHTML = '<ul class="list-disc space-y-1 pl-5">'
+                    + items.map(function (t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('')
+                    + '</ul>';
+            } else {
+                body.textContent = '';
+            }
+            if (dlg && !dlg.open) dlg.showModal();
+        }
+
+        function closeExtResult() {
+            var dlg = document.getElementById('ext_result_modal');
+            if (dlg && dlg.open) dlg.close();
+            if (extReloadOnClose) {
+                extReloadOnClose = false;
+                window.location.reload();
+            }
+        }
+
+        (function () {
+            var dlg = document.getElementById('ext_result_modal');
+            if (dlg) {
+                dlg.addEventListener('close', function () {
+                    if (extReloadOnClose) {
+                        extReloadOnClose = false;
+                        window.location.reload();
+                    }
+                });
+            }
+        })();
 
         function createExtDoc(btn) {
             if (!btn || btn.disabled) return;
@@ -714,6 +764,7 @@
             var type = btn.getAttribute('data-type');
             if (!doc) return;
 
+            var label = type ? type.toUpperCase() : 'Dokumen';
             var original = btn.textContent;
             btn.disabled = true;
             btn.textContent = 'Proses...';
@@ -735,18 +786,22 @@
                     if (!r.ok || !r.body.ok) {
                         btn.disabled = false;
                         btn.textContent = original;
-                        importToast('error', (r.body && r.body.message) || 'Gagal membuat dokumen di Accurate.');
+                        var reasons = (r.body && r.body.errors && r.body.errors.length)
+                            ? r.body.errors
+                            : [(r.body && r.body.message) || 'Gagal membuat dokumen di Accurate.'];
+                        showExtResult('Tidak bisa membuat ' + label + ' External', reasons, 'error', false);
                         return;
                     }
                     btn.textContent = 'Terkirim';
                     btn.className = 'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-success/10 text-success ring-1 ring-success/40 cursor-default';
-                    importToast('success', r.body.message || 'Dokumen dibuat di Accurate.');
-                    setTimeout(function () { window.location.reload(); }, 700);
+                    var notes = (r.body && r.body.notes) ? r.body.notes.slice() : [];
+                    showExtResult(label + ' ' + (r.body.number || doc) + ' berhasil',
+                        [(r.body.message || 'Dokumen dibuat di Accurate.')].concat(notes), 'success', true);
                 })
                 .catch(function () {
                     btn.disabled = false;
                     btn.textContent = original;
-                    importToast('error', 'Gagal menghubungi server.');
+                    showExtResult('Gagal', ['Gagal menghubungi server.'], 'error', false);
                 });
         }
 
