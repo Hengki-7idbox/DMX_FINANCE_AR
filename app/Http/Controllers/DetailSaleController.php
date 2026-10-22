@@ -44,15 +44,15 @@ class DetailSaleController extends Controller
         // Tab internal: sembunyikan dokumen retur (format SR — bukan DMX/SDMX) beserta
         // varian sufiks huruf (mis. SR/2610/0043D) yang base-nya ada di sales_returns.
         if ($tab === DetailSale::SOURCE_INTERNAL) {
-            $returns = SalesReturn::pluck('return_no')->all();
-            $exclude = $returns;
-            foreach ($returns as $r) {
-                for ($c = ord('A'); $c <= ord('Z'); $c++) {
-                    $exclude[] = $r . chr($c);
-                }
-            }
-            $exclude = array_unique($exclude);
-            $query->whereNotIn('doc_number', $exclude);
+            $query->whereNotExists(function ($sub) {
+                $sub->select(\DB::raw(1))
+                    ->from('sales_returns as r')
+                    ->whereRaw('r.return_no = detail_sales.doc_number')
+                    ->orWhere(function ($q2) {
+                        $q2->whereRaw('r.return_no = LEFT(detail_sales.doc_number, LENGTH(detail_sales.doc_number) - 1)')
+                           ->whereRaw("SUBSTRING(detail_sales.doc_number, LENGTH(detail_sales.doc_number), 1) REGEXP '[A-Z]'");
+                    });
+            });
         }
 
         // Filter tahun & bulan via query param (?bulan=8,9&tahun=2026).
@@ -166,15 +166,15 @@ class DetailSaleController extends Controller
             $optQuery->where('owing', '!=', 0);
         }
         if ($tab === DetailSale::SOURCE_INTERNAL) {
-            $returns = SalesReturn::pluck('return_no')->all();
-            $exclude = $returns;
-            foreach ($returns as $r) {
-                for ($c = ord('A'); $c <= ord('Z'); $c++) {
-                    $exclude[] = $r . chr($c);
-                }
-            }
-            $exclude = array_unique($exclude);
-            $optQuery->whereNotIn('doc_number', $exclude);
+            $optQuery->whereNotExists(function ($sub) {
+                $sub->select(\DB::raw(1))
+                    ->from('sales_returns as r')
+                    ->whereRaw('r.return_no = detail_sales.doc_number')
+                    ->orWhere(function ($q2) {
+                        $q2->whereRaw('r.return_no = LEFT(detail_sales.doc_number, LENGTH(detail_sales.doc_number) - 1)')
+                           ->whereRaw("SUBSTRING(detail_sales.doc_number, LENGTH(detail_sales.doc_number), 1) REGEXP '[A-Z]'");
+                    });
+            });
         }
         // Buang 0 — hasil MONTH/YEAR(NULL) pada baris tanpa tanggal (import rusak).
         $availableBulan = (clone $optQuery)
@@ -193,15 +193,15 @@ class DetailSaleController extends Controller
             ->values();
         $totalQuery = DetailSale::where('source_type', $tab);
         if ($tab === DetailSale::SOURCE_INTERNAL) {
-            $returns = SalesReturn::pluck('return_no')->all();
-            $exclude = $returns;
-            foreach ($returns as $r) {
-                for ($c = ord('A'); $c <= ord('Z'); $c++) {
-                    $exclude[] = $r . chr($c);
-                }
-            }
-            $exclude = array_unique($exclude);
-            $totalQuery->whereNotIn('doc_number', $exclude);
+            $totalQuery->whereNotExists(function ($sub) {
+                $sub->select(\DB::raw(1))
+                    ->from('sales_returns as r')
+                    ->whereRaw('r.return_no = detail_sales.doc_number')
+                    ->orWhere(function ($q2) {
+                        $q2->whereRaw('r.return_no = LEFT(detail_sales.doc_number, LENGTH(detail_sales.doc_number) - 1)')
+                           ->whereRaw("SUBSTRING(detail_sales.doc_number, LENGTH(detail_sales.doc_number), 1) REGEXP '[A-Z]'");
+                    });
+            });
         }
         $totalAll = $totalQuery->count();
 
