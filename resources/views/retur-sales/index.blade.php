@@ -18,6 +18,31 @@
         menimpa data untuk nomor retur yang sama (tidak menambah duplikat).
     </x-alert>
 
+    <form method="GET" action="{{ route('retur-sales.index') }}" class="mb-4 flex flex-wrap items-end gap-3">
+        <div>
+            <label for="customer_name" class="block text-xs font-medium text-muted-foreground mb-1">Nama Customer</label>
+            <input type="text" id="customer_name" name="customer_name" value="{{ request('customer_name') }}" placeholder="Cari nama..." class="input input-sm" />
+        </div>
+        <div>
+            <label for="bulan" class="block text-xs font-medium text-muted-foreground mb-1">Bulan</label>
+            <select id="bulan" name="bulan" class="select select-sm">
+                @for($m = 1; $m <= 12; $m++)
+                    <option value="{{ $m }}" {{ (int) request('bulan', now()->month) == $m ? 'selected' : '' }}>{{ str_pad($m, 2, '0', STR_PAD_LEFT) }}</option>
+                @endfor
+            </select>
+        </div>
+        <div>
+            <label for="tahun" class="block text-xs font-medium text-muted-foreground mb-1">Tahun</label>
+            <select id="tahun" name="tahun" class="select select-sm">
+                @for($y = now()->year - 2; $y <= now()->year + 1; $y++)
+                    <option value="{{ $y }}" {{ (int) request('tahun', now()->year) == $y ? 'selected' : '' }}>{{ $y }}</option>
+                @endfor
+            </select>
+        </div>
+        <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+        <a href="{{ route('retur-sales.index') }}" class="btn btn-sm btn-ghost">Reset</a>
+    </form>
+
     <x-card>
         <div class="flex flex-wrap items-center gap-x-6 gap-y-1 border-b border-border px-4 py-3 text-sm text-muted-foreground">
             <span>{{ number_format($returns->count()) }} baris</span>

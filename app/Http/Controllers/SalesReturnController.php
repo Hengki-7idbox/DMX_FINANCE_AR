@@ -10,9 +10,25 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class SalesReturnController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $returns = SalesReturn::query()
+        $query = SalesReturn::query();
+
+        if ($request->filled('customer_name')) {
+            $query->where('customer_name', 'like', '%' . $request->input('customer_name') . '%');
+        }
+        if ($request->filled('bulan')) {
+            $query->whereRaw('MONTH(return_date) = ?', [(int) $request->input('bulan')]);
+        } else {
+            $query->whereRaw('MONTH(return_date) = ?', [(int) now()->month]);
+        }
+        if ($request->filled('tahun')) {
+            $query->whereRaw('YEAR(return_date) = ?', [(int) $request->input('tahun')]);
+        } else {
+            $query->whereRaw('YEAR(return_date) = ?', [(int) now()->year]);
+        }
+
+        $returns = $query
             ->orderByDesc('return_date')
             ->orderBy('return_no')
             ->orderBy('id')
