@@ -1367,10 +1367,8 @@
                 params.set('tab', @json($tab));
                 window.location.search = params.toString();
             }
-            // Restore client-side filter setelah DataTable siap.
-            restoreFilterState();
-            if ($('#f_tgl_dari').val() || $('#f_tgl_sampai').val()) filterTable.draw();
-
+            // Restore client-side filter setelah DataTable berdiri (di akhir init).
+            // Pindahkan ke sini agar semua elemen + api tersedia.
             $('#f_bulan, #f_tahun').on('change', reloadBulanTahun);
 
             $('#f_tgl_dari, #f_tgl_sampai').on('change', function() {
@@ -1544,6 +1542,12 @@
                 syncVisibleChecks();
                 syncSelectAll();
             });
+
+            // Restore filter state setelah semua siap (hindari error sebelum init).
+            try {
+                restoreFilterState();
+                if (typeof filterTable !== 'undefined' && $('#f_tgl_dari').val()) filterTable.draw();
+            } catch (e) {}
         });
     </script>
     @endpush
