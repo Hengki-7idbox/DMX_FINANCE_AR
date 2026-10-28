@@ -104,6 +104,12 @@
                            class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
                     <p class="mt-1 text-xs text-tertiary">ID TKU Penjual = TIN + "000000".</p>
                 </div>
+                <div>
+                    <label for="coretax_unit_default" class="mb-1 block text-xs font-medium text-muted-foreground">Kode Unit Default XML Coretax</label>
+                    <input type="text" id="coretax_unit_default" name="coretax_unit_default" value="{{ old('coretax_unit_default', $settings['coretax_unit_default']) }}"
+                           class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    <p class="mt-1 text-xs text-tertiary">Dipakai bila satuan tidak ada di Mapping Unit (mis. UM.0022).</p>
+                </div>
             </div>
         </x-card>
 

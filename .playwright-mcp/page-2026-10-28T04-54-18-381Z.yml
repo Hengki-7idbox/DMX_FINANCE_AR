@@ -1,0 +1,1103 @@
+- generic [ref=f2e2]:
+  - complementary [ref=f2e3]:
+    - generic [ref=f2e4]:
+      - link "FA Finance AR" [ref=f2e6] [cursor=pointer]:
+        - /url: http://localhost:8000/dashboard
+        - generic [ref=f2e7]: FA
+        - generic [ref=f2e9]: Finance AR
+      - navigation [ref=f2e10]:
+        - link "Dashboard" [ref=f2e11] [cursor=pointer]:
+          - /url: http://localhost:8000/dashboard
+        - generic [ref=f2e14]:
+          - paragraph [ref=f2e15]: Master Data
+          - link "Customer" [ref=f2e16] [cursor=pointer]:
+            - /url: http://localhost:8000/customers
+          - link "Group Customer" [ref=f2e19] [cursor=pointer]:
+            - /url: http://localhost:8000/customer-groups
+          - link "Recap Sales" [ref=f2e22] [cursor=pointer]:
+            - /url: http://localhost:8000/recap-sales
+          - link "Retur Sales" [ref=f2e25] [cursor=pointer]:
+            - /url: http://localhost:8000/retur-sales
+          - link "Detail Sales" [ref=f2e28] [cursor=pointer]:
+            - /url: http://localhost:8000/detail-sales
+          - link "Faktur Pajak" [ref=f2e31] [cursor=pointer]:
+            - /url: http://localhost:8000/faktur-pajak
+          - link "Mapping Customer" [ref=f2e34] [cursor=pointer]:
+            - /url: http://localhost:8000/mapping-customers
+          - link "Mapping Product" [ref=f2e37] [cursor=pointer]:
+            - /url: http://localhost:8000/mapping-products
+          - link "Mapping Unit" [ref=f2e40] [cursor=pointer]:
+            - /url: http://localhost:8000/mapping-units
+          - link "Kode Barang/Jasa" [ref=f2e43] [cursor=pointer]:
+            - /url: http://localhost:8000/coretax-item-codes
+          - link "Kata Kunci Coretax" [ref=f2e46] [cursor=pointer]:
+            - /url: http://localhost:8000/coretax-keywords
+        - generic [ref=f2e49]:
+          - paragraph [ref=f2e50]: Olah Data
+          - link "Perubahan Data Internal" [ref=f2e51] [cursor=pointer]:
+            - /url: http://localhost:8000/olah-data/perubahan-data-internal
+          - link "Data External Tidak Sama" [ref=f2e54] [cursor=pointer]:
+            - /url: http://localhost:8000/olah-data/data-external-tidak-same
+          - link "Rekonsiliasi Harian Internal" [ref=f2e57] [cursor=pointer]:
+            - /url: http://localhost:8000/olah-data/rekonsiliasi-harian-internal
+        - generic [ref=f2e60]:
+          - paragraph [ref=f2e61]: Piutang
+          - link "Invoice" [ref=f2e62] [cursor=pointer]:
+            - /url: http://localhost:8000/invoices
+          - link "Outstanding" [ref=f2e65] [cursor=pointer]:
+            - /url: http://localhost:8000/invoices/outstanding
+          - link "Anomali Piutang" [ref=f2e68] [cursor=pointer]:
+            - /url: http://localhost:8000/invoices/anomali
+        - generic [ref=f2e71]:
+          - paragraph [ref=f2e72]: Pembayaran
+          - link "Payment" [ref=f2e73] [cursor=pointer]:
+            - /url: http://localhost:8000/payments
+        - generic [ref=f2e76]:
+          - paragraph [ref=f2e77]: Bank
+          - link "Rekening Koran" [ref=f2e78] [cursor=pointer]:
+            - /url: http://localhost:8000/bank-transactions
+          - link "Rekonsiliasi" [ref=f2e81] [cursor=pointer]:
+            - /url: http://localhost:8000/reconciliations
+        - generic [ref=f2e84]:
+          - paragraph [ref=f2e85]: Collection
+          - link "Collection" [ref=f2e86] [cursor=pointer]:
+            - /url: http://localhost:8000/collection
+        - generic [ref=f2e89]:
+          - paragraph [ref=f2e90]: Laporan
+          - link "Reports" [ref=f2e91] [cursor=pointer]:
+            - /url: http://localhost:8000/reports/aging
+        - generic [ref=f2e94]:
+          - paragraph [ref=f2e95]: System
+          - link "Payment Term" [ref=f2e96] [cursor=pointer]:
+            - /url: http://localhost:8000/payment-terms
+          - link "Bank Account" [ref=f2e99] [cursor=pointer]:
+            - /url: http://localhost:8000/bank-accounts
+          - link "Settings" [ref=f2e102] [cursor=pointer]:
+            - /url: http://localhost:8000/settings
+          - link "Users" [ref=f2e105] [cursor=pointer]:
+            - /url: http://localhost:8000/users
+      - generic [ref=f2e110]:
+        - generic [ref=f2e111]: Ad
+        - generic [ref=f2e113]:
+          - paragraph [ref=f2e114]: Admin
+          - paragraph [ref=f2e115]: admin
+        - button [ref=f2e117]
+  - generic [ref=f2e120]:
+    - banner [ref=f2e121]:
+      - generic [ref=f2e123]:
+        - textbox "Cari invoice, customer, payment..." [ref=f2e126]
+        - generic: Ctrl+K
+      - generic [ref=f2e127]:
+        - button "Ganti tema" [ref=f2e128]
+        - button [ref=f2e132]
+    - main [ref=f2e135]:
+      - generic [ref=f2e137]:
+        - generic [ref=f2e138]:
+          - heading "Detail Sales" [level=1] [ref=f2e139]
+          - paragraph [ref=f2e140]: Detail transaksi sales per invoice
+        - generic [ref=f2e141]:
+          - button "Import Detail Sales" [ref=f2e142]
+          - button "Import Detail Product Sales" [ref=f2e145]
+          - button "Clear Data" [ref=f2e148]
+      - generic [ref=f2e151]:
+        - link "External" [ref=f2e152] [cursor=pointer]:
+          - /url: http://localhost:8000/detail-sales?tab=external
+        - link "Internal" [ref=f2e153] [cursor=pointer]:
+          - /url: http://localhost:8000/detail-sales?tab=internal
+      - generic [ref=f2e155]:
+        - generic [ref=f2e159]:
+          - text: Import
+          - strong [ref=f2e160]: Detail Sales
+          - text: untuk daftar invoice; import
+          - strong [ref=f2e161]: Detail Product Sales
+          - text: untuk item per invoice. Aksi
+          - strong [ref=f2e162]: Lihat Produk
+          - text: ada di menu titik-tiga pada kolom Aksi.
+        - button [ref=f2e163]
+      - generic [ref=f2e166]:
+        - generic [ref=f2e167]:
+          - generic [ref=f2e168]: Status
+          - listbox [aria-hidden] [ref=f2e169]:
+            - option [ref=f2e170]: Match
+            - option [ref=f2e171]: Unmatch
+            - option [ref=f2e172]: Tidak ada pasangan
+          - combobox [ref=f2e175]:
+            - list
+            - searchbox "Search" [ref=f2e177]
+        - generic [ref=f2e178]:
+          - generic [ref=f2e179]: Nama
+          - listbox [aria-hidden] [ref=f2e180]:
+            - option [ref=f2e181]: ¿ËÂíÌØ PT.INKO JAYA RAYA (KMART)
+            - option [ref=f2e182]: »ùÌØÀ CITRA JAYA MANDIRI
+            - option [ref=f2e183]: ¶à´ó²¿°¡É«¸Â TOTAL BUAH SEGAR - BINTARO
+            - option [ref=f2e184]: ´÷ÃÅ³¬ÊÐ PT. KAGE DWIJAYA (DIAMOND JKT)
+            - option [ref=f2e185]: ´÷ÃÅ³¬ÊÐ PT. KAGE DWIJAYA (DIAMOND PALEMBANG)
+            - option [ref=f2e186]: ¸»ºÀ PT. SWALAYAN SUKSES ABADI (FOODHALL)
+            - option [ref=f2e187]: °¢Å¬¿ËÀ PT. ANUGRAH BUAH AGRO KENCANA
+            - option [ref=f2e188]: °¢Á¼ SUPER BUAH
+            - option [ref=f2e189]: °¢Äá¿¨²¿°¡ TOKO ANEKA BUAH - SEMARANG
+            - option [ref=f2e190]: °ÑºÜÌØÀ PAK HENDRA
+            - option [ref=f2e191]: ±´±Ìîì PT. SENTRAL RETAILINDO DEWATA (PEPITO)
+            - option [ref=f2e192]: ±öµ±²¿°¡ BINTANG BUAH
+            - option [ref=f2e193]: ¹þ¶àÅµ HARTONO
+            - option [ref=f2e194]: ²¼ÌØÀ JS PUTRA/H.DJUWARI.S
+            - option [ref=f2e195]: Å¬¶© NURDIN
+            - option [ref=f2e196]: À¼ª³¬ÊÐ PT. LUCKY STRATEGIS
+            - option [ref=f2e197]: À¼Ë¹³¬ÊÐ PT. SUPRA BOGA LESTARI Tbk (FRUIT)
+            - option [ref=f2e198]: À¼Ë¹³¬ÊÐ PT. SUPRA BOGA LESTARI Tbk (SAYUR)
+            - option [ref=f2e199]: Æ»¹ûµê APPLE SHOP
+            - option [ref=f2e200]: ÆÂ¿¨ PT.BOGA MAKMUR ABADI
+            - option [ref=f2e201]: ÂêÐÄ MAXIM FRUIT MARKET
+            - option [ref=f2e202]: Âí¿ËË¹µÙ PT.GRACIA MITRA SELARAS (MARKET CITY)
+            - option [ref=f2e203]: ÀîÄÈ BU RINA
+            - option [ref=f2e204]: AMING BANGKA/ANEKA BUAH
+            - option [ref=f2e205]: ANDREAS BUNTORO
+            - option [ref=f2e206]: ANGGA YONAN
+            - option [ref=f2e207]: ãôË®´óÃ¯ÐÛ DMX CAB. SBY
+            - option [ref=f2e208]: APHENK JAMBI
+            - option [ref=f2e209]: ASAN BUAH - DAVID
+            - option [ref=f2e210]: AYOK SUKONYOMO
+            - option [ref=f2e211]: AYUN BANGKA
+            - option [ref=f2e212]: BASTIAN GINTING
+            - option [ref=f2e213]: BEARY FRESH
+            - option [ref=f2e214]: BIN WENG
+            - option [ref=f2e215]: BU IMAS KARWATI/SINAR BUAH BANDUNG
+            - option [ref=f2e216]: CAROLINA DWI APRILIA
+            - option [ref=f2e217]: CASH - COD
+            - option [ref=f2e218]: CHAMP RESTO INDONESIA
+            - option [ref=f2e219]: CRISPY SALAD
+            - option [ref=f2e220]: CV. ANEKA SAYUR - PONTIANAK
+            - option [ref=f2e221]: CV. CENTRAL BOGA JAYA
+            - option [ref=f2e222]: CV. CHANDRA PERDANA ABADI
+            - option [ref=f2e223]: CV. CHRISTIE-S INTERNUSA
+            - option [ref=f2e224]: CV. KARTIKA KARUNIA JAYA
+            - option [ref=f2e225]: CV. LAI LAI MOROWALI
+            - option [ref=f2e226]: CV. LESTARI JAYA ABADI
+            - option [ref=f2e227]: CV. PRIMA SENTOSA METTA
+            - option [ref=f2e228]: CV. RAMORA FORTUNGGAL
+            - option [ref=f2e229]: CV. RAPHA PANGAN UTAMA
+            - option [ref=f2e230]: CV. SAGA RETAILINDO SORONG
+            - option [ref=f2e231]: CV. SAGA SUPERMARKET
+            - option [ref=f2e232]: DANIS
+            - option [ref=f2e233]: DAVID PUTRA
+            - option [ref=f2e234]: DC KAYU MANIS (PT AKUR PRATAMA)
+            - option [ref=f2e235]: DEKI
+            - option [ref=f2e236]: DEVI SEPTIANI
+            - option [ref=f2e237]: Ê°µÎÓ´ PAK SETYO
+            - option [ref=f2e238]: EDDY
+            - option [ref=f2e239]: EDDY WONGSO
+            - option [ref=f2e240]: EEN ENI
+            - option [ref=f2e241]: EMPAT SERANGKAI SEJAHTERA
+            - option [ref=f2e242]: ERIKA HANDAYANI
+            - option [ref=f2e243]: FERRY GUNAWAN - FOOHENG SUNTER
+            - option [ref=f2e244]: FRANSISKA SUYANTI KARTIKA
+            - option [ref=f2e245]: GANDI
+            - option [ref=f2e246]: GROSIR BUAH
+            - option [ref=f2e247]: HAJI FERRY
+            - option [ref=f2e248]: HAJI HERI
+            - option [ref=f2e249]: HAO HUAT DINING
+            - option [ref=f2e250]: HARUM SARI
+            - option [ref=f2e251]: HENDRA SIMAMORA
+            - option [ref=f2e252]: HENDRICK WINATA
+            - option [ref=f2e253]: IGNATIUS MARIO HARYADI
+            - option [ref=f2e254]: INDONESIA MOROWALI INDUSTRIAL PARK (PUSAT)
+            - option [ref=f2e255]: INDONESIA SIZZLING HOTSPOT
+            - option [ref=f2e256]: INDONESIA SIZZLING HOTSPOT/SUMMARECON MALL BEKASI
+            - option [ref=f2e257]: ÏÖ½ð¿Í»§ CASH
+            - option [ref=f2e258]: IRFAN WIJAYA / HARVESTMONT
+            - option [ref=f2e259]: ISTANA BUAH/PANDANARAN
+            - option [ref=f2e260]: ISWANTO
+            - option [ref=f2e261]: IVANDI HARSONO
+            - option [ref=f2e262]: IWAN MARWAN
+            - option [ref=f2e263]: IWAN TATEP CAHYONO
+            - option [ref=f2e264]: JAKARTA FRUIT MARKET
+            - option [ref=f2e265]: JANI
+            - option [ref=f2e266]: JONI TAMBORA
+            - option [ref=f2e267]: JUAN
+            - option [ref=f2e268]: JUNAWAN/LARIS BUAH
+            - option [ref=f2e269]: LIA SUSANTI
+            - option [ref=f2e270]: M FRESH
+            - option [ref=f2e271]: MA HUIHUI
+            - option [ref=f2e272]: MARIO VIANNEY RENDY
+            - option [ref=f2e273]: MARSITI (TOKO ARIF SAYUR)
+            - option [ref=f2e274]: MITRA BELANJA ANDA (MOI)
+            - option [ref=f2e275]: MITRA BELANJA ANDA (PIK)
+            - option [ref=f2e276]: MM MART GROSIR
+            - option [ref=f2e277]: MOH.FATHULLOH AL GHIFARI
+            - option [ref=f2e278]: MUHAMMAD HAFIZ
+            - option [ref=f2e279]: MUHAMMAD RIDWAN
+            - option [ref=f2e280]: MUHARNO/PING PING
+            - option [ref=f2e281]: MULYANA
+            - option [ref=f2e282]: ÑÅ¼Ó´ï¸»Â³Óñ JAKARTA FRUIT - GAJAH M.
+            - option [ref=f2e283]: ÑÅ¼Ó´ï¸»Â³Óñ JAKARTA FRUIT - PLUIT
+            - option [ref=f2e284]: ÑÅ¼Ó´ï¸»Â³Óñ JAKARTA FRUIT- GREENVILLE
+            - option [ref=f2e285]: NANA
+            - option [ref=f2e286]: Ó´Ñ½ PT. AKUR PRATAMA (YOGYA)
+            - option [ref=f2e287]: ODAH
+            - option [ref=f2e288]: ÓÞÍç IWAN-KERAMAT JATI
+            - option [ref=f2e289]: PAK HAJI YAYA
+            - option [ref=f2e290]: PRAWIRO SESENO
+            - option [ref=f2e291]: PT CITRA REJEKI NIRMALA
+            - option [ref=f2e292]: PT. ASAS ASRI SEGAR AMAN SENTOSA
+            - option [ref=f2e293]: PT. ASTRO INDOKARYA SEMESTA
+            - option [ref=f2e294]: PT. ASTRO TECHNOLOGIES INDONESIA
+            - option [ref=f2e295]: PT. BANDAR BUAH
+            - option [ref=f2e296]: PT. BOGA MAJU ABADI
+            - option [ref=f2e297]: PT. BUAH CAHAYA SUKSES
+            - option [ref=f2e298]: PT. CAHAYA PANGAN MAKMUR (BUAH)
+            - option [ref=f2e299]: PT. CAHAYA PANGAN MAKMUR (SAYUR)
+            - option [ref=f2e300]: PT. CENTRAL BOGA SEJAHTERA
+            - option [ref=f2e301]: PT. DINAMIKA BUAH NUSANTARA
+            - option [ref=f2e302]: PT. DUTA CAHAYA SUKSES
+            - option [ref=f2e303]: PT. DUTA MANDIRI JAYA
+            - option [ref=f2e304]: PT. FRESH ONE
+            - option [ref=f2e305]: PT. FRUTA AGRO NUSAGUNA
+            - option [ref=f2e306]: PT. FUNSO SEJAHTERA INDONESIA
+            - option [ref=f2e307]: PT. HAHA SAMA SAMA
+            - option [ref=f2e308]: PT. HAIDILAO INDONESIA RESTAURANTS - EMPORIUM
+            - option [ref=f2e309]: PT. HAIDILAO INDONESIA RESTAURANTS - G.I
+            - option [ref=f2e310]: PT. HAIDILAO INDONESIA RESTAURANTS - GANDARIA CITY
+            - option [ref=f2e311]: PT. HAIDILAO INDONESIA RESTAURANTS - LIVING WORLD
+            - option [ref=f2e312]: PT. HAIDILAO INDONESIA RESTAURANTS - MOI
+            - option [ref=f2e313]: PT. HAIDILAO INDONESIA RESTAURANTS - PIK AVENUE
+            - option [ref=f2e314]: PT. HAIDILAO INDONESIA RESTAURANTS - T.A
+            - option [ref=f2e315]: PT. HARJA GUNATAMA LESTARI
+            - option [ref=f2e316]: PT. HERO RETAIL NUSANTARA
+            - option [ref=f2e317]: PT. HOKI MART INDONESIA
+            - option [ref=f2e318]: PT. HOKKY BERSAMA/RADIO DALAM
+            - option [ref=f2e319]: PT. HOKKY TE IT
+            - option [ref=f2e320]: PT. HUI WANG PROSPERITY
+            - option [ref=f2e321]: PT. ISKOPI BOGA LESTARI
+            - option [ref=f2e322]: PT. ISTANA BUAH JAYA/SILIWANGI
+            - option [ref=f2e323]: PT. JIREH LESTARI JAYA
+            - option [ref=f2e324]: PT. LION SUPERINDO
+            - option [ref=f2e325]: PT. LOTTE MART INDONESIA
+            - option [ref=f2e326]: PT. LOTTE SHOPPING INDONESIA (SAYUR)
+            - option [ref=f2e327]: PT. MATAHARI PUTRA PRIMA TBK.
+            - option [ref=f2e328]: PT. MIDI UTAMA INDONESIA
+            - option [ref=f2e329]: PT. MITRA BELANJA ANDA (Grandlucky Sanur Bali)
+            - option [ref=f2e330]: PT. MITRA BELANJA ANDA (Grandlucky Sunset Road Bali)
+            - option [ref=f2e331]: PT. MITRA BELANJA ANDA (Grandlucky Udayana)
+            - option [ref=f2e332]: PT. MITRA BELANJA ANDA (PURI INDAH)
+            - option [ref=f2e333]: PT. MITRA BELANJA ANDA/BSD
+            - option [ref=f2e334]: PT. MITRA BELANJA ANDA/GREEN LAKE
+            - option [ref=f2e335]: PT. MITRA BELANJA ANDA/HARAPAN INDAH
+            - option [ref=f2e336]: PT. MULTI REJEKI NIRMALA
+            - option [ref=f2e337]: PT. NAGA SWALAYAN
+            - option [ref=f2e338]: PT. PERMATA SUKSES SENTOSA
+            - option [ref=f2e339]: PT. PRIMA SEGAR MANDIRI
+            - option [ref=f2e340]: PT. RUDO SELARASSEJATI SENTOSA
+            - option [ref=f2e341]: PT. SANDS TALK INDONESIA
+            - option [ref=f2e342]: PT. SAYURAN SIAP SAJI
+            - option [ref=f2e343]: PT. SELALU SEGAR INDONESIA
+            - option [ref=f2e344]: PT. SERBA AGRO TANI INTERNATIONAL
+            - option [ref=f2e345]: PT. SINAR GUNUNG MOROWALI
+            - option [ref=f2e346]: PT. SPARKORA BBQ INDONESIA - EMPORIUM
+            - option [ref=f2e347]: PT. SUMBER AGRI SEHAT
+            - option [ref=f2e348]: PT. TALINDO MITRA SENTOSA
+            - option [ref=f2e349]: PT. TEMAS ALVINDO
+            - option [ref=f2e350]: PT. TOTAL PANGAN GROUP
+            - option [ref=f2e351]: PT. TOTALITAS TANPA BATAS
+            - option [ref=f2e352]: PT. TRIDARMA BERKAH ABADI
+            - option [ref=f2e353]: PT. TUMBUH BERSAMA SEHAT
+            - option [ref=f2e354]: PT. USAHA KRIDA SEJAHTERA
+            - option [ref=f2e355]: PT. VIRTUS CULINARY INDONESIA
+            - option [ref=f2e356]: PT. ZOEE GEMILANG NUSANTARA
+            - option [ref=f2e357]: PT.HYDRO FARM INDONESIA
+            - option [ref=f2e358]: RAYMOND
+            - option [ref=f2e359]: RIZKY APRIANDI
+            - option [ref=f2e360]: RONI/DANI
+            - option [ref=f2e361]: ROSELLA
+            - option [ref=f2e362]: RUMAH BUAH
+            - option [ref=f2e363]: SABAD/SUHIRNO
+            - option [ref=f2e364]: SIANTY DEVI
+            - option [ref=f2e365]: SUHARDI
+            - option [ref=f2e366]: SUNARDI
+            - option [ref=f2e367]: SUSILAWATI DJONG
+            - option [ref=f2e368]: TOKO BUAH AYUNG
+            - option [ref=f2e369]: TOKO MUNA BUAH/NYOMAN DARMAWI
+            - option [ref=f2e370]: TOKO OLIVE BUAH SEGAR
+            - option [ref=f2e371]: TOKO SUMBER BUAH/ACAN
+            - option [ref=f2e372]: TOTAL BUAH SEGAR - SUNTER
+            - option [ref=f2e373]: UJANG ALIM
+            - option [ref=f2e374]: UMI YATUN
+            - option [ref=f2e375]: USAHA MAJU SUKSES BERSAMA
+            - option [ref=f2e376]: WAWAN GAMAL IRWANA
+            - option [ref=f2e377]: WIDIANTO
+            - option [ref=f2e378]: YAMIN
+            - option [ref=f2e379]: YOGYA JUNCTION PARAHYANGAN
+            - option [ref=f2e380]: YOGYA RIAU JUNCTION
+            - option [ref=f2e381]: YUSTIKA RITA RAHMANI/NAOMI BUAH SEGAR
+          - combobox [ref=f2e384]:
+            - list
+            - searchbox "Search" [ref=f2e386]
+        - generic [ref=f2e387]:
+          - generic [ref=f2e388]: Bulan
+          - listbox [aria-hidden] [ref=f2e389]:
+            - option [ref=f2e390]: Januari
+            - option [ref=f2e391]: Februari
+            - option [ref=f2e392]: Maret
+            - option [ref=f2e393]: April
+            - option [ref=f2e394]: Mei
+            - option [ref=f2e395]: Juni
+            - option [ref=f2e396]: Juli
+            - option [ref=f2e397]: Agustus
+            - option [ref=f2e398]: September
+            - option [selected] [ref=f2e399]: Oktober
+            - option [ref=f2e400]: Desember
+          - combobox [ref=f2e403]:
+            - list [ref=f2e404]:
+              - listitem "Oktober" [ref=f2e405]:
+                - button "Remove item" [ref=f2e406] [cursor=pointer]: ×
+            - searchbox "Search" [ref=f2e409]
+        - generic [ref=f2e410]:
+          - generic [ref=f2e411]: Tahun
+          - listbox [aria-hidden] [ref=f2e412]:
+            - option [ref=f2e413]: "2025"
+            - option [selected] [ref=f2e414]: "2026"
+          - combobox [ref=f2e417]:
+            - list [ref=f2e418]:
+              - listitem "2026" [ref=f2e419]:
+                - button "Remove item" [ref=f2e420] [cursor=pointer]: ×
+            - searchbox "Search" [ref=f2e423]
+        - generic [ref=f2e424]:
+          - generic [ref=f2e425]: Tanggal Dari
+          - textbox "Tanggal Dari" [ref=f2e426]
+        - generic [ref=f2e427]:
+          - generic [ref=f2e428]: Tanggal Sampai
+          - textbox "Tanggal Sampai" [ref=f2e429]
+        - button "Reset" [ref=f2e431]
+        - generic [ref=f2e434]:
+          - button "Export Data" [disabled]
+      - generic [ref=f2e438]:
+        - generic [ref=f2e439]:
+          - generic [ref=f2e441]:
+            - text: "Cari:"
+            - searchbox "Cari:" [ref=f2e442]
+          - generic [ref=f2e445]:
+            - text: Tampilkan
+            - combobox "Tampilkan data" [ref=f2e446]:
+              - option "10"
+              - option "25" [selected]
+              - option "50"
+              - option "100"
+            - text: data
+        - table [ref=f2e449]:
+          - rowgroup [ref=f2e470]:
+            - row [ref=f2e471]:
+              - columnheader "Aksi" [ref=f2e472]
+              - columnheader [ref=f2e475]:
+                - checkbox "Pilih semua baris" [ref=f2e478]
+              - columnheader "SO EXT" [ref=f2e479]
+              - columnheader "DO EXT" [ref=f2e482]
+              - columnheader "INV EXT" [ref=f2e485]
+              - 'columnheader "Status Status: Activate to sort" [ref=f2e488] [cursor=pointer]':
+                - generic [ref=f2e489]:
+                  - generic [ref=f2e490]: Status
+                  - 'button "Status: Activate to sort" [ref=f2e491]'
+              - 'columnheader "Customer No. Customer No.: Activate to sort" [ref=f2e492] [cursor=pointer]':
+                - generic [ref=f2e493]:
+                  - generic [ref=f2e494]: Customer No.
+                  - 'button "Customer No.: Activate to sort" [ref=f2e495]'
+              - 'columnheader "Customer Name Customer Name: Activate to sort" [ref=f2e496] [cursor=pointer]':
+                - generic [ref=f2e497]:
+                  - generic [ref=f2e498]: Customer Name
+                  - 'button "Customer Name: Activate to sort" [ref=f2e499]'
+              - 'columnheader "Invoice No. Invoice No.: Activate to sort" [ref=f2e500] [cursor=pointer]':
+                - generic [ref=f2e501]:
+                  - generic [ref=f2e502]: Invoice No.
+                  - 'button "Invoice No.: Activate to sort" [ref=f2e503]'
+              - 'columnheader "Invoice Date Invoice Date: Activate to sort" [ref=f2e504] [cursor=pointer]':
+                - generic [ref=f2e505]:
+                  - generic [ref=f2e506]: Invoice Date
+                  - 'button "Invoice Date: Activate to sort" [ref=f2e507]'
+              - 'columnheader "Description Description: Activate to sort" [ref=f2e508] [cursor=pointer]':
+                - generic [ref=f2e509]:
+                  - generic [ref=f2e510]: Description
+                  - 'button "Description: Activate to sort" [ref=f2e511]'
+              - 'columnheader "Invoice Invoice Amount Invoice Invoice Amount: Activate to sort" [ref=f2e512] [cursor=pointer]':
+                - generic [ref=f2e513]:
+                  - generic [ref=f2e514]: Invoice Invoice Amount
+                  - 'button "Invoice Invoice Amount: Activate to sort" [ref=f2e515]'
+              - 'columnheader "Amount Amount: Activate to sort" [ref=f2e516] [cursor=pointer]':
+                - generic [ref=f2e517]:
+                  - generic [ref=f2e518]: Amount
+                  - 'button "Amount: Activate to sort" [ref=f2e519]'
+              - 'columnheader "Invoice Tax 1 Base Currency Invoice Tax 1 Base Currency: Activate to sort" [ref=f2e520] [cursor=pointer]':
+                - generic [ref=f2e521]:
+                  - generic [ref=f2e522]: Invoice Tax 1 Base Currency
+                  - 'button "Invoice Tax 1 Base Currency: Activate to sort" [ref=f2e523]'
+              - 'columnheader "Invoice Discount Invoice Discount: Activate to sort" [ref=f2e524] [cursor=pointer]':
+                - generic [ref=f2e525]:
+                  - generic [ref=f2e526]: Invoice Discount
+                  - 'button "Invoice Discount: Activate to sort" [ref=f2e527]'
+              - 'columnheader "Invoice Return Amount Invoice Return Amount: Activate to sort" [ref=f2e528] [cursor=pointer]':
+                - generic [ref=f2e529]:
+                  - generic [ref=f2e530]: Invoice Return Amount
+                  - 'button "Invoice Return Amount: Activate to sort" [ref=f2e531]'
+              - 'columnheader "Invoice Owing Invoice Owing: Activate to sort" [ref=f2e532] [cursor=pointer]':
+                - generic [ref=f2e533]:
+                  - generic [ref=f2e534]: Invoice Owing
+                  - 'button "Invoice Owing: Activate to sort" [ref=f2e535]'
+              - 'columnheader "Invoice Payment Amount Invoice Payment Amount: Activate to sort" [ref=f2e536] [cursor=pointer]':
+                - generic [ref=f2e537]:
+                  - generic [ref=f2e538]: Invoice Payment Amount
+                  - 'button "Invoice Payment Amount: Activate to sort" [ref=f2e539]'
+              - 'columnheader "Calculate Field 1 Calculate Field 1: Activate to sort" [ref=f2e540] [cursor=pointer]':
+                - generic [ref=f2e541]:
+                  - generic [ref=f2e542]: Calculate Field 1
+                  - 'button "Calculate Field 1: Activate to sort" [ref=f2e543]'
+          - rowgroup [ref=f2e544]:
+            - row [ref=f2e545]:
+              - cell [ref=f2e546]:
+                - button "Action" [ref=f2e547]
+              - cell [ref=f2e550]:
+                - checkbox "Pilih baris DMXS26102111" [ref=f2e551]
+              - cell "data exists Hapus SO" [ref=f2e552]:
+                - generic [ref=f2e553]: data exists
+                - button "Hapus SO" [ref=f2e554]
+              - cell [ref=f2e557]:
+                - button "Create" [ref=f2e558]
+              - cell [ref=f2e559]:
+                - button "Create" [ref=f2e560]
+              - cell "Match" [ref=f2e561]
+              - cell "PUR-002-T" [ref=f2e563]
+              - cell "PT. ASTRO TECHNOLOGIES INDONESIA" [ref=f2e564]
+              - cell "DMXS26102111" [ref=f2e565]
+              - cell "28/10/2026" [ref=f2e566]
+              - cell "-" [ref=f2e567]
+              - cell "Rp 660.000" [ref=f2e568]
+              - cell "Rp 660.000" [ref=f2e569]
+              - cell "Rp 0" [ref=f2e570]
+              - cell "Rp 0" [ref=f2e571]
+              - cell "Rp 0" [ref=f2e572]
+              - cell "Rp 660.000" [ref=f2e573]
+              - cell "Rp 0" [ref=f2e574]
+              - cell "Rp 660.000" [ref=f2e575]
+            - row [ref=f2e576]:
+              - cell [ref=f2e577]:
+                - button "Action" [ref=f2e578]
+              - cell [ref=f2e581]:
+                - checkbox "Pilih baris DMXS26102110" [ref=f2e582]
+              - cell [ref=f2e583]:
+                - button "Create" [ref=f2e584]
+              - cell [ref=f2e585]:
+                - button "Create" [ref=f2e586]
+              - cell [ref=f2e587]:
+                - button "Create" [ref=f2e588]
+              - cell "Match" [ref=f2e589]
+              - cell "PUR V-043-T" [ref=f2e591]
+              - cell "PT. MITRA BELANJA ANDA/GREEN LAKE" [ref=f2e592]
+              - cell "DMXS26102110" [ref=f2e593]
+              - cell "28/10/2026" [ref=f2e594]
+              - cell "-" [ref=f2e595]
+              - cell "Rp 13.500.000" [ref=f2e596]
+              - cell "Rp 13.500.000" [ref=f2e597]
+              - cell "Rp 0" [ref=f2e598]
+              - cell "Rp 0" [ref=f2e599]
+              - cell "Rp 0" [ref=f2e600]
+              - cell "Rp 13.500.000" [ref=f2e601]
+              - cell "Rp 0" [ref=f2e602]
+              - cell "Rp 13.500.000" [ref=f2e603]
+            - row [ref=f2e604]:
+              - cell [ref=f2e605]:
+                - button "Action" [ref=f2e606]
+              - cell [ref=f2e609]:
+                - checkbox "Pilih baris DMXS26102109" [ref=f2e610]
+              - cell [ref=f2e611]:
+                - button "Create" [ref=f2e612]
+              - cell [ref=f2e613]:
+                - button "Create" [ref=f2e614]
+              - cell [ref=f2e615]:
+                - button "Create" [ref=f2e616]
+              - cell "Match" [ref=f2e617]
+              - cell "PUR V-043-T" [ref=f2e619]
+              - cell "PT. MITRA BELANJA ANDA/GREEN LAKE" [ref=f2e620]
+              - cell "DMXS26102109" [ref=f2e621]
+              - cell "28/10/2026" [ref=f2e622]
+              - cell "-" [ref=f2e623]
+              - cell "Rp 6.000.000" [ref=f2e624]
+              - cell "Rp 6.000.000" [ref=f2e625]
+              - cell "Rp 0" [ref=f2e626]
+              - cell "Rp 0" [ref=f2e627]
+              - cell "Rp 0" [ref=f2e628]
+              - cell "Rp 6.000.000" [ref=f2e629]
+              - cell "Rp 0" [ref=f2e630]
+              - cell "Rp 6.000.000" [ref=f2e631]
+            - row [ref=f2e632]:
+              - cell [ref=f2e633]:
+                - button "Action" [ref=f2e634]
+              - cell [ref=f2e637]:
+                - checkbox "Pilih baris DMXS26102108" [ref=f2e638]
+              - cell [ref=f2e639]:
+                - button "Create" [ref=f2e640]
+              - cell [ref=f2e641]:
+                - button "Create" [ref=f2e642]
+              - cell [ref=f2e643]:
+                - button "Create" [ref=f2e644]
+              - cell "Match" [ref=f2e645]
+              - cell "PUR V-043-T" [ref=f2e647]
+              - cell "PT. MITRA BELANJA ANDA/GREEN LAKE" [ref=f2e648]
+              - cell "DMXS26102108" [ref=f2e649]
+              - cell "28/10/2026" [ref=f2e650]
+              - cell "-" [ref=f2e651]
+              - cell "Rp 3.600.000" [ref=f2e652]
+              - cell "Rp 3.600.000" [ref=f2e653]
+              - cell "Rp 0" [ref=f2e654]
+              - cell "Rp 0" [ref=f2e655]
+              - cell "Rp 0" [ref=f2e656]
+              - cell "Rp 3.600.000" [ref=f2e657]
+              - cell "Rp 0" [ref=f2e658]
+              - cell "Rp 3.600.000" [ref=f2e659]
+            - row [ref=f2e660]:
+              - cell [ref=f2e661]:
+                - button "Action" [ref=f2e662]
+              - cell [ref=f2e665]:
+                - checkbox "Pilih baris DMXS26102104" [ref=f2e666]
+              - cell [ref=f2e667]:
+                - button "Create" [ref=f2e668]
+              - cell [ref=f2e669]:
+                - button "Create" [ref=f2e670]
+              - cell [ref=f2e671]:
+                - button "Create" [ref=f2e672]
+              - cell "Match" [ref=f2e673]
+              - cell "PUR V-038-T" [ref=f2e675]
+              - cell "PT. MITRA BELANJA ANDA (PURI INDAH)" [ref=f2e676]
+              - cell "DMXS26102104" [ref=f2e677]
+              - cell "28/10/2026" [ref=f2e678]
+              - cell "-" [ref=f2e679]
+              - cell "Rp 6.000.000" [ref=f2e680]
+              - cell "Rp 6.000.000" [ref=f2e681]
+              - cell "Rp 0" [ref=f2e682]
+              - cell "Rp 0" [ref=f2e683]
+              - cell "Rp 0" [ref=f2e684]
+              - cell "Rp 6.000.000" [ref=f2e685]
+              - cell "Rp 0" [ref=f2e686]
+              - cell "Rp 6.000.000" [ref=f2e687]
+            - row [ref=f2e688]:
+              - cell [ref=f2e689]:
+                - button "Action" [ref=f2e690]
+              - cell [ref=f2e693]:
+                - checkbox "Pilih baris DMXS26102103" [ref=f2e694]
+              - cell [ref=f2e695]:
+                - button "Create" [ref=f2e696]
+              - cell [ref=f2e697]:
+                - button "Create" [ref=f2e698]
+              - cell [ref=f2e699]:
+                - button "Create" [ref=f2e700]
+              - cell "Match" [ref=f2e701]
+              - cell "PUR V-038-T" [ref=f2e703]
+              - cell "PT. MITRA BELANJA ANDA (PURI INDAH)" [ref=f2e704]
+              - cell "DMXS26102103" [ref=f2e705]
+              - cell "28/10/2026" [ref=f2e706]
+              - cell "-" [ref=f2e707]
+              - cell "Rp 3.600.000" [ref=f2e708]
+              - cell "Rp 3.600.000" [ref=f2e709]
+              - cell "Rp 0" [ref=f2e710]
+              - cell "Rp 0" [ref=f2e711]
+              - cell "Rp 0" [ref=f2e712]
+              - cell "Rp 3.600.000" [ref=f2e713]
+              - cell "Rp 0" [ref=f2e714]
+              - cell "Rp 3.600.000" [ref=f2e715]
+            - row [ref=f2e716]:
+              - cell [ref=f2e717]:
+                - button "Action" [ref=f2e718]
+              - cell [ref=f2e721]:
+                - checkbox "Pilih baris DMXS26102102" [ref=f2e722]
+              - cell [ref=f2e723]:
+                - button "Create" [ref=f2e724]
+              - cell [ref=f2e725]:
+                - button "Create" [ref=f2e726]
+              - cell [ref=f2e727]:
+                - button "Create" [ref=f2e728]
+              - cell "Match" [ref=f2e729]
+              - cell "PUR V-038-T" [ref=f2e731]
+              - cell "PT. MITRA BELANJA ANDA (PURI INDAH)" [ref=f2e732]
+              - cell "DMXS26102102" [ref=f2e733]
+              - cell "28/10/2026" [ref=f2e734]
+              - cell "-" [ref=f2e735]
+              - cell "Rp 18.900.000" [ref=f2e736]
+              - cell "Rp 18.900.000" [ref=f2e737]
+              - cell "Rp 0" [ref=f2e738]
+              - cell "Rp 0" [ref=f2e739]
+              - cell "Rp 0" [ref=f2e740]
+              - cell "Rp 18.900.000" [ref=f2e741]
+              - cell "Rp 0" [ref=f2e742]
+              - cell "Rp 18.900.000" [ref=f2e743]
+            - row [ref=f2e744]:
+              - cell [ref=f2e745]:
+                - button "Action" [ref=f2e746]
+              - cell [ref=f2e749]:
+                - checkbox "Pilih baris DMXB26100658" [ref=f2e750]
+              - cell [ref=f2e751]:
+                - button "Create" [ref=f2e752]
+              - cell [ref=f2e753]:
+                - button "Create" [ref=f2e754]
+              - cell [ref=f2e755]:
+                - button "Create" [ref=f2e756]
+              - cell "Match" [ref=f2e757]
+              - cell "PUR F-020-T" [ref=f2e759]
+              - cell "PT. HERO RETAIL NUSANTARA" [ref=f2e760]
+              - cell "DMXB26100658" [ref=f2e761]
+              - cell "28/10/2026" [ref=f2e762]
+              - cell "-" [ref=f2e763]
+              - cell "Rp 13.500.000" [ref=f2e764]
+              - cell "Rp 13.500.000" [ref=f2e765]
+              - cell "Rp 0" [ref=f2e766]
+              - cell "Rp 0" [ref=f2e767]
+              - cell "Rp 0" [ref=f2e768]
+              - cell "Rp 13.500.000" [ref=f2e769]
+              - cell "Rp 0" [ref=f2e770]
+              - cell "Rp 13.500.000" [ref=f2e771]
+            - row [ref=f2e772]:
+              - cell [ref=f2e773]:
+                - button "Action" [ref=f2e774]
+              - cell [ref=f2e777]:
+                - checkbox "Pilih baris DMXS26102107" [ref=f2e778]
+              - cell [ref=f2e779]:
+                - button "Create" [ref=f2e780]
+              - cell [ref=f2e781]:
+                - button "Create" [ref=f2e782]
+              - cell [ref=f2e783]:
+                - button "Create" [ref=f2e784]
+              - cell "Match" [ref=f2e785]
+              - cell "PUR F-020-T" [ref=f2e787]
+              - cell "PT. HERO RETAIL NUSANTARA" [ref=f2e788]
+              - cell "DMXS26102107" [ref=f2e789]
+              - cell "28/10/2026" [ref=f2e790]
+              - cell "-" [ref=f2e791]
+              - cell "Rp 2.700.000" [ref=f2e792]
+              - cell "Rp 2.700.000" [ref=f2e793]
+              - cell "Rp 0" [ref=f2e794]
+              - cell "Rp 0" [ref=f2e795]
+              - cell "Rp 0" [ref=f2e796]
+              - cell "Rp 2.700.000" [ref=f2e797]
+              - cell "Rp 0" [ref=f2e798]
+              - cell "Rp 2.700.000" [ref=f2e799]
+            - row [ref=f2e800]:
+              - cell [ref=f2e801]:
+                - button "Action" [ref=f2e802]
+              - cell [ref=f2e805]:
+                - checkbox "Pilih baris DMXS26102106" [ref=f2e806]
+              - cell [ref=f2e807]:
+                - button "Create" [ref=f2e808]
+              - cell [ref=f2e809]:
+                - button "Create" [ref=f2e810]
+              - cell [ref=f2e811]:
+                - button "Create" [ref=f2e812]
+              - cell "Match" [ref=f2e813]
+              - cell "PUR-002-T" [ref=f2e815]
+              - cell "PT. ASTRO TECHNOLOGIES INDONESIA" [ref=f2e816]
+              - cell "DMXS26102106" [ref=f2e817]
+              - cell "28/10/2026" [ref=f2e818]
+              - cell "-" [ref=f2e819]
+              - cell "Rp 3.990.000" [ref=f2e820]
+              - cell "Rp 3.990.000" [ref=f2e821]
+              - cell "Rp 0" [ref=f2e822]
+              - cell "Rp 0" [ref=f2e823]
+              - cell "Rp 0" [ref=f2e824]
+              - cell "Rp 3.990.000" [ref=f2e825]
+              - cell "Rp 0" [ref=f2e826]
+              - cell "Rp 3.990.000" [ref=f2e827]
+            - row [ref=f2e828]:
+              - cell [ref=f2e829]:
+                - button "Action" [ref=f2e830]
+              - cell [ref=f2e833]:
+                - checkbox "Pilih baris DMXS26102105" [ref=f2e834]
+              - cell [ref=f2e835]:
+                - button "Create" [ref=f2e836]
+              - cell [ref=f2e837]:
+                - button "Create" [ref=f2e838]
+              - cell [ref=f2e839]:
+                - button "Create" [ref=f2e840]
+              - cell "Match" [ref=f2e841]
+              - cell "PUR-002-T" [ref=f2e843]
+              - cell "PT. ASTRO TECHNOLOGIES INDONESIA" [ref=f2e844]
+              - cell "DMXS26102105" [ref=f2e845]
+              - cell "28/10/2026" [ref=f2e846]
+              - cell "-" [ref=f2e847]
+              - cell "Rp 9.740.000" [ref=f2e848]
+              - cell "Rp 9.740.000" [ref=f2e849]
+              - cell "Rp 0" [ref=f2e850]
+              - cell "Rp 0" [ref=f2e851]
+              - cell "Rp 0" [ref=f2e852]
+              - cell "Rp 9.740.000" [ref=f2e853]
+              - cell "Rp 0" [ref=f2e854]
+              - cell "Rp 9.740.000" [ref=f2e855]
+            - row [ref=f2e856]:
+              - cell [ref=f2e857]:
+                - button "Action" [ref=f2e858]
+              - cell [ref=f2e861]:
+                - checkbox "Pilih baris DMXS26102101" [ref=f2e862]
+              - cell [ref=f2e863]:
+                - button "Create" [ref=f2e864]
+              - cell [ref=f2e865]:
+                - button "Create" [ref=f2e866]
+              - cell [ref=f2e867]:
+                - button "Create" [ref=f2e868]
+              - cell "Match" [ref=f2e869]
+              - cell "PUR V-037-T" [ref=f2e871]
+              - cell "MITRA BELANJA ANDA (PIK)" [ref=f2e872]
+              - cell "DMXS26102101" [ref=f2e873]
+              - cell "28/10/2026" [ref=f2e874]
+              - cell "-" [ref=f2e875]
+              - cell "Rp 9.000.000" [ref=f2e876]
+              - cell "Rp 9.000.000" [ref=f2e877]
+              - cell "Rp 0" [ref=f2e878]
+              - cell "Rp 0" [ref=f2e879]
+              - cell "Rp 0" [ref=f2e880]
+              - cell "Rp 9.000.000" [ref=f2e881]
+              - cell "Rp 0" [ref=f2e882]
+              - cell "Rp 9.000.000" [ref=f2e883]
+            - row [ref=f2e884]:
+              - cell [ref=f2e885]:
+                - button "Action" [ref=f2e886]
+              - cell [ref=f2e889]:
+                - checkbox "Pilih baris DMXS26102100" [ref=f2e890]
+              - cell [ref=f2e891]:
+                - button "Create" [ref=f2e892]
+              - cell [ref=f2e893]:
+                - button "Create" [ref=f2e894]
+              - cell [ref=f2e895]:
+                - button "Create" [ref=f2e896]
+              - cell "Match" [ref=f2e897]
+              - cell "PUR V-037-T" [ref=f2e899]
+              - cell "MITRA BELANJA ANDA (PIK)" [ref=f2e900]
+              - cell "DMXS26102100" [ref=f2e901]
+              - cell "28/10/2026" [ref=f2e902]
+              - cell "-" [ref=f2e903]
+              - cell "Rp 14.309.841" [ref=f2e904]
+              - cell "Rp 14.309.841" [ref=f2e905]
+              - cell "Rp 0" [ref=f2e906]
+              - cell "Rp 0" [ref=f2e907]
+              - cell "Rp 0" [ref=f2e908]
+              - cell "Rp 14.309.841" [ref=f2e909]
+              - cell "Rp 0" [ref=f2e910]
+              - cell "Rp 14.309.841" [ref=f2e911]
+            - row [ref=f2e912]:
+              - cell [ref=f2e913]:
+                - button "Action" [ref=f2e914]
+              - cell [ref=f2e917]:
+                - checkbox "Pilih baris SR/2610/0382" [ref=f2e918]
+              - cell [ref=f2e919]:
+                - button "Create" [ref=f2e920]
+              - cell [ref=f2e921]:
+                - button "Create" [ref=f2e922]
+              - cell [ref=f2e923]:
+                - button "Create" [ref=f2e924]
+              - cell "Unmatch" [ref=f2e925]
+              - cell "NANA F-13" [ref=f2e927]
+              - cell "ÑÅ¼Ó´ï¸»Â³Óñ JAKARTA FRUIT - PLUIT" [ref=f2e928]
+              - cell "SR/2610/0382" [ref=f2e929]
+              - cell "27/10/2026" [ref=f2e930]
+              - cell "-" [ref=f2e931]
+              - cell "Rp 11.610.000" [ref=f2e932]
+              - cell "Rp -2.590.000" [ref=f2e933]
+              - cell "Rp 0" [ref=f2e934]
+              - cell "Rp 0" [ref=f2e935]
+              - cell "Rp 2.590.000" [ref=f2e936]
+              - cell "Rp 9.020.000" [ref=f2e937]
+              - cell "Rp 0" [ref=f2e938]
+              - cell "Rp 9.020.000" [ref=f2e939]
+            - row [ref=f2e940]:
+              - cell [ref=f2e941]:
+                - button "Action" [ref=f2e942]
+              - cell [ref=f2e945]:
+                - checkbox "Pilih baris DMXS26102096" [ref=f2e946]
+              - cell [ref=f2e947]:
+                - button "Create" [ref=f2e948]
+              - cell [ref=f2e949]:
+                - button "Create" [ref=f2e950]
+              - cell [ref=f2e951]:
+                - button "Create" [ref=f2e952]
+              - cell "Match" [ref=f2e953]
+              - cell "FAUZIAH V-013-T" [ref=f2e955]
+              - cell "¹þ¶àÅµ HARTONO" [ref=f2e956]
+              - cell "DMXS26102096" [ref=f2e957]
+              - cell "27/10/2026" [ref=f2e958]
+              - cell "-" [ref=f2e959]
+              - cell "Rp 18.160.000" [ref=f2e960]
+              - cell "Rp 18.160.000" [ref=f2e961]
+              - cell "Rp 0" [ref=f2e962]
+              - cell "Rp 0" [ref=f2e963]
+              - cell "Rp 0" [ref=f2e964]
+              - cell "Rp 18.160.000" [ref=f2e965]
+              - cell "Rp 0" [ref=f2e966]
+              - cell "Rp 18.160.000" [ref=f2e967]
+            - row [ref=f2e968]:
+              - cell [ref=f2e969]:
+                - button "Action" [ref=f2e970]
+              - cell [ref=f2e973]:
+                - checkbox "Pilih baris SR/2610/0377" [ref=f2e974]
+              - cell [ref=f2e975]:
+                - button "Create" [ref=f2e976]
+              - cell [ref=f2e977]:
+                - button "Create" [ref=f2e978]
+              - cell [ref=f2e979]:
+                - button "Create" [ref=f2e980]
+              - cell "Unmatch" [ref=f2e981]
+              - cell "NANA F-11" [ref=f2e983]
+              - cell "¸»ºÀ PT. SWALAYAN SUKSES ABADI (FOODHALL)" [ref=f2e984]
+              - cell "SR/2610/0377" [ref=f2e985]
+              - cell "27/10/2026" [ref=f2e986]
+              - cell "-" [ref=f2e987]
+              - cell "Rp 15.615.600" [ref=f2e988]
+              - cell "Rp -6.283.200" [ref=f2e989]
+              - cell "Rp 0" [ref=f2e990]
+              - cell "Rp 0" [ref=f2e991]
+              - cell "Rp 6.283.200" [ref=f2e992]
+              - cell "Rp 9.332.400" [ref=f2e993]
+              - cell "Rp 0" [ref=f2e994]
+              - cell "Rp 9.332.400" [ref=f2e995]
+            - row [ref=f2e996]:
+              - cell [ref=f2e997]:
+                - button "Action" [ref=f2e998]
+              - cell [ref=f2e1001]:
+                - checkbox "Pilih baris SR/2610/0376" [ref=f2e1002]
+              - cell [ref=f2e1003]:
+                - button "Create" [ref=f2e1004]
+              - cell [ref=f2e1005]:
+                - button "Create" [ref=f2e1006]
+              - cell [ref=f2e1007]:
+                - button "Create" [ref=f2e1008]
+              - cell "Unmatch" [ref=f2e1009]
+              - cell "NANA F-11" [ref=f2e1011]
+              - cell "¸»ºÀ PT. SWALAYAN SUKSES ABADI (FOODHALL)" [ref=f2e1012]
+              - cell "SR/2610/0376" [ref=f2e1013]
+              - cell "27/10/2026" [ref=f2e1014]
+              - cell "-" [ref=f2e1015]
+              - cell "Rp 35.443.440" [ref=f2e1016]
+              - cell "Rp -3.444.985" [ref=f2e1017]
+              - cell "Rp 0" [ref=f2e1018]
+              - cell "Rp 0" [ref=f2e1019]
+              - cell "Rp 3.444.985" [ref=f2e1020]
+              - cell "Rp 31.998.455" [ref=f2e1021]
+              - cell "Rp 0" [ref=f2e1022]
+              - cell "Rp 31.998.455" [ref=f2e1023]
+            - row [ref=f2e1024]:
+              - cell [ref=f2e1025]:
+                - button "Action" [ref=f2e1026]
+              - cell [ref=f2e1029]:
+                - checkbox "Pilih baris DMXS26102086" [ref=f2e1030]
+              - cell [ref=f2e1031]:
+                - button "Create" [ref=f2e1032]
+              - cell [ref=f2e1033]:
+                - button "Create" [ref=f2e1034]
+              - cell [ref=f2e1035]:
+                - button "Create" [ref=f2e1036]
+              - cell "Match" [ref=f2e1037]
+              - cell "SINTJOO F-052-T" [ref=f2e1039]
+              - cell "±öµ±²¿°¡ BINTANG BUAH" [ref=f2e1040]
+              - cell "DMXS26102086" [ref=f2e1041]
+              - cell "27/10/2026" [ref=f2e1042]
+              - cell "-" [ref=f2e1043]
+              - cell "Rp 36.610.000" [ref=f2e1044]
+              - cell "Rp 36.610.000" [ref=f2e1045]
+              - cell "Rp 0" [ref=f2e1046]
+              - cell "Rp 0" [ref=f2e1047]
+              - cell "Rp 0" [ref=f2e1048]
+              - cell "Rp 36.610.000" [ref=f2e1049]
+              - cell "Rp 0" [ref=f2e1050]
+              - cell "Rp 36.610.000" [ref=f2e1051]
+            - row [ref=f2e1052]:
+              - cell [ref=f2e1053]:
+                - button "Action" [ref=f2e1054]
+              - cell [ref=f2e1057]:
+                - checkbox "Pilih baris DMXS26102083" [ref=f2e1058]
+              - cell [ref=f2e1059]:
+                - button "Create" [ref=f2e1060]
+              - cell [ref=f2e1061]:
+                - button "Create" [ref=f2e1062]
+              - cell [ref=f2e1063]:
+                - button "Create" [ref=f2e1064]
+              - cell "Match" [ref=f2e1065]
+              - cell "SINTJOO F-052-T" [ref=f2e1067]
+              - cell "±öµ±²¿°¡ BINTANG BUAH" [ref=f2e1068]
+              - cell "DMXS26102083" [ref=f2e1069]
+              - cell "27/10/2026" [ref=f2e1070]
+              - cell "BROCOLI LAKBAN KUNING CAULI KRNJG UNGU" [ref=f2e1071]
+              - cell "Rp 55.890.000" [ref=f2e1072]
+              - cell "Rp 55.890.000" [ref=f2e1073]
+              - cell "Rp 0" [ref=f2e1074]
+              - cell "Rp 0" [ref=f2e1075]
+              - cell "Rp 0" [ref=f2e1076]
+              - cell "Rp 55.890.000" [ref=f2e1077]
+              - cell "Rp 0" [ref=f2e1078]
+              - cell "Rp 55.890.000" [ref=f2e1079]
+            - row [ref=f2e1080]:
+              - cell [ref=f2e1081]:
+                - button "Action" [ref=f2e1082]
+              - cell [ref=f2e1085]:
+                - checkbox "Pilih baris DMXS26102076" [ref=f2e1086]
+              - cell [ref=f2e1087]:
+                - button "Create" [ref=f2e1088]
+              - cell [ref=f2e1089]:
+                - button "Create" [ref=f2e1090]
+              - cell [ref=f2e1091]:
+                - button "Create" [ref=f2e1092]
+              - cell "Match" [ref=f2e1093]
+              - cell "FAUZIAH M-015-T" [ref=f2e1095]
+              - cell "°ÑºÜÌØÀ PAK HENDRA" [ref=f2e1096]
+              - cell "DMXS26102076" [ref=f2e1097]
+              - cell "27/10/2026" [ref=f2e1098]
+              - cell "-" [ref=f2e1099]
+              - cell "Rp 1.400.000" [ref=f2e1100]
+              - cell "Rp 1.400.000" [ref=f2e1101]
+              - cell "Rp 0" [ref=f2e1102]
+              - cell "Rp 0" [ref=f2e1103]
+              - cell "Rp 0" [ref=f2e1104]
+              - cell "Rp 1.400.000" [ref=f2e1105]
+              - cell "Rp 0" [ref=f2e1106]
+              - cell "Rp 1.400.000" [ref=f2e1107]
+            - row [ref=f2e1108]:
+              - cell [ref=f2e1109]:
+                - button "Action" [ref=f2e1110]
+              - cell [ref=f2e1113]:
+                - checkbox "Pilih baris DMXS26102082" [ref=f2e1114]
+              - cell [ref=f2e1115]:
+                - button "Create" [ref=f2e1116]
+              - cell [ref=f2e1117]:
+                - button "Create" [ref=f2e1118]
+              - cell [ref=f2e1119]:
+                - button "Create" [ref=f2e1120]
+              - cell "Match" [ref=f2e1121]
+              - cell "FAUZIAH V-027-T" [ref=f2e1123]
+              - cell "°¢Äá¿¨²¿°¡ TOKO ANEKA BUAH - SEMARANG" [ref=f2e1124]
+              - cell "DMXS26102082" [ref=f2e1125]
+              - cell "27/10/2026" [ref=f2e1126]
+              - cell "-" [ref=f2e1127]
+              - cell "Rp 7.940.000" [ref=f2e1128]
+              - cell "Rp 7.940.000" [ref=f2e1129]
+              - cell "Rp 0" [ref=f2e1130]
+              - cell "Rp 0" [ref=f2e1131]
+              - cell "Rp 0" [ref=f2e1132]
+              - cell "Rp 7.940.000" [ref=f2e1133]
+              - cell "Rp 0" [ref=f2e1134]
+              - cell "Rp 7.940.000" [ref=f2e1135]
+            - row [ref=f2e1136]:
+              - cell [ref=f2e1137]:
+                - button "Action" [ref=f2e1138]
+              - cell [ref=f2e1141]:
+                - checkbox "Pilih baris DMXB26100656" [ref=f2e1142]
+              - cell [ref=f2e1143]:
+                - button "Create" [ref=f2e1144]
+              - cell [ref=f2e1145]:
+                - button "Create" [ref=f2e1146]
+              - cell [ref=f2e1147]:
+                - button "Create" [ref=f2e1148]
+              - cell "Match" [ref=f2e1149]
+              - cell "SINTJOO M-001-T" [ref=f2e1151]
+              - cell "YAMIN" [ref=f2e1152]
+              - cell "DMXB26100656" [ref=f2e1153]
+              - cell "27/10/2026" [ref=f2e1154]
+              - cell "-" [ref=f2e1155]
+              - cell "Rp 9.600.000" [ref=f2e1156]
+              - cell "Rp 9.600.000" [ref=f2e1157]
+              - cell "Rp 0" [ref=f2e1158]
+              - cell "Rp 0" [ref=f2e1159]
+              - cell "Rp 0" [ref=f2e1160]
+              - cell "Rp 9.600.000" [ref=f2e1161]
+              - cell "Rp 0" [ref=f2e1162]
+              - cell "Rp 9.600.000" [ref=f2e1163]
+            - row [ref=f2e1164]:
+              - cell [ref=f2e1165]:
+                - button "Action" [ref=f2e1166]
+              - cell [ref=f2e1169]:
+                - checkbox "Pilih baris DMXS26102084" [ref=f2e1170]
+              - cell [ref=f2e1171]:
+                - button "Create" [ref=f2e1172]
+              - cell [ref=f2e1173]:
+                - button "Create" [ref=f2e1174]
+              - cell [ref=f2e1175]:
+                - button "Create" [ref=f2e1176]
+              - cell "Match" [ref=f2e1177]
+              - cell "SINTJOO M-001-T" [ref=f2e1179]
+              - cell "YAMIN" [ref=f2e1180]
+              - cell "DMXS26102084" [ref=f2e1181]
+              - cell "27/10/2026" [ref=f2e1182]
+              - cell "BROCOLI LAKBAN KUNING CELERY,FIBER,DIKIRIM KEGUDANG AGAK SORE" [ref=f2e1183]
+              - cell "Rp 30.200.000" [ref=f2e1184]
+              - cell "Rp 30.200.000" [ref=f2e1185]
+              - cell "Rp 0" [ref=f2e1186]
+              - cell "Rp 0" [ref=f2e1187]
+              - cell "Rp 0" [ref=f2e1188]
+              - cell "Rp 30.200.000" [ref=f2e1189]
+              - cell "Rp 0" [ref=f2e1190]
+              - cell "Rp 30.200.000" [ref=f2e1191]
+            - row [ref=f2e1192]:
+              - cell [ref=f2e1193]:
+                - button "Action" [ref=f2e1194]
+              - cell [ref=f2e1197]:
+                - checkbox "Pilih baris DMXS26102065" [ref=f2e1198]
+              - cell [ref=f2e1199]:
+                - button "Create" [ref=f2e1200]
+              - cell [ref=f2e1201]:
+                - button "Create" [ref=f2e1202]
+              - cell [ref=f2e1203]:
+                - button "Create" [ref=f2e1204]
+              - cell "Match" [ref=f2e1205]
+              - cell "FAUZIAH V-049-C" [ref=f2e1207]
+              - cell "UMI YATUN" [ref=f2e1208]
+              - cell "DMXS26102065" [ref=f2e1209]
+              - cell "27/10/2026" [ref=f2e1210]
+              - cell "-" [ref=f2e1211]
+              - cell "Rp 1.550.000" [ref=f2e1212]
+              - cell "Rp 1.550.000" [ref=f2e1213]
+              - cell "Rp 0" [ref=f2e1214]
+              - cell "Rp 0" [ref=f2e1215]
+              - cell "Rp 0" [ref=f2e1216]
+              - cell "Rp 1.550.000" [ref=f2e1217]
+              - cell "Rp 0" [ref=f2e1218]
+              - cell "Rp 1.550.000" [ref=f2e1219]
+            - row [ref=f2e1220]:
+              - cell [ref=f2e1221]:
+                - button "Action" [ref=f2e1222]
+              - cell [ref=f2e1225]:
+                - checkbox "Pilih baris DMXS26102070" [ref=f2e1226]
+              - cell [ref=f2e1227]:
+                - button "Create" [ref=f2e1228]
+              - cell [ref=f2e1229]:
+                - button "Create" [ref=f2e1230]
+              - cell [ref=f2e1231]:
+                - button "Create" [ref=f2e1232]
+              - cell "Match" [ref=f2e1233]
+              - cell "FAUZIAH V-030-T" [ref=f2e1235]
+              - cell "UJANG ALIM" [ref=f2e1236]
+              - cell "DMXS26102070" [ref=f2e1237]
+              - cell "27/10/2026" [ref=f2e1238]
+              - cell "BROCOLI LAKBAN KUNING" [ref=f2e1239]
+              - cell "Rp 18.890.000" [ref=f2e1240]
+              - cell "Rp 18.890.000" [ref=f2e1241]
+              - cell "Rp 0" [ref=f2e1242]
+              - cell "Rp 0" [ref=f2e1243]
+              - cell "Rp 0" [ref=f2e1244]
+              - cell "Rp 18.890.000" [ref=f2e1245]
+              - cell "Rp 0" [ref=f2e1246]
+              - cell "Rp 18.890.000" [ref=f2e1247]
+        - generic [ref=f2e1248]:
+          - status [ref=f2e1250]: Menampilkan 1 - 25 dari 2,946 data
+          - navigation "pagination" [ref=f2e1253]:
+            - link "First" [disabled] [ref=f2e1254]: Pertama
+            - link "Previous" [disabled] [ref=f2e1255]: Sebelumnya
+            - link "1" [ref=f2e1256] [cursor=pointer]
+            - link "2" [ref=f2e1257] [cursor=pointer]
+            - link "3" [ref=f2e1258] [cursor=pointer]
+            - link "4" [ref=f2e1259] [cursor=pointer]
+            - link "5" [ref=f2e1260] [cursor=pointer]
+            - text: …
+            - link "118" [ref=f2e1261] [cursor=pointer]
+            - link "Next" [ref=f2e1262] [cursor=pointer]: Selanjutnya
+            - link "Last" [ref=f2e1263] [cursor=pointer]: Terakhir
+      - option "Januari"
+      - option "Februari"
+      - option "Maret"
+      - option "April"
+      - option "Mei"
+      - option "Juni"
+      - option "Juli"
+      - option "Agustus"
+      - option "September"
+      - option "Oktober" [selected]
+      - option "Desember"
+      - option "2025"
+      - option "2026" [selected]

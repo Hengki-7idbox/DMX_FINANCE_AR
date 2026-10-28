@@ -26,6 +26,7 @@ class Setting extends Model
             'ar_account' => '110311',
             'dp_account_id' => '210201',
             'seller_tin' => '0029327129041000',
+            'coretax_unit_default' => 'UM.0022',
         ];
     }
 

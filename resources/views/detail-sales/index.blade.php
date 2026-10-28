@@ -469,6 +469,26 @@
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
 
+    <dialog id="create_unit_modal" class="modal">
+        <div class="modal-box max-w-md">
+            <h3 class="text-lg font-bold text-foreground">Tambah Satuan ke Master Item</h3>
+            <p class="py-2 text-sm text-muted-foreground">
+                Aplikasi akan menambahkan satuan <strong id="cu_unit">-</strong> ke item
+                <strong id="cu_item_name">-</strong> (<span id="cu_item_code">-</span>) di Accurate.
+            </p>
+            <label for="cu_ratio" class="mb-1 block text-sm font-medium text-muted-foreground">Rasio (1 satuan ini = berapa satuan utama)</label>
+            <input type="number" id="cu_ratio" min="2" step="1"
+                   class="block w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            <p class="mt-1 text-xs text-tertiary">Contoh: item "6PCS" &rarr; rasio 6 berarti 1 Crt = 6 PCS.</p>
+            <p id="cu_error" class="mt-2 text-sm text-destructive"></p>
+            <div class="modal-action">
+                <button type="button" id="cu_submit" class="btn btn-primary" onclick="submitCreateUnit()">Simpan &amp; Buat Dokumen</button>
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('create_unit_modal').close()">Batal</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
     @push('scripts')
     <script>
         (function () {
@@ -587,6 +607,56 @@
                 .replace(/"/g, '&quot;');
         }
 
+        // Ubah data baris langsung di DataTables supaya filter, pencarian, dan halaman tidak reset.
+        function updateDsRows(match, mutate) {
+            if (!window.jQuery || !jQuery.fn.DataTable || !jQuery.fn.DataTable.isDataTable('#detail-sales-table')) return;
+            var api = jQuery('#detail-sales-table').DataTable();
+            var changed = false;
+            api.rows().every(function () {
+                var row = this.data();
+                if (!row || !match(row)) return;
+                mutate(row);
+                this.data(row).invalidate();
+                changed = true;
+            });
+            if (changed) api.draw(false);
+        }
+
+        // Tahap external tertinggi yang sudah tercatat pada sebuah baris (so < do < inv).
+        function extStageOf(row) {
+            var stage = null;
+            ['so', 'do', 'inv'].forEach(function (t) {
+                if (row['ext_' + t]) stage = t;
+            });
+            return stage;
+        }
+
+        function markExtDocState(doc, type, exists) {
+            updateDsRows(function (row) {
+                return String(row.doc_number || '') === String(doc || '');
+            }, function (row) {
+                row['ext_' + type] = !!exists;
+                row.ext_stage = extStageOf(row);
+            });
+        }
+
+        function markFpStatus(docOrIds, status) {
+            if (Array.isArray(docOrIds)) {
+                var ids = docOrIds.map(Number);
+                updateDsRows(function (row) {
+                    return ids.indexOf(Number(row.id)) !== -1;
+                }, function (row) {
+                    row.fp_status = status;
+                });
+                return;
+            }
+            updateDsRows(function (row) {
+                return String(row.doc_number || '') === String(docOrIds || '');
+            }, function (row) {
+                row.fp_status = status;
+            });
+        }
+
         var actionMenuDoc = null;
         var actionMenuFpStatus = '';
 
@@ -661,7 +731,7 @@
                     importToast('success', newStatus === 'gung_gung'
                         ? 'Status faktur pajak diubah ke Gung Gung.'
                         : 'Status faktur pajak dikembalikan ke "fp belum ada".');
-                    setTimeout(function () { window.location.reload(); }, 600);
+                    markFpStatus(doc, newStatus);
                 })
                 .catch(function () {
                     importToast('error', 'Gagal mengubah status faktur pajak.');
@@ -718,10 +788,8 @@
         }
 
         var CREATE_EXT_URL = @json(route('detail-sales.create-ext'));
-        var extReloadOnClose = false;
 
-        function showExtResult(title, items, type, reload) {
-            extReloadOnClose = !!reload;
+        function showExtResult(title, items, type) {
             var dlg = document.getElementById('ext_result_modal');
             var head = document.getElementById('ext_result_title');
             var body = document.getElementById('ext_result_body');
@@ -737,37 +805,38 @@
             if (dlg && !dlg.open) dlg.showModal();
         }
 
+        // Tutup modal hasil tanpa reload halaman (filter & posisi tabel dipertahankan).
         function closeExtResult() {
             var dlg = document.getElementById('ext_result_modal');
             if (dlg && dlg.open) dlg.close();
-            if (extReloadOnClose) {
-                extReloadOnClose = false;
-                window.location.reload();
-            }
         }
 
-        (function () {
-            var dlg = document.getElementById('ext_result_modal');
-            if (dlg) {
-                dlg.addEventListener('close', function () {
-                    if (extReloadOnClose) {
-                        extReloadOnClose = false;
-                        window.location.reload();
-                    }
-                });
-            }
-        })();
+        var CREATE_UNIT_URL = @json(route('detail-sales.create-item-unit'));
+        var pendingUnitIssues = [];
+        var pendingUnitContext = { doc: null, type: null };
+        var currentUnitIssue = null;
 
         function createExtDoc(btn) {
             if (!btn || btn.disabled) return;
-            var doc = btn.getAttribute('data-doc');
-            var type = btn.getAttribute('data-type');
+            createExtDocRequest(btn.getAttribute('data-doc'), btn.getAttribute('data-type'), btn);
+        }
+
+        function createExtDocRequest(doc, type, btn) {
             if (!doc) return;
 
             var label = type ? type.toUpperCase() : 'Dokumen';
-            var original = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = 'Proses...';
+            var original = btn ? btn.textContent : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Proses...';
+            }
+
+            function restoreBtn() {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = original;
+                }
+            }
 
             fetch(CREATE_EXT_URL, {
                 method: 'POST',
@@ -784,24 +853,142 @@
                 })
                 .then(function (r) {
                     if (!r.ok || !r.body.ok) {
-                        btn.disabled = false;
-                        btn.textContent = original;
+                        restoreBtn();
                         var reasons = (r.body && r.body.errors && r.body.errors.length)
                             ? r.body.errors
                             : [(r.body && r.body.message) || 'Gagal membuat dokumen di Accurate.'];
-                        showExtResult('Tidak bisa membuat ' + label + ' External', reasons, 'error', false);
+                        if (r.body && Array.isArray(r.body.unit_issues) && r.body.unit_issues.length) {
+                            showUnitIssues('Tidak bisa membuat ' + label + ' External', r.body.unit_issues, doc, type);
+                            return;
+                        }
+                        showExtResult('Tidak bisa membuat ' + label + ' External', reasons, 'error');
                         return;
                     }
-                    btn.textContent = 'Terkirim';
-                    btn.className = 'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-success/10 text-success ring-1 ring-success/40 cursor-default';
+                    if (btn) {
+                        btn.textContent = 'Terkirim';
+                        btn.className = 'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-success/10 text-success ring-1 ring-success/40 cursor-default';
+                    }
                     var notes = (r.body && r.body.notes) ? r.body.notes.slice() : [];
+
+                    // Tandai baris sebagai sudah punya dokumen tanpa reload halaman.
+                    markExtDocState(doc, type, true);
+
                     showExtResult(label + ' ' + (r.body.number || doc) + ' berhasil',
-                        [(r.body.message || 'Dokumen dibuat di Accurate.')].concat(notes), 'success', true);
+                        [(r.body.message || 'Dokumen dibuat di Accurate.')].concat(notes), 'success');
+                })
+                .catch(function () {
+                    restoreBtn();
+                    showExtResult('Gagal', ['Gagal menghubungi server.'], 'error');
+                });
+        }
+
+        function showUnitIssues(title, issues, doc, type) {
+            pendingUnitIssues = issues.slice();
+            pendingUnitContext = { doc: doc, type: type };
+
+            var dlg = document.getElementById('ext_result_modal');
+            var head = document.getElementById('ext_result_title');
+            var body = document.getElementById('ext_result_body');
+            head.textContent = title;
+            head.className = 'text-lg font-bold text-destructive';
+            body.innerHTML = '<p class="mb-2 text-muted-foreground">Satuan berikut belum terdaftar pada master item Accurate. Tambahkan dulu, lalu dokumen dibuat otomatis.</p>'
+                + '<ul class="space-y-2">'
+                + issues.map(function (it, idx) {
+                    var hint = it.suggested_ratio ? ' &middot; saran rasio ' + it.suggested_ratio : '';
+                    return '<li class="rounded-lg border border-border p-2">'
+                        + '<div class="font-medium text-foreground">' + escapeHtml(it.item_name) + '</div>'
+                        + '<div class="text-xs text-muted-foreground">Satuan "' + escapeHtml(it.unit) + '" belum ada &middot; kode ' + escapeHtml(it.item_no) + hint + '</div>'
+                        + '<button type="button" class="btn btn-primary btn-sm mt-2" onclick="openCreateUnitModal(' + idx + ')">Create Satuan</button>'
+                        + '</li>';
+                }).join('')
+                + '</ul>';
+            if (dlg && !dlg.open) dlg.showModal();
+        }
+
+        function openCreateUnitModal(idx) {
+            var it = pendingUnitIssues[idx];
+            if (!it) return;
+
+            currentUnitIssue = it;
+
+            var resultDlg = document.getElementById('ext_result_modal');
+            if (resultDlg && resultDlg.open) resultDlg.close();
+
+            document.getElementById('cu_item_name').textContent = it.item_name;
+            document.getElementById('cu_item_code').textContent = it.item_no;
+            document.getElementById('cu_unit').textContent = it.unit;
+            document.getElementById('cu_error').textContent = '';
+
+            var input = document.getElementById('cu_ratio');
+            input.value = it.suggested_ratio || 6;
+
+            document.getElementById('create_unit_modal').showModal();
+            setTimeout(function () { input.focus(); input.select(); }, 60);
+        }
+
+        function submitCreateUnit() {
+            if (!currentUnitIssue) return;
+
+            var input = document.getElementById('cu_ratio');
+            var error = document.getElementById('cu_error');
+            var ratio = parseFloat(input.value);
+
+            if (!(ratio > 1)) {
+                error.textContent = 'Rasio harus lebih besar dari 1.';
+                return;
+            }
+
+            var btn = document.getElementById('cu_submit');
+            var original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Menyimpan...';
+            error.textContent = '';
+
+            fetch(CREATE_UNIT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                },
+                body: JSON.stringify({
+                    doc_number: pendingUnitContext.doc,
+                    item_no: currentUnitIssue.item_no,
+                    item_name: currentUnitIssue.item_name,
+                    unit: currentUnitIssue.unit,
+                    ratio: ratio,
+                    price: 0
+                })
+            })
+                .then(function (res) {
+                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                })
+                .then(function (r) {
+                    btn.disabled = false;
+                    btn.textContent = original;
+
+                    if (!r.ok || !r.body.ok) {
+                        error.textContent = (r.body && r.body.message) || 'Gagal menambah satuan.';
+                        return;
+                    }
+
+                    var dlg = document.getElementById('create_unit_modal');
+                    if (dlg && dlg.open) dlg.close();
+
+                    importToast('success', r.body.message || 'Satuan ditambahkan.');
+                    currentUnitIssue = null;
+
+                    if (pendingUnitContext.doc) {
+                        setTimeout(function () {
+                            createExtDocRequest(pendingUnitContext.doc, pendingUnitContext.type, null);
+                        }, 250);
+                    }
                 })
                 .catch(function () {
                     btn.disabled = false;
                     btn.textContent = original;
-                    showExtResult('Gagal', ['Gagal menghubungi server.'], 'error', false);
+                    error.textContent = 'Gagal menghubungi server.';
                 });
         }
 
@@ -872,6 +1059,10 @@
                 })
                 .then(function (r) {
                     if (!r.ok || !r.body.ok) {
+                        if (r.body && Array.isArray(r.body.errors) && r.body.errors.length) {
+                            showExtResult('Tidak bisa export XML Coretax', r.body.errors, 'error');
+                            return;
+                        }
                         importToast('error', (r.body && r.body.message) || 'Gagal membuat XML Coretax.');
                         return;
                     }
@@ -1132,12 +1323,42 @@
                 return true;
             });
 
+            // Persist client-side filter state ke localStorage (survive reload/F5).
+            var FILTER_CACHE_KEY = 'ds_filter_state';
+            function saveFilterState() {
+                try {
+                    var s = {
+                        status: $('#f_status').val() || [],
+                        nama: $('#f_nama').val() || [],
+                        faktur: $('#f_faktur').val() || [],
+                        tgl_dari: $('#f_tgl_dari').val() || '',
+                        tgl_sampai: $('#f_tgl_sampai').val() || ''
+                    };
+                    localStorage.setItem(FILTER_CACHE_KEY, JSON.stringify(s));
+                } catch (e) {}
+            }
+            function restoreFilterState() {
+                try {
+                    var raw = localStorage.getItem(FILTER_CACHE_KEY);
+                    if (!raw) return;
+                    var s = JSON.parse(raw);
+                    if (s.status) $('#f_status').val(s.status).trigger('change');
+                    if (s.nama) $('#f_nama').val(s.nama).trigger('change');
+                    if (s.faktur) $('#f_faktur').val(s.faktur).trigger('change');
+                    if (s.tgl_dari) $('#f_tgl_dari').val(s.tgl_dari);
+                    if (s.tgl_sampai) $('#f_tgl_sampai').val(s.tgl_sampai);
+                } catch (e) {}
+            }
+
             $('#f_status, #f_nama, #f_faktur').on('change', function() {
+                saveFilterState();
                 filterTable.draw();
             });
 
-            // Bulan/Tahun = filter server-side: ganti pilihan → reload dgn ?bulan=&tahun=.
-            function reloadBulanTahun() {
+            $('#f_tgl_dari, #f_tgl_sampai').on('change', function() {
+                saveFilterState();
+                filterTable.draw();
+            });
                 var params = new URLSearchParams(window.location.search);
                 var b = $('#f_bulan').val() || [];
                 var t = $('#f_tahun').val() || [];
@@ -1146,6 +1367,10 @@
                 params.set('tab', @json($tab));
                 window.location.search = params.toString();
             }
+            // Restore client-side filter setelah DataTable siap.
+            restoreFilterState();
+            if ($('#f_tgl_dari').val() || $('#f_tgl_sampai').val()) filterTable.draw();
+
             $('#f_bulan, #f_tahun').on('change', reloadBulanTahun);
 
             $('#f_tgl_dari, #f_tgl_sampai').on('change', function() {
@@ -1305,7 +1530,7 @@
                             importToast('success', mode === 'clear'
                                 ? ids.length + ' baris: status FP dikembalikan ke "fp belum ada".'
                                 : ids.length + ' baris: status FP diubah ke Gung Gung.');
-                            setTimeout(function () { window.location.reload(); }, 600);
+                            markFpStatus(ids, status);
                         })
                         .catch(function () {
                             importToast('error', 'Gagal mengubah status faktur pajak.');

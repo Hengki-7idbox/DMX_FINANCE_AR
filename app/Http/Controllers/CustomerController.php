@@ -7,6 +7,7 @@ use App\Imports\CustomersImport;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\PaymentTerm;
+use App\Services\CustomerTaxNumberSync;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
@@ -186,12 +187,46 @@ class CustomerController extends Controller
         }
     }
 
+    public function importTaxNumbers(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:10240',
+            'source_type' => ['required', Rule::in(['internal', 'external'])],
+        ]);
+
+        $tab = $request->input('source_type');
+
+        try {
+            @ini_set('memory_limit', '-1');
+            $result = (new CustomerTaxNumberSync())->importWorkbook(
+                $request->file('file')->getRealPath(),
+                $tab
+            );
+
+            $message = "Import NPWP selesai: {$result['updated']} customer diupdate";
+
+            if ($result['missing'] > 0) {
+                $message .= ", {$result['missing']} kode tidak ditemukan";
+            }
+
+            if ($result['skipped'] > 0) {
+                $message .= ", {$result['skipped']} baris tanpa NPWP 16 digit dilewati";
+            }
+
+            return redirect()
+                ->route('customers.index', ['tab' => $tab])
+                ->with('success', $message . '.');
+        } catch (\Throwable $e) {
+            return redirect()
+                ->route('customers.index', ['tab' => $tab])
+                ->with('error', 'Import NPWP gagal: ' . $e->getMessage());
+        }
+    }
+
     public function importTemplate()
     {
         return Excel::download(new CustomerTemplateExport(), 'template-import-customer.xlsx');
-    }
-
-    public function clear(Request $request)
+    }    public function clear(Request $request)
     {
         $tab = $this->resolveTab($request);
 

@@ -30,6 +30,7 @@ class SettingController extends Controller
             'ar_account' => 'nullable|string|max:50',
             'dp_account_id' => 'nullable|string|max:50',
             'seller_tin' => 'nullable|string|max:50',
+            'coretax_unit_default' => 'nullable|string|max:50',
             'accurate_host' => 'nullable|string|max:255',
             'accurate_warehouse_name' => 'nullable|string|max:100',
             'accurate_api_token' => 'nullable|string|max:2000',

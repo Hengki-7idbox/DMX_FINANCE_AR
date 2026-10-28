@@ -2,13 +2,16 @@
 
 namespace App\Services;
 
+use App\Models\CoretaxItemCode;
 use App\Models\CoretaxKeyword;
 use App\Models\Customer;
 use App\Models\DetailSale;
 use App\Models\DetailSaleItem;
+use App\Models\FakturPajak;
 use App\Models\MappingCustomer;
 use App\Models\MappingProduct;
 use App\Models\MappingUnit;
+use App\Models\SalesReturn;
 use App\Models\Setting;
 use Illuminate\Support\Carbon;
 
@@ -23,6 +26,7 @@ class CoretaxXmlBuilder
 {
     private string $sellerTin;
     private float $vatRate;
+    private string $unitDefault;
 
     /** @var array<string,array{name:string,address:string,tax:string}> */
     private array $custInternal = [];
@@ -36,26 +40,37 @@ class CoretaxXmlBuilder
     private array $productByExternal = [];
     /** @var array<string,string> */
     private array $unitMap = [];
+    /** @var array<string,string> name_norm => kode 6 digit */
+    private array $itemCodes = [];
     /** @var array<int,string> kata kunci (lowercase) */
     private array $keywords = [];
+    /** @var array<int,string> */
+    private array $blockers = [];
 
     public function __construct()
     {
         $this->sellerTin = (string) Setting::get('seller_tin', '0029327129041000');
         $this->vatRate = (float) Setting::get('tax2_rate', '12');
+        $this->unitDefault = (string) Setting::get('coretax_unit_default', 'UM.0022');
+
+        if ($this->unitDefault === '') {
+            $this->unitDefault = 'UM.0022';
+        }
 
         $this->loadMappings();
     }
 
     /**
      * @param  array<int,string>  $docNumbers
-     * @return array{xml:string, count:int}
+     * @return array{xml:string, count:int, blockers:array<int,string>}
      */
     public function build(array $docNumbers, string $sourceType): array
     {
+        $this->blockers = [];
+
         $docNumbers = array_values(array_unique(array_filter(array_map('strval', $docNumbers))));
         if ($docNumbers === []) {
-            return ['xml' => '', 'count' => 0];
+            return ['xml' => '', 'count' => 0, 'blockers' => []];
         }
 
         $headers = DetailSale::where('source_type', $sourceType)
@@ -68,6 +83,22 @@ class CoretaxXmlBuilder
             ->orderBy('id')
             ->get()
             ->groupBy('doc_number');
+
+        // Diskon invoice hanya tersimpan di baris internal; dipakai juga saat export tab external.
+        $financeLines = DetailSaleItem::where('source_type', DetailSale::SOURCE_INTERNAL)
+            ->whereIn('doc_number', $docNumbers)
+            ->orderBy('id')
+            ->get()
+            ->groupBy('doc_number');
+
+        $returns = SalesReturn::whereIn('invoice_no', $docNumbers)
+            ->get()
+            ->groupBy('invoice_no');
+
+        $taxByReference = FakturPajak::whereIn('reference', $docNumbers)
+            ->whereNotNull('buyer_tin')
+            ->pluck('buyer_tin', 'reference')
+            ->all();
 
         // Tanggal faktur: pakai tanggal dokumen external bila ada, fallback tanggal internal.
         $externalDates = DetailSale::where('source_type', DetailSale::SOURCE_EXTERNAL)
@@ -86,12 +117,20 @@ class CoretaxXmlBuilder
                 $header,
                 $items->get($doc) ?? collect(),
                 $externalDates->get($doc),
-                $sourceType
+                $sourceType,
+                $returns->get($doc) ?? collect(),
+                $taxByReference,
+                $financeLines->get($doc) ?? collect(),
+                $doc
             );
             $count++;
         }
 
-        return ['xml' => $this->wrap($invoices), 'count' => $count];
+        return [
+            'xml' => $this->wrap($invoices),
+            'count' => $count,
+            'blockers' => array_values(array_unique($this->blockers)),
+        ];
     }
 
     private function wrap(string $invoices): string
@@ -103,10 +142,16 @@ class CoretaxXmlBuilder
             . '</TaxInvoiceBulk>';
     }
 
-    private function buildInvoice(DetailSale $header, $lines, mixed $externalDate, string $sourceType): string
-    {
-        $doc = (string) $header->doc_number;
-
+    private function buildInvoice(
+        DetailSale $header,
+        $lines,
+        mixed $externalDate,
+        string $sourceType,
+        $returns,
+        array $taxByReference,
+        $financeLines,
+        string $doc
+    ): string {
         $date = $externalDate
             ? Carbon::parse($externalDate)->format('Y-m-d')
             : ($header->transaction_date?->format('Y-m-d') ?? '');
@@ -121,10 +166,30 @@ class CoretaxXmlBuilder
         $internal = $this->custInternal[$code] ?? null;
         $external = $this->custExternal[$extCode] ?? null;
 
+        $taxExternal = trim((string) ($external['tax'] ?? ''));
         $taxInternal = trim((string) ($internal['tax'] ?? ''));
-        $taxNumber = $taxInternal !== '' ? $taxInternal : (string) ($external['tax'] ?? '');
-        $buyerName = $internal['name'] ?? ($external['name'] ?? (string) $header->customer_name);
-        $buyerAddress = $internal['address'] ?? ($external['address'] ?? '');
+        $taxNumber = $taxExternal !== '' ? $taxExternal : $taxInternal;
+
+        if ($taxNumber === '') {
+            $taxNumber = trim((string) ($taxByReference[$doc] ?? ''));
+        }
+
+        $buyerName = trim((string) ($external['name'] ?? ''));
+        if ($buyerName === '') {
+            $buyerName = trim((string) ($internal['name'] ?? ''));
+        }
+        if ($buyerName === '') {
+            $buyerName = (string) $header->customer_name;
+        }
+
+        $buyerAddress = trim((string) ($external['address'] ?? ''));
+        if ($buyerAddress === '') {
+            $buyerAddress = trim((string) ($internal['address'] ?? ''));
+        }
+
+        if (! $isKtp && ! preg_match('/^\d{16}$/', $taxNumber)) {
+            $this->blockers[] = "Customer {$code} ({$buyerName}) pada {$doc} belum punya NPWP 16 digit.";
+        }
 
         $buyerTin = $isKtp ? '0000000000000000' : $taxNumber;
         $buyerDocNumber = $isKtp ? $taxNumber : '0000000000000000';
@@ -134,9 +199,25 @@ class CoretaxXmlBuilder
         $addInfo = $trxCode === '08' ? 'TD.00510' : '';
         $facilityStamp = $trxCode === '08' ? 'TD.01110' : '';
 
+        $returnQty = [];
+        foreach ($returns as $ret) {
+            $key = (string) $ret->item_no;
+            $returnQty[$key] = ($returnQty[$key] ?? 0) + (float) $ret->quantity;
+        }
+
+        $discountAlloc = $this->invoiceDiscountAllocation($financeLines, $lines->count());
+
+        if ($lines->isEmpty()) {
+            $this->blockers[] = "Dokumen {$doc} tidak punya baris item.";
+        }
+
+        // Retur tanpa rincian item (sales_returns kosong) tetap harus menurunkan DPP:
+        // skalakan qty + diskon proporsional agar total = invoice_amount - return_amount.
+        $factor = $this->returnFactor($header, $lines, $returnQty, $discountAlloc);
+
         $goodServices = '';
         foreach ($lines as $line) {
-            $goodServices .= $this->buildItem($line, $sourceType);
+            $goodServices .= $this->buildItem($line, $sourceType, $returnQty, $discountAlloc, $doc, $factor);
         }
 
         return '<TaxInvoice>'
@@ -161,22 +242,106 @@ class CoretaxXmlBuilder
             . '</TaxInvoice>';
     }
 
-    private function buildItem(DetailSaleItem $line, string $sourceType): string
+    /**
+     * Diskon invoice tersimpan berulang di setiap baris internal; hitung sekali lalu
+     * bagi rata ke semua baris (mengikuti file XML Coretax yang berhasil diupload).
+     */
+    private function invoiceDiscountAllocation($financeLines, int $lineCount): ?float
     {
+        $discounts = [];
+        foreach ($financeLines as $line) {
+            $discount = (float) $line->discount;
+            if ($discount > 0) {
+                $discounts[round($discount, 2)] = true;
+            }
+        }
+
+        if (count($discounts) !== 1 || $lineCount < 1) {
+            return null;
+        }
+
+        return array_key_first($discounts) / $lineCount;
+    }
+
+    private function returnFactor(DetailSale $header, $lines, array $returnQty, ?float $discountAlloc): float
+    {
+        $invoiceAmount = (float) $header->invoice_amount;
+        $returnAmount = (float) $header->return_amount;
+
+        if ($invoiceAmount <= 0 || $returnAmount <= 0) {
+            return 1.0;
+        }
+
+        $base = 0.0;
+        foreach ($lines as $line) {
+            $qty = (float) $line->qty + ($returnQty[(string) $line->item_no] ?? 0);
+            if ($qty < 0) {
+                $qty = 0;
+            }
+            $discount = $discountAlloc !== null ? $discountAlloc : (float) $line->discount;
+            $base += (float) $line->unit_price * $qty - $discount;
+        }
+
+        $target = $invoiceAmount - $returnAmount;
+
+        if ($base <= 0 || $target <= 0) {
+            return 1.0;
+        }
+
+        $factor = $target / $base;
+
+        if ($factor > 1.2 || $factor < 0.1 || abs($factor - 1.0) < 0.00005) {
+            return 1.0;
+        }
+
+        return $factor;
+    }
+
+    private function buildItem(
+        DetailSaleItem $line,
+        string $sourceType,
+        array $returnQty,
+        ?float $discountAlloc,
+        string $doc,
+        float $factor = 1.0
+    ): string {
         $itemNo = (string) $line->item_no;
         $map = $sourceType === DetailSale::SOURCE_INTERNAL
             ? ($this->productByInternal[$itemNo] ?? null)
             : ($this->productByExternal[$itemNo] ?? null);
 
-        $code = ($map['code'] ?? '') !== '' ? $map['code'] : $itemNo;
-        $name = ($map['name'] ?? '') !== '' ? $map['name'] : trim((string) $line->item_description);
+        $name = trim((string) ($map['name'] ?? ''));
+        if ($name === '' || str_starts_with($name, '=')) {
+            $name = trim((string) $line->item_description);
+        }
+
+        $code = trim((string) ($map['code'] ?? ''));
+        if ($code === '') {
+            $code = $this->itemCodes[CoretaxItemCode::normalizeName($name)] ?? '';
+        }
+        if ($code === '') {
+            $code = $this->itemCodes[CoretaxItemCode::normalizeName($line->item_description)] ?? '';
+        }
+
+        if (! preg_match('/^\d{6}$/', $code)) {
+            $this->blockers[] = "Item {$itemNo} ({$name}) pada {$doc} belum punya Kode Barang/Jasa Coretax 6 digit.";
+        }
 
         $unit = (string) $line->unit;
-        $unitOut = $this->unitMap[$unit] ?? $unit;
+        $unitOut = $this->unitMap[$unit] ?? $this->unitDefault;
 
         $price = (float) $line->unit_price;
-        $qty = (float) $line->qty;
-        $discount = (float) $line->discount;
+        $qty = (float) $line->qty + ($returnQty[$itemNo] ?? 0);
+        if ($qty < 0) {
+            $qty = 0;
+        }
+
+        $discount = $discountAlloc !== null ? $discountAlloc : (float) $line->discount;
+
+        if ($factor !== 1.0) {
+            $qty *= $factor;
+            $discount *= $factor;
+        }
 
         $taxBase = $price * $qty - $discount;
         $otherTaxBase = $this->otherTaxBase($taxBase);
@@ -291,6 +456,8 @@ class CoretaxXmlBuilder
                 $this->unitMap[$k] = (string) $r->unit_coretax;
             }
         }
+
+        $this->itemCodes = CoretaxItemCode::query()->pluck('code', 'name_norm')->all();
 
         foreach (CoretaxKeyword::query()->pluck('kata') as $kata) {
             $kata = mb_strtolower(trim((string) $kata));

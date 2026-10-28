@@ -431,6 +431,8 @@ class InvoiceController extends Controller
                 ];
             }
 
+            $ym = $r->invoice_date?->format('Y-m');
+
             if ($ym !== null && isset($grouped[$cat][$code]['months'][$ym])) {
                 $grouped[$cat][$code]['months'][$ym] += $amt;
             } else {
@@ -526,8 +528,9 @@ class InvoiceController extends Controller
             }
         }
 
+        $catchKey = sprintf('%04d-%02d', $y, $m);
         $catch = [
-            'key' => sprintf('%04d-%02d', $y, $m),
+            'key' => $catchKey,
             'label' => self::CHINA_MONTH_NAMES[$m - 1] . ' ' . $y . '+',
         ];
 

@@ -13,6 +13,7 @@ use App\Http\Controllers\FakturPajakController;
 use App\Http\Controllers\MappingCustomerController;
 use App\Http\Controllers\MappingProductController;
 use App\Http\Controllers\MappingUnitController;
+use App\Http\Controllers\CoretaxItemCodeController;
 use App\Http\Controllers\CoretaxKeywordController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PaymentController;
@@ -39,6 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Master Data
     Route::post('customers/import', [CustomerController::class, 'import'])->name('customers.import');
+    Route::post('customers/import-tax-numbers', [CustomerController::class, 'importTaxNumbers'])->name('customers.import-tax-numbers');
     Route::get('customers/import/template', [CustomerController::class, 'importTemplate'])->name('customers.import.template');
     Route::delete('customers/clear', [CustomerController::class, 'clear'])->name('customers.clear');
     Route::resource('customers', CustomerController::class);
@@ -59,6 +61,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('detail-sales/export-xml-external', [DetailSaleController::class, 'exportXmlExternal'])->name('detail-sales.export-xml-external');
     Route::post('detail-sales/export-xml-coretax', [DetailSaleController::class, 'exportXmlCoretax'])->name('detail-sales.export-xml-coretax');
     Route::post('detail-sales/create-ext', [DetailSaleController::class, 'createExternalDoc'])->name('detail-sales.create-ext');
+    Route::post('detail-sales/create-item-unit', [DetailSaleController::class, 'createItemUnit'])->name('detail-sales.create-item-unit');
     Route::post('detail-sales/delete-ext', [DetailSaleController::class, 'deleteExternalDoc'])->name('detail-sales.delete-ext');
     Route::put('detail-sales/faktur-pajak-status', [DetailSaleController::class, 'updateFakturPajakStatus'])->name('detail-sales.fp-status');
     Route::get('faktur-pajak', [FakturPajakController::class, 'index'])->name('faktur-pajak.index');
@@ -83,6 +86,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('mapping-units/clear', [MappingUnitController::class, 'clear'])->name('mapping-units.clear');
     Route::put('mapping-units/{mappingUnit}', [MappingUnitController::class, 'update'])->name('mapping-units.update');
     Route::delete('mapping-units/{mappingUnit}', [MappingUnitController::class, 'destroy'])->name('mapping-units.destroy');
+    Route::get('coretax-item-codes', [CoretaxItemCodeController::class, 'index'])->name('coretax-item-codes.index');
+    Route::post('coretax-item-codes', [CoretaxItemCodeController::class, 'store'])->name('coretax-item-codes.store');
+    Route::post('coretax-item-codes/import', [CoretaxItemCodeController::class, 'import'])->name('coretax-item-codes.import');
+    Route::delete('coretax-item-codes/clear', [CoretaxItemCodeController::class, 'clear'])->name('coretax-item-codes.clear');
+    Route::put('coretax-item-codes/{coretaxItemCode}', [CoretaxItemCodeController::class, 'update'])->name('coretax-item-codes.update');
+    Route::delete('coretax-item-codes/{coretaxItemCode}', [CoretaxItemCodeController::class, 'destroy'])->name('coretax-item-codes.destroy');
     Route::get('coretax-keywords', [CoretaxKeywordController::class, 'index'])->name('coretax-keywords.index');
     Route::post('coretax-keywords', [CoretaxKeywordController::class, 'store'])->name('coretax-keywords.store');
     Route::delete('coretax-keywords/clear', [CoretaxKeywordController::class, 'clear'])->name('coretax-keywords.clear');

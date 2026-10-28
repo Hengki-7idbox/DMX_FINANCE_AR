@@ -13,6 +13,12 @@
                 </svg>
                 Import Customer
             </x-button>
+            <x-button variant="outline" onclick="document.getElementById('import_tax_modal').showModal()">
+                <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Import NPWP
+            </x-button>
             <x-button href="{{ route('customers.create', ['tab' => $tab]) }}">
                 <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -147,6 +153,42 @@
                 <div class="modal-action">
                     <button type="submit" class="btn btn-primary">Upload & Import</button>
                     <button type="button" class="btn btn-ghost" onclick="document.getElementById('import_modal').close()">Batal</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    {{-- Import NPWP Modal --}}
+    <dialog id="import_tax_modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg text-foreground">Import NPWP Customer {{ $tab === 'external' ? 'External' : 'Internal' }}</h3>
+            <p class="py-2 text-sm text-muted-foreground">
+                Upload file converter (<em>Hky - Faktur Pajak - Converter ...xlsx</em>). Dibaca sheet
+                <strong>Customer {{ $tab === 'external' ? 'eksternal' : 'internal' }}</strong>:
+                kolom <em>PERSONNO</em> dicocokkan ke Customer No., lalu <em>TAX1EXEMPTIONNO</em> (16 digit) disimpan sebagai NPWP.
+            </p>
+
+            <form action="{{ route('customers.import-tax-numbers') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="source_type" value="{{ $tab }}">
+                <div class="py-4">
+                    <label for="tax_file" class="block text-sm font-medium text-muted-foreground mb-2">File Excel</label>
+                    <input type="file"
+                           id="tax_file"
+                           name="file"
+                           accept=".xlsx,.xls"
+                           required
+                           class="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer" />
+                    @error('file')
+                        <p class="mt-2 text-sm text-destructive">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="modal-action">
+                    <button type="submit" class="btn btn-primary">Upload & Import</button>
+                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('import_tax_modal').close()">Batal</button>
                 </div>
             </form>
         </div>

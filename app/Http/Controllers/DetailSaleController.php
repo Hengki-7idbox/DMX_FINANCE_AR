@@ -16,6 +16,7 @@ use App\Models\PaymentTerm;
 use App\Models\Setting;
 use App\Models\SalesReturn;
 use App\Services\AccurateApiClient;
+use App\Services\AccurateItemUnitService;
 use App\Services\CoretaxXmlBuilder;
 use App\Services\ExternalXmlBuilder;
 use Illuminate\Http\Request;
@@ -705,6 +706,14 @@ class DetailSaleController extends Controller
 
         $result = (new CoretaxXmlBuilder())->build($docNumbers, $tab);
 
+        if ($result['blockers'] !== []) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Export dibatalkan: ' . count($result['blockers']) . ' data belum lengkap.',
+                'errors' => $result['blockers'],
+            ], 422);
+        }
+
         if ($result['count'] === 0) {
             return response()->json(['ok' => false, 'message' => 'Invoice tidak ditemukan di tab ' . $tab . '.'], 422);
         }
@@ -950,11 +959,18 @@ class DetailSaleController extends Controller
         if (! $result['ok']) {
             $reason = $result['message'] ?? ('Accurate menolak pembuatan ' . strtoupper($type) . '.');
 
-            return response()->json([
+            $payload = [
                 'ok' => false,
                 'message' => $reason,
                 'errors' => [$reason],
-            ], 422);
+            ];
+
+            $unitIssues = $this->missingUnitIssues($reason, $prepared);
+            if ($unitIssues !== []) {
+                $payload['unit_issues'] = $unitIssues;
+            }
+
+            return response()->json($payload, 422);
         }
 
         $r = $result['body']['r'] ?? [];
@@ -973,6 +989,88 @@ class DetailSaleController extends Controller
             'message' => strtoupper($type) . ' ' . $number . ' berhasil dibuat di Accurate.',
             'notes' => $notes,
         ]);
+    }
+
+    public function createItemUnit(Request $request)
+    {
+        $data = $request->validate([
+            'doc_number' => ['nullable', 'string', 'max:50'],
+            'item_no' => ['required', 'string', 'max:100'],
+            'item_name' => ['nullable', 'string', 'max:255'],
+            'unit' => ['required', 'string', 'max:20'],
+            'ratio' => ['required', 'numeric', 'gt:1'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $result = (new AccurateItemUnitService())->addUnit(
+            $data['item_no'],
+            $data['unit'],
+            (float) $data['ratio'],
+            (float) ($data['price'] ?? 0)
+        );
+
+        Log::info('accurate.item-unit', [
+            'doc_number' => $data['doc_number'] ?? null,
+            'item_no' => $data['item_no'],
+            'item_name' => $data['item_name'] ?? null,
+            'unit' => $data['unit'],
+            'ratio' => (float) $data['ratio'],
+            'price' => (float) ($data['price'] ?? 0),
+            'ok' => $result['ok'],
+            'already' => $result['already'] ?? false,
+            'message' => $result['message'],
+            'slot' => $result['slot'] ?? null,
+        ]);
+
+        if (! $result['ok']) {
+            return response()->json([
+                'ok' => false,
+                'message' => $result['message'],
+                'errors' => [$result['message']],
+            ], 422);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Ambil daftar item yang satuannya belum ada di master item Accurate dari pesan error API.
+     *
+     * @return array<int,array{item_no:string,item_name:string,unit:string,suggested_ratio:?int}>
+     */
+    private function missingUnitIssues(string $message, array $prepared): array
+    {
+        if (! preg_match_all('/Tidak ada satuan "([^"]+)" pada barang "([^"]+)"/u', $message, $matches, PREG_SET_ORDER)) {
+            return [];
+        }
+
+        $issues = [];
+        foreach ($matches as $match) {
+            $unit = trim($match[1]);
+            $name = trim($match[2]);
+
+            $itemNo = '';
+            foreach ($prepared as $row) {
+                if (strcasecmp(trim((string) ($row['item_name_external'] ?? '')), $name) === 0) {
+                    $itemNo = (string) ($row['item_no_external'] ?? '');
+                    break;
+                }
+            }
+
+            $ratio = null;
+            if (preg_match('/(\d+)\s*PCS/i', $name, $ratioMatch)) {
+                $ratio = (int) $ratioMatch[1];
+            }
+
+            $issues[] = [
+                'item_no' => $itemNo !== '' ? $itemNo : $name,
+                'item_name' => $name,
+                'unit' => $unit,
+                'suggested_ratio' => $ratio,
+            ];
+        }
+
+        return $issues;
     }
 
     public function deleteExternalDoc(Request $request)
@@ -1285,10 +1383,15 @@ class DetailSaleController extends Controller
 
     private function resolveTab(Request $request): string
     {
-        $tab = $request->query('tab', $request->input('tab', DetailSale::SOURCE_EXTERNAL));
+        // Halaman /invoices tetap default External; /detail-sales default Internal.
+        $default = $request->routeIs('invoices.*')
+            ? DetailSale::SOURCE_EXTERNAL
+            : DetailSale::SOURCE_INTERNAL;
+
+        $tab = $request->query('tab', $request->input('tab', $default));
 
         return in_array($tab, [DetailSale::SOURCE_INTERNAL, DetailSale::SOURCE_EXTERNAL], true)
             ? $tab
-            : DetailSale::SOURCE_EXTERNAL;
+            : $default;
     }
 }
