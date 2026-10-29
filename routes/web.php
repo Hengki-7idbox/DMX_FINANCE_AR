@@ -111,6 +111,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Piutang
     Route::get('invoices/outstanding', [InvoiceController::class, 'outstanding'])->name('invoices.outstanding');
+    Route::get('invoices/outstanding/export', [InvoiceController::class, 'outstandingExport'])->name('invoices.outstanding.export');
     Route::post('invoices/outstanding/import', [InvoiceController::class, 'importOutstanding'])->name('invoices.outstanding.import');
     Route::post('invoices/outstanding/exception', [InvoiceController::class, 'setException'])->name('invoices.outstanding.exception');
     Route::get('invoices/anomali', [InvoiceController::class, 'anomali'])->name('invoices.anomali');

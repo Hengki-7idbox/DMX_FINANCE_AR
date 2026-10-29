@@ -9,6 +9,12 @@
                 Import Outstanding
             </x-button>
             @endif
+            <x-button type="button" id="btn_export_outstanding" onclick="exportOutstandingExcel()">
+                <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M4 4h16v4H4V4zm0 8h16v8H4v-8z" />
+                </svg>
+                Export Excel
+            </x-button>
         </x-page-header>
     </x-slot>
 
@@ -371,6 +377,27 @@
             p.set('all', '1');
             window.location.search = p.toString();
         });
+
+        // Export Excel mengikuti filter aktif (bulan/tahun dari URL + filter tabel).
+        var EXPORT_OUTSTANDING_URL = @json(route('invoices.outstanding.export'));
+        var PAGE_MODE = @json($mode);
+
+        function exportOutstandingExcel() {
+            var p = new URLSearchParams();
+            var qs = new URLSearchParams(window.location.search);
+            ['bulan', 'tahun', 'all'].forEach(function (k) {
+                if (qs.has(k)) p.set(k, qs.get(k));
+            });
+            p.set('mode', PAGE_MODE);
+
+            var map = { status: '#f_status', lunas: '#f_lunas', tukar: '#f_tukar', kode: '#f_kode', nama: '#f_nama' };
+            Object.keys(map).forEach(function (key) {
+                var vals = $(map[key]).val() || [];
+                vals.forEach(function (v) { p.append(key + '[]', v); });
+            });
+
+            window.location = EXPORT_OUTSTANDING_URL + '?' + p.toString();
+        }
 
         // ==== Selection + bulk ====
         var rowMenuId = null;

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exports\ChinaGlobalExport;
 use App\Exports\ChinaReportExport;
+use App\Exports\OutstandingExport;
 use App\Exports\StandardReportExport;
 use App\Imports\OutstandingInvoicesImport;
 use App\Models\Customer;
@@ -574,6 +575,86 @@ class InvoiceController extends Controller
     {
         $isAnomali = $mode === 'anomali';
 
+        [$rows, $filterBulan, $filterTahun] = $this->outstandingRows($request, $mode);
+
+        $payload = $this->buildPayload($rows);
+
+        $availableBulan = OutstandingInvoice::query()
+            ->selectRaw('DISTINCT MONTH(invoice_date) AS m')
+            ->pluck('m')->filter(fn ($v) => $v !== null && (int) $v > 0)->map(fn ($v) => (int) $v)->sort()->values();
+        $availableTahun = OutstandingInvoice::query()
+            ->selectRaw('DISTINCT YEAR(invoice_date) AS y')
+            ->pluck('y')->filter(fn ($v) => $v !== null && (int) $v > 0)->map(fn ($v) => (int) $v)->sort()->values();
+
+        $pageTitle = $isAnomali ? 'Anomali Piutang' : 'Outstanding Invoices';
+        $pageDescription = $isAnomali
+            ? 'Invoice yang ditandai anomali / biaya bank / sudah bayar belum proses'
+            : 'Daftar invoice outstanding (belum lunas) — hasil import Accurate';
+
+        return view('invoices.outstanding', compact(
+            'payload', 'filterBulan', 'filterTahun', 'availableBulan', 'availableTahun', 'mode', 'pageTitle', 'pageDescription'
+        ));
+    }
+
+    /** Export Excel tab DB / Anomali (mengikuti filter bulan, tahun, status, dan customer). */
+    public function outstandingExport(Request $request)
+    {
+        $mode = $request->query('mode') === 'anomali' ? 'anomali' : 'outstanding';
+
+        [$rows] = $this->outstandingRows($request, $mode);
+        $payload = $this->buildPayload($rows);
+
+        $status = array_values(array_filter((array) $request->query('status', []), fn ($v) => $v !== ''));
+        $lunas = array_values(array_filter((array) $request->query('lunas', []), fn ($v) => $v !== ''));
+        $tukar = array_values(array_filter((array) $request->query('tukar', []), fn ($v) => $v !== ''));
+        $kode = array_values(array_filter((array) $request->query('kode', []), fn ($v) => $v !== ''));
+        $nama = array_values(array_filter((array) $request->query('nama', []), fn ($v) => $v !== ''));
+
+        $payload = $payload->filter(function ($r) use ($status, $lunas, $tukar, $kode, $nama) {
+            if ($status !== [] && ! in_array((string) $r['exception_type'], $status, true)) {
+                return false;
+            }
+
+            if ($lunas !== []) {
+                $state = ((int) $r['missing_count']) >= 1 ? 'sudah_lunas' : 'belum_lunas';
+                if (! in_array($state, $lunas, true)) {
+                    return false;
+                }
+            }
+
+            if ($tukar !== [] && ! in_array((string) $r['tukar_faktur'], $tukar, true)) {
+                return false;
+            }
+
+            if ($kode !== [] && ! in_array((string) $r['customer_no'], $kode, true)) {
+                return false;
+            }
+
+            if ($nama !== []) {
+                $needles = array_map(fn ($v) => mb_strtolower(trim($v)), $nama);
+                if (! in_array(mb_strtolower(trim((string) $r['customer_name'])), $needles, true)) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->values();
+
+        $file = ($mode === 'anomali' ? 'anomali-piutang-' : 'outstanding-')
+            . now()->format('Ymd-His') . '.xlsx';
+
+        return Excel::download(new OutstandingExport($payload->all()), $file);
+    }
+
+    /**
+     * Baris DB/Anomali sesuai filter bulan & tahun (dipakai halaman + export).
+     *
+     * @return array{0:\Illuminate\Support\Collection,1:array<int,int>,2:array<int,int>}
+     */
+    private function outstandingRows(Request $request, string $mode): array
+    {
+        $isAnomali = $mode === 'anomali';
+
         $base = OutstandingInvoice::query();
         $isAnomali ? $base->whereNotNull('exception_type') : $base->whereNull('exception_type');
 
@@ -613,23 +694,7 @@ class InvoiceController extends Controller
 
         $rows = $query->orderByDesc('invoice_date')->orderByDesc('id')->get();
 
-        $payload = $this->buildPayload($rows);
-
-        $availableBulan = OutstandingInvoice::query()
-            ->selectRaw('DISTINCT MONTH(invoice_date) AS m')
-            ->pluck('m')->filter(fn ($v) => $v !== null && (int) $v > 0)->map(fn ($v) => (int) $v)->sort()->values();
-        $availableTahun = OutstandingInvoice::query()
-            ->selectRaw('DISTINCT YEAR(invoice_date) AS y')
-            ->pluck('y')->filter(fn ($v) => $v !== null && (int) $v > 0)->map(fn ($v) => (int) $v)->sort()->values();
-
-        $pageTitle = $isAnomali ? 'Anomali Piutang' : 'Outstanding Invoices';
-        $pageDescription = $isAnomali
-            ? 'Invoice yang ditandai anomali / biaya bank / sudah bayar belum proses'
-            : 'Daftar invoice outstanding (belum lunas) — hasil import Accurate';
-
-        return view('invoices.outstanding', compact(
-            'payload', 'filterBulan', 'filterTahun', 'availableBulan', 'availableTahun', 'mode', 'pageTitle', 'pageDescription'
-        ));
+        return [$rows, $filterBulan, $filterTahun];
     }
 
     private function buildPayload($rows): \Illuminate\Support\Collection
