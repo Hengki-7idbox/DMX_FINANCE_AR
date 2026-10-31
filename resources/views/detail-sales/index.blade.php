@@ -128,6 +128,24 @@
                 </ul>
             </div>
             @endif
+            @if($tab === 'internal')
+            <div class="dropdown dropdown-end">
+                <button type="button" id="bulk_create_btn" tabindex="0" disabled
+                        class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+                    Create Dokumen
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <ul tabindex="0"
+                    class="dropdown-content menu z-[90] mt-1 w-56 rounded-lg border border-border bg-card p-1 shadow-xl">
+                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="so">Buat SO</button></li>
+                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="do">Buat DO</button></li>
+                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="inv">Buat INV</button></li>
+                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="chain">Buat SO &rarr; DO &rarr; INV</button></li>
+                </ul>
+            </div>
+            @endif
             <div class="dropdown dropdown-end">
                 <button type="button" id="export_btn" tabindex="0" disabled
                         class="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
@@ -464,6 +482,18 @@
             <div id="ext_result_body" class="py-3 text-sm"></div>
             <div class="modal-action">
                 <button type="button" class="btn btn-primary" onclick="closeExtResult()">Tutup</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <dialog id="bulk_progress_modal" class="modal">
+        <div class="modal-box max-w-xl">
+            <h3 id="bulk_progress_title" class="text-lg font-bold text-foreground">Bulk Create Dokumen</h3>
+            <p id="bulk_progress_text" class="py-1 text-sm text-muted-foreground">Menyiapkan...</p>
+            <div id="bulk_progress_list" class="max-h-72 space-y-1 overflow-y-auto rounded-lg border border-border p-2 text-sm"></div>
+            <div class="modal-action">
+                <button type="button" id="bulk_progress_close" class="btn btn-primary" disabled onclick="closeBulkModal()">Selesai</button>
             </div>
         </div>
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
@@ -821,8 +851,11 @@
             createExtDocRequest(btn.getAttribute('data-doc'), btn.getAttribute('data-type'), btn);
         }
 
-        function createExtDocRequest(doc, type, btn) {
-            if (!doc) return;
+        function createExtDocRequest(doc, type, btn, opts) {
+            if (!doc) return Promise.resolve({ ok: false, message: 'Nomor dokumen kosong.' });
+
+            opts = opts || {};
+            var silent = !!opts.silent;
 
             var label = type ? type.toUpperCase() : 'Dokumen';
             var original = btn ? btn.textContent : '';
@@ -838,7 +871,7 @@
                 }
             }
 
-            fetch(CREATE_EXT_URL, {
+            return fetch(CREATE_EXT_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -857,12 +890,24 @@
                         var reasons = (r.body && r.body.errors && r.body.errors.length)
                             ? r.body.errors
                             : [(r.body && r.body.message) || 'Gagal membuat dokumen di Accurate.'];
-                        if (r.body && Array.isArray(r.body.unit_issues) && r.body.unit_issues.length) {
-                            showUnitIssues('Tidak bisa membuat ' + label + ' External', r.body.unit_issues, doc, type);
-                            return;
+                        var issues = (r.body && Array.isArray(r.body.unit_issues)) ? r.body.unit_issues : [];
+
+                        if (!silent) {
+                            if (issues.length) {
+                                showUnitIssues('Tidak bisa membuat ' + label + ' External', issues, doc, type);
+                                return { ok: false, message: reasons[0], unit_issues: issues };
+                            }
+                            showExtResult('Tidak bisa membuat ' + label + ' External', reasons, 'error');
                         }
-                        showExtResult('Tidak bisa membuat ' + label + ' External', reasons, 'error');
-                        return;
+
+                        return {
+                            ok: false,
+                            message: reasons[0],
+                            errors: reasons,
+                            unit_issues: issues,
+                            doc: doc,
+                            type: type
+                        };
                     }
                     if (btn) {
                         btn.textContent = 'Terkirim';
@@ -873,12 +918,25 @@
                     // Tandai baris sebagai sudah punya dokumen tanpa reload halaman.
                     markExtDocState(doc, type, true);
 
-                    showExtResult(label + ' ' + (r.body.number || doc) + ' berhasil',
-                        [(r.body.message || 'Dokumen dibuat di Accurate.')].concat(notes), 'success');
+                    if (!silent) {
+                        showExtResult(label + ' ' + (r.body.number || doc) + ' berhasil',
+                            [(r.body.message || 'Dokumen dibuat di Accurate.')].concat(notes), 'success');
+                    }
+
+                    return {
+                        ok: true,
+                        already: !!r.body.already,
+                        number: r.body.number || doc,
+                        message: r.body.message || 'Dokumen dibuat di Accurate.',
+                        notes: notes,
+                        doc: doc,
+                        type: type
+                    };
                 })
                 .catch(function () {
                     restoreBtn();
-                    showExtResult('Gagal', ['Gagal menghubungi server.'], 'error');
+                    if (!silent) showExtResult('Gagal', ['Gagal menghubungi server.'], 'error');
+                    return { ok: false, message: 'Gagal menghubungi server.', doc: doc, type: type };
                 });
         }
 
@@ -1395,17 +1453,20 @@
                 var countEl = document.getElementById('export_count');
                 var btn = document.getElementById('export_btn');
                 var bulkBtn = document.getElementById('bulk_btn');
+                var bulkCreateBtn = document.getElementById('bulk_create_btn');
                 if (count > 0) {
                     countEl.classList.remove('hidden');
                     countEl.classList.add('flex');
                     countEl.textContent = count + ' data dipilih';
                     btn.disabled = false;
                     if (bulkBtn) bulkBtn.disabled = false;
+                    if (bulkCreateBtn) bulkCreateBtn.disabled = false;
                 } else {
                     countEl.classList.add('hidden');
                     countEl.classList.remove('flex');
                     btn.disabled = true;
                     if (bulkBtn) bulkBtn.disabled = true;
+                    if (bulkCreateBtn) bulkCreateBtn.disabled = true;
                 }
                 syncSelectAll();
             }
@@ -1465,6 +1526,129 @@
                     document.body.appendChild(form);
                     form.submit();
                     form.remove();
+                });
+            });
+
+            // ==== Bulk create SO / DO / INV untuk baris tab Internal yang dicentang ====
+            var BULK_TYPE_LABEL = { so: 'SO', do: 'DO', inv: 'INV', chain: 'SO \u2192 DO \u2192 INV' };
+            var BULK_TYPE_SEQ = { so: ['so'], do: ['do'], inv: ['inv'], chain: ['so', 'do', 'inv'] };
+            var bulkRunning = false;
+
+            function bulkSelectedDocs() {
+                var api = filterTable;
+                var seen = {};
+                var docs = [];
+                api.rows().every(function () {
+                    var row = this.data();
+                    if (!row || !selectedIds.has(Number(row.id))) return;
+                    var doc = String(row.doc_number || '');
+                    if (doc === '' || seen[doc]) return;
+                    seen[doc] = true;
+                    docs.push(doc);
+                });
+                return docs;
+            }
+
+            function bulkAddResult(icon, text) {
+                var list = document.getElementById('bulk_progress_list');
+                if (!list) return;
+                var div = document.createElement('div');
+                div.className = 'flex items-start gap-2';
+                div.innerHTML = '<span>' + icon + '</span><span class="flex-1">' + escapeHtml(text) + '</span>';
+                list.appendChild(div);
+                list.scrollTop = list.scrollHeight;
+            }
+
+            window.closeBulkModal = function () {
+                var dlg = document.getElementById('bulk_progress_modal');
+                if (dlg && dlg.open) dlg.close();
+            };
+
+            function bulkCreateExt(kind) {
+                if (bulkRunning) return;
+                var types = BULK_TYPE_SEQ[kind];
+                if (!types) return;
+
+                var docs = bulkSelectedDocs();
+                if (!docs.length) {
+                    importToast('error', 'Pilih minimal satu baris dulu.');
+                    return;
+                }
+
+                var label = BULK_TYPE_LABEL[kind];
+                if (!window.confirm('Buat ' + label + ' untuk ' + docs.length + ' dokumen di Accurate?')) return;
+
+                bulkRunning = true;
+                var dlg = document.getElementById('bulk_progress_modal');
+                var list = document.getElementById('bulk_progress_list');
+                var title = document.getElementById('bulk_progress_title');
+                var text = document.getElementById('bulk_progress_text');
+                var closeBtn = document.getElementById('bulk_progress_close');
+
+                list.innerHTML = '';
+                title.textContent = 'Bulk Create ' + label;
+                text.textContent = 'Menyiapkan ' + docs.length + ' dokumen...';
+                closeBtn.disabled = true;
+                closeBtn.textContent = 'Selesai';
+                if (dlg && !dlg.open) dlg.showModal();
+
+                var ok = 0, skipped = 0, failed = 0;
+                var unitIssueFail = null;
+                var total = docs.length * types.length;
+                var step = 0;
+
+                function nextDoc(i) {
+                    if (i >= docs.length) return Promise.resolve();
+
+                    var doc = docs[i];
+                    var chain = Promise.resolve();
+
+                    types.forEach(function (type) {
+                        chain = chain.then(function () {
+                            step++;
+                            text.textContent = 'Memproses ' + step + '/' + total + ' \u2014 ' + doc + ' (' + type.toUpperCase() + ')';
+                            return createExtDocRequest(doc, type, null, { silent: true }).then(function (res) {
+                                if (res.ok) {
+                                    if (res.already) {
+                                        skipped++;
+                                        bulkAddResult('\u23ed', doc + ' ' + type.toUpperCase() + ': sudah ada (' + res.number + ')');
+                                    } else {
+                                        ok++;
+                                        bulkAddResult('\u2705', doc + ' ' + type.toUpperCase() + ': ' + (res.number || '') + ' dibuat');
+                                    }
+                                } else {
+                                    failed++;
+                                    bulkAddResult('\u274c', doc + ' ' + type.toUpperCase() + ': ' + (res.message || 'gagal'));
+                                    if (res.unit_issues && res.unit_issues.length && !unitIssueFail) {
+                                        unitIssueFail = { doc: doc, type: type, issues: res.unit_issues };
+                                    }
+                                }
+                            });
+                        });
+                    });
+
+                    return chain
+                        .then(function () { return new Promise(function (resolve) { setTimeout(resolve, 300); }); })
+                        .then(function () { return nextDoc(i + 1); });
+                }
+
+                nextDoc(0).then(function () {
+                    bulkRunning = false;
+                    text.textContent = 'Selesai: ' + ok + ' berhasil, ' + skipped + ' sudah ada, ' + failed + ' gagal.';
+                    closeBtn.disabled = false;
+                    importToast(failed > 0 ? 'error' : 'success',
+                        'Bulk ' + label + ': ' + ok + ' berhasil, ' + skipped + ' sudah ada, ' + failed + ' gagal.');
+
+                    if (unitIssueFail) {
+                        closeBulkModal();
+                        showUnitIssues('Satuan belum ada saat bulk ' + label, unitIssueFail.issues, unitIssueFail.doc, unitIssueFail.type);
+                    }
+                });
+            }
+
+            document.querySelectorAll('#bulk_create_btn ~ ul [data-bulk-create]').forEach(function (item) {
+                item.addEventListener('click', function () {
+                    bulkCreateExt(item.getAttribute('data-bulk-create'));
                 });
             });
 
