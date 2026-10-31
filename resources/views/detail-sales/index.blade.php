@@ -145,6 +145,10 @@
                     <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="chain">Buat SO &rarr; DO &rarr; INV</button></li>
                 </ul>
             </div>
+            <button type="button" id="bulk_delete_btn" disabled onclick="bulkDeleteExt()"
+                    class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-destructive/40 bg-background px-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+                Hapus Dokumen
+            </button>
             @endif
             <div class="dropdown dropdown-end">
                 <button type="button" id="export_btn" tabindex="0" disabled
@@ -507,6 +511,18 @@
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
 
+    <dialog id="confirm_modal" class="modal">
+        <div class="modal-box max-w-md">
+            <h3 id="confirm_title" class="text-lg font-bold text-foreground">Konfirmasi</h3>
+            <p id="confirm_message" class="whitespace-pre-line py-2 text-sm text-muted-foreground"></p>
+            <div class="modal-action">
+                <button type="button" id="confirm_cancel" class="btn btn-ghost" onclick="closeConfirmModal()">Batal</button>
+                <button type="button" id="confirm_ok" class="btn btn-primary" onclick="acceptConfirmModal()">Ya, Lanjutkan</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
     <dialog id="create_unit_modal" class="modal">
         <div class="modal-box max-w-md">
             <h3 class="text-lg font-bold text-foreground">Tambah Satuan ke Master Item</h3>
@@ -556,6 +572,45 @@
             @if(session('error'))
             importToast('error', @json(session('error')));
             @endif
+        })();
+
+        // Konfirmasi memakai modal aplikasi (bukan confirm() bawaan browser).
+        var confirmCallback = null;
+
+        function askConfirm(title, message, onConfirm, okLabel, danger) {
+            var dlg = document.getElementById('confirm_modal');
+            if (!dlg) {
+                if (window.confirm(title + '\n\n' + message)) onConfirm();
+                return;
+            }
+
+            confirmCallback = onConfirm;
+            document.getElementById('confirm_title').textContent = title;
+            document.getElementById('confirm_message').textContent = message;
+
+            var ok = document.getElementById('confirm_ok');
+            ok.textContent = okLabel || 'Ya, Lanjutkan';
+            ok.className = 'btn ' + (danger ? 'btn-error' : 'btn-primary');
+            dlg.showModal();
+        }
+
+        window.acceptConfirmModal = function () {
+            var cb = confirmCallback;
+            confirmCallback = null;
+            var dlg = document.getElementById('confirm_modal');
+            if (dlg && dlg.open) dlg.close();
+            if (typeof cb === 'function') cb();
+        };
+
+        window.closeConfirmModal = function () {
+            confirmCallback = null;
+            var dlg = document.getElementById('confirm_modal');
+            if (dlg && dlg.open) dlg.close();
+        };
+
+        (function () {
+            var dlg = document.getElementById('confirm_modal');
+            if (dlg) dlg.addEventListener('close', function () { confirmCallback = null; });
         })();
 
         function formatRp(value) {
@@ -1081,39 +1136,44 @@
             if (!doc || !type) return;
 
             var label = type.toUpperCase();
-            if (!window.confirm('Hapus ' + label + ' ' + doc + ' di Accurate?')) return;
+            askConfirm('Hapus ' + label,
+                'Hapus ' + label + ' ' + doc + ' di Accurate?',
+                function () {
+                    btn.disabled = true;
+                    fetch(DELETE_EXT_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                        },
+                        body: JSON.stringify({ doc_number: doc, type: type })
+                    })
+                        .then(function (res) {
+                            return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                        })
+                        .then(function (r) {
+                            // Status terbaru dari Accurate (mis. DO/INV ditemukan -> tombol hapus muncul).
+                            if (r.body && r.body.ext) applyExtFlags(doc, r.body.ext);
 
-            btn.disabled = true;
-            fetch(DELETE_EXT_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                            if (!r.ok || !r.body.ok) {
+                                btn.disabled = false;
+                                importToast('error', (r.body && r.body.message) || 'Gagal menghapus dokumen di Accurate.');
+                                return;
+                            }
+
+                            markExtDocState(doc, type, false);
+                            importToast('success', r.body.message || 'Dokumen dihapus dari Accurate.');
+                        })
+                        .catch(function () {
+                            btn.disabled = false;
+                            importToast('error', 'Gagal menghubungi server.');
+                        });
                 },
-                body: JSON.stringify({ doc_number: doc, type: type })
-            })
-                .then(function (res) {
-                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
-                })
-                .then(function (r) {
-                    // Status terbaru dari Accurate (mis. DO/INV ditemukan -> tombol hapus muncul).
-                    if (r.body && r.body.ext) applyExtFlags(doc, r.body.ext);
-
-                    if (!r.ok || !r.body.ok) {
-                        btn.disabled = false;
-                        importToast('error', (r.body && r.body.message) || 'Gagal menghapus dokumen di Accurate.');
-                        return;
-                    }
-
-                    markExtDocState(doc, type, false);
-                    importToast('success', r.body.message || 'Dokumen dihapus dari Accurate.');
-                })
-                .catch(function () {
-                    btn.disabled = false;
-                    importToast('error', 'Gagal menghubungi server.');
-                });
+                'Ya, Hapus',
+                true
+            );
         }
 
         // Hapus dokumen lengkap dari menu Action: INV -> DO -> SO.
@@ -1122,34 +1182,39 @@
             closeActionMenu();
             if (!doc) return;
 
-            if (!window.confirm('Hapus dokumen ' + doc + ' di Accurate?\nUrutan: INV → DO → SO.')) return;
+            askConfirm('Hapus Dokumen',
+                'Hapus dokumen ' + doc + ' di Accurate?\nUrutan: INV → DO → SO.',
+                function () {
+                    fetch(DELETE_EXT_CHAIN_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                        },
+                        body: JSON.stringify({ doc_number: doc })
+                    })
+                        .then(function (res) {
+                            return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                        })
+                        .then(function (r) {
+                            if (r.body && r.body.ext) applyExtFlags(doc, r.body.ext);
 
-            fetch(DELETE_EXT_CHAIN_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                            if (!r.ok || !r.body.ok) {
+                                importToast('error', (r.body && r.body.message) || 'Gagal menghapus dokumen di Accurate.');
+                                return;
+                            }
+
+                            importToast('success', r.body.message || 'Dokumen dihapus dari Accurate.');
+                        })
+                        .catch(function () {
+                            importToast('error', 'Gagal menghubungi server.');
+                        });
                 },
-                body: JSON.stringify({ doc_number: doc })
-            })
-                .then(function (res) {
-                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
-                })
-                .then(function (r) {
-                    if (r.body && r.body.ext) applyExtFlags(doc, r.body.ext);
-
-                    if (!r.ok || !r.body.ok) {
-                        importToast('error', (r.body && r.body.message) || 'Gagal menghapus dokumen di Accurate.');
-                        return;
-                    }
-
-                    importToast('success', r.body.message || 'Dokumen dihapus dari Accurate.');
-                })
-                .catch(function () {
-                    importToast('error', 'Gagal menghubungi server.');
-                });
+                'Ya, Hapus',
+                true
+            );
         }
 
         var EXPORT_CORETAX_URL = @json(route('detail-sales.export-xml-coretax'));
@@ -1511,6 +1576,7 @@
                 var btn = document.getElementById('export_btn');
                 var bulkBtn = document.getElementById('bulk_btn');
                 var bulkCreateBtn = document.getElementById('bulk_create_btn');
+                var bulkDeleteBtn = document.getElementById('bulk_delete_btn');
                 if (count > 0) {
                     countEl.classList.remove('hidden');
                     countEl.classList.add('flex');
@@ -1518,12 +1584,14 @@
                     btn.disabled = false;
                     if (bulkBtn) bulkBtn.disabled = false;
                     if (bulkCreateBtn) bulkCreateBtn.disabled = false;
+                    if (bulkDeleteBtn) bulkDeleteBtn.disabled = false;
                 } else {
                     countEl.classList.add('hidden');
                     countEl.classList.remove('flex');
                     btn.disabled = true;
                     if (bulkBtn) bulkBtn.disabled = true;
                     if (bulkCreateBtn) bulkCreateBtn.disabled = true;
+                    if (bulkDeleteBtn) bulkDeleteBtn.disabled = true;
                 }
                 syncSelectAll();
             }
@@ -1633,8 +1701,14 @@
                 }
 
                 var label = BULK_TYPE_LABEL[kind];
-                if (!window.confirm('Buat ' + label + ' untuk ' + docs.length + ' dokumen di Accurate?')) return;
+                askConfirm('Buat ' + label,
+                    'Buat ' + label + ' untuk ' + docs.length + ' dokumen di Accurate?',
+                    function () { runBulkCreate(docs, types, label); },
+                    'Ya, Buat'
+                );
+            }
 
+            function runBulkCreate(docs, types, label) {
                 bulkRunning = true;
                 var dlg = document.getElementById('bulk_progress_modal');
                 var list = document.getElementById('bulk_progress_list');
@@ -1700,6 +1774,101 @@
                         closeBulkModal();
                         showUnitIssues('Satuan belum ada saat bulk ' + label, unitIssueFail.issues, unitIssueFail.doc, unitIssueFail.type);
                     }
+                });
+            }
+
+            // ==== Bulk hapus dokumen (INV -> DO -> SO) untuk baris terpilih ====
+            window.bulkDeleteExt = function () {
+                if (bulkRunning) return;
+
+                var docs = bulkSelectedDocs();
+                if (!docs.length) {
+                    importToast('error', 'Pilih minimal satu baris dulu.');
+                    return;
+                }
+
+                askConfirm('Hapus Dokumen',
+                    'Hapus dokumen untuk ' + docs.length + ' baris di Accurate?\nUrutan: INV → DO → SO.',
+                    function () { runBulkDelete(docs); },
+                    'Ya, Hapus',
+                    true
+                );
+            };
+
+            function runBulkDelete(docs) {
+                bulkRunning = true;
+                var dlg = document.getElementById('bulk_progress_modal');
+                var list = document.getElementById('bulk_progress_list');
+                var title = document.getElementById('bulk_progress_title');
+                var text = document.getElementById('bulk_progress_text');
+                var closeBtn = document.getElementById('bulk_progress_close');
+
+                list.innerHTML = '';
+                title.textContent = 'Bulk Hapus Dokumen';
+                text.textContent = 'Menyiapkan ' + docs.length + ' dokumen...';
+                closeBtn.disabled = true;
+                closeBtn.textContent = 'Selesai';
+                if (dlg && !dlg.open) dlg.showModal();
+
+                var ok = 0, skipped = 0, failed = 0;
+                var total = docs.length;
+                var step = 0;
+
+                function nextDoc(i) {
+                    if (i >= docs.length) return Promise.resolve();
+
+                    var doc = docs[i];
+                    step++;
+                    text.textContent = 'Menghapus ' + step + '/' + total + ' \u2014 ' + doc;
+
+                    return fetch(DELETE_EXT_CHAIN_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                        },
+                        body: JSON.stringify({ doc_number: doc })
+                    })
+                        .then(function (res) {
+                            return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                        })
+                        .then(function (r) {
+                            if (r.body && r.body.ext) applyExtFlags(doc, r.body.ext);
+
+                            if (r.ok && r.body.ok) {
+                                var removed = (r.body.results || [])
+                                    .filter(function (x) { return !x.skipped; })
+                                    .map(function (x) { return String(x.type || '').toUpperCase(); });
+
+                                if (removed.length) {
+                                    ok++;
+                                    bulkAddResult('\u2705', doc + ': ' + removed.join(' + ') + ' dihapus');
+                                } else {
+                                    skipped++;
+                                    bulkAddResult('\u23ed', doc + ': tidak ada dokumen');
+                                }
+                                return;
+                            }
+
+                            failed++;
+                            bulkAddResult('\u274c', doc + ': ' + ((r.body && r.body.message) || 'gagal'));
+                        })
+                        .catch(function () {
+                            failed++;
+                            bulkAddResult('\u274c', doc + ': gagal menghubungi server');
+                        })
+                        .then(function () { return new Promise(function (resolve) { setTimeout(resolve, 300); }); })
+                        .then(function () { return nextDoc(i + 1); });
+                }
+
+                nextDoc(0).then(function () {
+                    bulkRunning = false;
+                    text.textContent = 'Selesai: ' + ok + ' dihapus, ' + skipped + ' tidak ada, ' + failed + ' gagal.';
+                    closeBtn.disabled = false;
+                    importToast(failed > 0 ? 'error' : 'success',
+                        'Bulk Hapus: ' + ok + ' dihapus, ' + skipped + ' tidak ada, ' + failed + ' gagal.');
                 });
             }
 
