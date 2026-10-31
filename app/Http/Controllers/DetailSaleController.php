@@ -1083,23 +1083,86 @@ class DetailSaleController extends Controller
         $type = $data['type'];
         $doc = $data['doc_number'];
 
-        $row = ExternalDocument::where('doc_number', $doc)->where('type', $type)->first();
-
-        if ($type === ExternalDocument::TYPE_SO
-            && ExternalDocument::where('doc_number', $doc)->whereIn('type', [ExternalDocument::TYPE_DO, ExternalDocument::TYPE_INV])->exists()) {
+        $client = new AccurateApiClient();
+        if (! $client->configured()) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Hapus DO dan INV ' . $doc . ' terlebih dahulu.',
+                'message' => 'API Token dan Signature Secret Accurate belum diisi di Settings.',
             ], 422);
         }
 
-        if ($type === ExternalDocument::TYPE_DO
-            && ExternalDocument::where('doc_number', $doc)->where('type', ExternalDocument::TYPE_INV)->exists()) {
+        // Sinkronkan dokumen yang mau dihapus + dependensinya langsung dari Accurate.
+        // Dokumen yang ditemukan ikut dicatat supaya tombol hapusnya muncul di tabel.
+        $target = $this->syncExternalDoc($doc, $type, $client);
+
+        if ($type === ExternalDocument::TYPE_SO) {
+            $do = $this->syncExternalDoc($doc, ExternalDocument::TYPE_DO, $client);
+            $inv = $this->syncExternalDoc($doc, ExternalDocument::TYPE_INV, $client);
+
+            if ($do !== null || $inv !== null) {
+                $need = [];
+                if ($inv !== null) {
+                    $need[] = 'INV';
+                }
+                if ($do !== null) {
+                    $need[] = 'DO';
+                }
+
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Hapus ' . implode(' lalu ', $need) . ' ' . $doc . ' dulu (urutan: INV → DO → SO).',
+                    'ext' => $this->externalDocFlags($doc),
+                ], 422);
+            }
+        }
+
+        if ($type === ExternalDocument::TYPE_DO) {
+            $inv = $this->syncExternalDoc($doc, ExternalDocument::TYPE_INV, $client);
+
+            if ($inv !== null) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Hapus INV ' . $doc . ' dulu (urutan: INV → DO → SO).',
+                    'ext' => $this->externalDocFlags($doc),
+                ], 422);
+            }
+        }
+
+        if ($target === null) {
+            return response()->json([
+                'ok' => true,
+                'message' => strtoupper($type) . ' ' . $doc . ' sudah tidak ada di Accurate.',
+                'ext' => $this->externalDocFlags($doc),
+            ]);
+        }
+
+        $result = $client->delete(ExternalDocument::MODULES[$type], $target->accurate_id);
+        if (! $result['ok'] && ! $this->isNotFound($result['message'])) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Hapus INV ' . $doc . ' terlebih dahulu.',
+                'message' => $result['message'] ?? ('Accurate gagal menghapus ' . strtoupper($type) . '.'),
+                'ext' => $this->externalDocFlags($doc),
             ], 422);
         }
+
+        $target->delete();
+        $this->cleanExternalInvoiceMirror($doc, $type);
+
+        return response()->json([
+            'ok' => true,
+            'message' => strtoupper($type) . ' ' . $doc . ' dihapus dari Accurate.',
+            'ext' => $this->externalDocFlags($doc),
+        ]);
+    }
+
+    /** Hapus dokumen lengkap dengan urutan aman: INV -> DO -> SO. */
+    public function deleteExternalDocChain(Request $request)
+    {
+        $data = $request->validate([
+            'doc_number' => ['required', 'string', 'max:50'],
+        ]);
+
+        $doc = $data['doc_number'];
 
         $client = new AccurateApiClient();
         if (! $client->configured()) {
@@ -1109,45 +1172,113 @@ class DetailSaleController extends Controller
             ], 422);
         }
 
-        $accurateId = $row?->accurate_id;
-        if ($accurateId === null) {
-            $found = $client->findByNumber(ExternalDocument::MODULES[$type], $doc);
-            $accurateId = isset($found['id']) ? (int) $found['id'] : null;
-        }
+        $results = [];
+        $failed = null;
 
-        if ($accurateId === null) {
-            $row?->delete();
+        foreach ([ExternalDocument::TYPE_INV, ExternalDocument::TYPE_DO, ExternalDocument::TYPE_SO] as $type) {
+            $row = $this->syncExternalDoc($doc, $type, $client);
 
-            if ($row && $type === ExternalDocument::TYPE_INV) {
-                DetailSaleItem::where('source_type', DetailSaleItem::SOURCE_EXTERNAL)->where('doc_number', $doc)->delete();
-                DetailSale::where('source_type', DetailSale::SOURCE_EXTERNAL)->where('doc_number', $doc)->delete();
+            if ($row === null) {
+                $results[] = ['type' => $type, 'ok' => true, 'skipped' => true, 'message' => 'tidak ada'];
+                continue;
             }
 
-            return response()->json([
-                'ok' => true,
-                'message' => strtoupper($type) . ' ' . $doc . ' sudah tidak ada di Accurate.',
-            ]);
+            $result = $client->delete(ExternalDocument::MODULES[$type], $row->accurate_id);
+            if (! $result['ok'] && ! $this->isNotFound($result['message'])) {
+                $results[] = [
+                    'type' => $type,
+                    'ok' => false,
+                    'skipped' => false,
+                    'message' => $result['message'] ?? 'Accurate gagal menghapus ' . strtoupper($type) . '.',
+                ];
+                $failed = $type;
+                break;
+            }
+
+            $row->delete();
+            $this->cleanExternalInvoiceMirror($doc, $type);
+
+            $results[] = ['type' => $type, 'ok' => true, 'skipped' => false, 'message' => 'dihapus'];
         }
 
-        $result = $client->delete(ExternalDocument::MODULES[$type], $accurateId);
-        if (! $result['ok'] && ! $this->isNotFound($result['message'])) {
-            return response()->json([
-                'ok' => false,
-                'message' => $result['message'] ?? ('Accurate gagal menghapus ' . strtoupper($type) . '.'),
-            ], 422);
-        }
-
-        $row?->delete();
-
-        if ($row && $type === ExternalDocument::TYPE_INV) {
-            DetailSaleItem::where('source_type', DetailSaleItem::SOURCE_EXTERNAL)->where('doc_number', $doc)->delete();
-            DetailSale::where('source_type', DetailSale::SOURCE_EXTERNAL)->where('doc_number', $doc)->delete();
-        }
+        $ok = $failed === null;
+        $deleted = array_filter($results, fn ($r) => empty($r['skipped']));
 
         return response()->json([
-            'ok' => true,
-            'message' => strtoupper($type) . ' ' . $doc . ' dihapus dari Accurate.',
+            'ok' => $ok,
+            'message' => ! $ok
+                ? strtoupper($failed) . ' ' . $doc . ' gagal dihapus. ' . ($results[count($results) - 1]['message'] ?? '')
+                : ($deleted === []
+                    ? 'Tidak ada dokumen ' . $doc . ' di Accurate.'
+                    : 'Dokumen ' . $doc . ' dihapus (INV → DO → SO).'),
+            'results' => $results,
+            'ext' => $this->externalDocFlags($doc),
+        ], $ok ? 200 : 422);
+    }
+
+    /**
+     * Ambil dokumen dari Accurate lalu catat ke external_documents bila belum ada.
+     * Mengembalikan null bila dokumen tidak ada di Accurate.
+     */
+    private function syncExternalDoc(string $doc, string $type, AccurateApiClient $client): ?ExternalDocument
+    {
+        $row = ExternalDocument::withTrashed()
+            ->where('doc_number', $doc)
+            ->where('type', $type)
+            ->first();
+
+        if ($row !== null && $row->deleted_at === null && $row->accurate_id !== null) {
+            return $row;
+        }
+
+        $found = $client->findByNumber(ExternalDocument::MODULES[$type], $doc);
+
+        if ($found === null) {
+            if ($row !== null && $row->deleted_at === null) {
+                $row->delete();
+            }
+
+            return null;
+        }
+
+        if (! isset($found['id']) || (int) $found['id'] <= 0) {
+            return null;
+        }
+
+        $row ??= new ExternalDocument(['doc_number' => $doc, 'type' => $type]);
+        $row->fill([
+            'accurate_id' => isset($found['id']) ? (int) $found['id'] : null,
+            'accurate_number' => isset($found['number']) ? (string) $found['number'] : $doc,
+            'accurate_status' => isset($found['status']) ? (string) $found['status'] : null,
+            'http_status' => 200,
         ]);
+        $row->deleted_at = null;
+        $row->save();
+
+        return $row;
+    }
+
+    /** Status SO/DO/INV yang tercatat untuk satu dokumen (untuk update UI tanpa reload). */
+    private function externalDocFlags(string $doc): array
+    {
+        $types = ExternalDocument::where('doc_number', $doc)->pluck('type')->all();
+
+        return [
+            ExternalDocument::TYPE_SO => in_array(ExternalDocument::TYPE_SO, $types, true),
+            ExternalDocument::TYPE_DO => in_array(ExternalDocument::TYPE_DO, $types, true),
+            ExternalDocument::TYPE_INV => in_array(ExternalDocument::TYPE_INV, $types, true),
+        ];
+    }
+
+    /** Bersihkan mirror tab external saat INV dihapus (perilaku lama dipertahankan). */
+    private function cleanExternalInvoiceMirror(string $doc, string $type): void
+    {
+        if ($type !== ExternalDocument::TYPE_INV) {
+            return;
+        }
+
+        DetailSaleItem::where('source_type', DetailSaleItem::SOURCE_EXTERNAL)->where('doc_number', $doc)->delete();
+        DetailSale::where('source_type', DetailSale::SOURCE_EXTERNAL)->where('doc_number', $doc)->delete();
     }
 
     private function storeExternalDocument(string $doc, string $type, array $payload, array $result): void

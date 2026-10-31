@@ -256,6 +256,14 @@
             </svg>
             Export XML External
         </button>
+        <button type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
+                onclick="deleteDocChainFromMenu()">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+            </svg>
+            Hapus Dokumen (INV → DO → SO)
+        </button>
         @endif
     </div>
 
@@ -670,6 +678,19 @@
             });
         }
 
+        // Terapkan status SO/DO/INV dari server (mis. setelah dokumen ditemukan di Accurate).
+        function applyExtFlags(doc, ext) {
+            if (!ext) return;
+            updateDsRows(function (row) {
+                return String(row.doc_number || '') === String(doc || '');
+            }, function (row) {
+                ['so', 'do', 'inv'].forEach(function (t) {
+                    if (typeof ext[t] !== 'undefined') row['ext_' + t] = !!ext[t];
+                });
+                row.ext_stage = extStageOf(row);
+            });
+        }
+
         function markFpStatus(docOrIds, status) {
             if (Array.isArray(docOrIds)) {
                 var ids = docOrIds.map(Number);
@@ -1051,6 +1072,7 @@
         }
 
         var DELETE_EXT_URL = @json(route('detail-sales.delete-ext'));
+        var DELETE_EXT_CHAIN_URL = @json(route('detail-sales.delete-ext-chain'));
 
         function deleteExtDoc(btn) {
             if (!btn || btn.disabled) return;
@@ -1076,21 +1098,56 @@
                     return res.json().then(function (j) { return { ok: res.ok, body: j }; });
                 })
                 .then(function (r) {
+                    // Status terbaru dari Accurate (mis. DO/INV ditemukan -> tombol hapus muncul).
+                    if (r.body && r.body.ext) applyExtFlags(doc, r.body.ext);
+
                     if (!r.ok || !r.body.ok) {
                         btn.disabled = false;
                         importToast('error', (r.body && r.body.message) || 'Gagal menghapus dokumen di Accurate.');
                         return;
                     }
-                    var cell = btn.closest('td');
-                    if (cell) {
-                        cell.innerHTML = '<button type="button" class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-error/10 text-error ring-1 ring-error/40 hover:bg-error/20" data-doc="'
-                            + escapeHtml(doc) + '" data-type="' + type + '" onclick="createExtDoc(this)">Create</button>';
-                    }
+
+                    markExtDocState(doc, type, false);
                     importToast('success', r.body.message || 'Dokumen dihapus dari Accurate.');
-                    setTimeout(function () { window.location.reload(); }, 700);
                 })
                 .catch(function () {
                     btn.disabled = false;
+                    importToast('error', 'Gagal menghubungi server.');
+                });
+        }
+
+        // Hapus dokumen lengkap dari menu Action: INV -> DO -> SO.
+        function deleteDocChainFromMenu() {
+            var doc = actionMenuDoc;
+            closeActionMenu();
+            if (!doc) return;
+
+            if (!window.confirm('Hapus dokumen ' + doc + ' di Accurate?\nUrutan: INV → DO → SO.')) return;
+
+            fetch(DELETE_EXT_CHAIN_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                },
+                body: JSON.stringify({ doc_number: doc })
+            })
+                .then(function (res) {
+                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                })
+                .then(function (r) {
+                    if (r.body && r.body.ext) applyExtFlags(doc, r.body.ext);
+
+                    if (!r.ok || !r.body.ok) {
+                        importToast('error', (r.body && r.body.message) || 'Gagal menghapus dokumen di Accurate.');
+                        return;
+                    }
+
+                    importToast('success', r.body.message || 'Dokumen dihapus dari Accurate.');
+                })
+                .catch(function () {
                     importToast('error', 'Gagal menghubungi server.');
                 });
         }

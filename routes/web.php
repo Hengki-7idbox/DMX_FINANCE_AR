@@ -63,6 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('detail-sales/create-ext', [DetailSaleController::class, 'createExternalDoc'])->name('detail-sales.create-ext');
     Route::post('detail-sales/create-item-unit', [DetailSaleController::class, 'createItemUnit'])->name('detail-sales.create-item-unit');
     Route::post('detail-sales/delete-ext', [DetailSaleController::class, 'deleteExternalDoc'])->name('detail-sales.delete-ext');
+    Route::post('detail-sales/delete-ext-chain', [DetailSaleController::class, 'deleteExternalDocChain'])->name('detail-sales.delete-ext-chain');
     Route::put('detail-sales/faktur-pajak-status', [DetailSaleController::class, 'updateFakturPajakStatus'])->name('detail-sales.fp-status');
     Route::get('faktur-pajak', [FakturPajakController::class, 'index'])->name('faktur-pajak.index');
     Route::post('faktur-pajak/import', [FakturPajakController::class, 'import'])->name('faktur-pajak.import');
