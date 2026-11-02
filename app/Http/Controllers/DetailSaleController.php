@@ -1217,6 +1217,361 @@ class DetailSaleController extends Controller
     }
 
     /**
+     * Tahap 1 refresh tab external: hitung jumlah SO/DO/INV Accurate pada periode.
+     * Hanya 3 panggilan list (pageSize=1) supaya ringan.
+     */
+    public function prepareRefreshExternal(Request $request)
+    {
+        $data = $request->validate([
+            'date_from' => ['required', 'date_format:Y-m-d'],
+            'date_to' => ['required', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+        ]);
+
+        $client = new AccurateApiClient();
+        if (! $client->configured()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'API Token dan Signature Secret Accurate belum diisi di Settings.',
+            ], 422);
+        }
+
+        $from = Carbon::createFromFormat('Y-m-d', $data['date_from'])->format('d/m/Y');
+        $to = Carbon::createFromFormat('Y-m-d', $data['date_to'])->format('d/m/Y');
+
+        $counts = [];
+        foreach (ExternalDocument::MODULES as $type => $module) {
+            $result = $client->get('/accurate/api/' . $module . '/list.do', [
+                'filter.transDate.op' => 'BETWEEN',
+                'filter.transDate.val[0]' => $from,
+                'filter.transDate.val[1]' => $to,
+                'sp.pageSize' => 1,
+                'sp.page' => 1,
+                'fields' => 'id',
+            ]);
+
+            if (! $result['ok']) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Gagal menghitung ' . strtoupper($type) . ' di Accurate: '
+                        . ($result['message'] ?? 'tidak ada respons.'),
+                ], 422);
+            }
+
+            $counts[$type] = (int) ($result['body']['sp']['rowCount'] ?? 0);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'date_from' => $data['date_from'],
+            'date_to' => $data['date_to'],
+            'counts' => $counts,
+            'total' => array_sum($counts),
+            'page_size' => [
+                ExternalDocument::TYPE_SO => 100,
+                ExternalDocument::TYPE_DO => 100,
+                ExternalDocument::TYPE_INV => 15,
+            ],
+        ]);
+    }
+
+    /**
+     * Tahap 2 refresh tab external: proses satu halaman dokumen Accurate.
+     * SO/DO cukup dicatat di external_documents; INV yang belum ada di-mirror
+     * ke detail_sales + detail_sales_items supaya tampil di tab External.
+     */
+    public function refreshExternalChunk(Request $request)
+    {
+        $data = $request->validate([
+            'date_from' => ['required', 'date_format:Y-m-d'],
+            'date_to' => ['required', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+            'type' => ['required', Rule::in(['so', 'do', 'inv'])],
+            'page' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $client = new AccurateApiClient();
+        if (! $client->configured()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'API Token dan Signature Secret Accurate belum diisi di Settings.',
+            ], 422);
+        }
+
+        $type = $data['type'];
+        $page = (int) $data['page'];
+        $pageSize = $type === ExternalDocument::TYPE_INV ? 15 : 100;
+
+        $from = Carbon::createFromFormat('Y-m-d', $data['date_from'])->format('d/m/Y');
+        $to = Carbon::createFromFormat('Y-m-d', $data['date_to'])->format('d/m/Y');
+
+        $result = $client->get('/accurate/api/' . ExternalDocument::MODULES[$type] . '/list.do', [
+            'filter.transDate.op' => 'BETWEEN',
+            'filter.transDate.val[0]' => $from,
+            'filter.transDate.val[1]' => $to,
+            'sp.pageSize' => $pageSize,
+            'sp.page' => $page,
+            'fields' => 'id,number,transDate,status',
+        ]);
+
+        if (! $result['ok']) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Gagal mengambil ' . strtoupper($type) . ' halaman ' . $page . ': '
+                    . ($result['message'] ?? 'tidak ada respons.'),
+            ], 422);
+        }
+
+        $rows = $result['body']['d'] ?? [];
+        $rowCount = (int) ($result['body']['sp']['rowCount'] ?? count($rows));
+
+        $imported = 0;
+        $skipped = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($rows as $row) {
+            $accurateId = (int) ($row['id'] ?? 0);
+            $number = trim((string) ($row['number'] ?? ''));
+
+            if ($accurateId <= 0 || $number === '') {
+                $skipped++;
+                continue;
+            }
+
+            $existing = ExternalDocument::withTrashed()
+                ->where('doc_number', $number)
+                ->where('type', $type)
+                ->first();
+
+            // SO/DO: cukup catat dokumennya (tidak perlu detail).
+            if ($type !== ExternalDocument::TYPE_INV) {
+                if ($existing !== null && $existing->deleted_at === null && $existing->accurate_id !== null) {
+                    $skipped++;
+                    continue;
+                }
+
+                $this->storeRefreshedExternal(
+                    $number,
+                    $type,
+                    $accurateId,
+                    $number,
+                    isset($row['status']) ? (string) $row['status'] : null
+                );
+                $imported++;
+                continue;
+            }
+
+            // INV: sudah tercatat lengkap (external_documents + mirror tab external) -> lewati.
+            $mirrorExists = DetailSale::where('source_type', DetailSale::SOURCE_EXTERNAL)
+                ->where('doc_number', $number)
+                ->exists();
+
+            if ($mirrorExists && $existing !== null && $existing->deleted_at === null && $existing->accurate_id !== null) {
+                $skipped++;
+                continue;
+            }
+
+            // Mirror sudah ada tetapi external_documents belum -> cukup catat dokumennya.
+            if ($mirrorExists) {
+                $this->storeRefreshedExternal(
+                    $number,
+                    ExternalDocument::TYPE_INV,
+                    $accurateId,
+                    $number,
+                    isset($row['status']) ? (string) $row['status'] : null
+                );
+                $imported++;
+                continue;
+            }
+
+            $detail = $client->get('/accurate/api/sales-invoice/detail.do', ['id' => $accurateId]);
+            if (! $detail['ok'] || ! is_array($detail['body']['d'] ?? null)) {
+                $failed++;
+                $errors[] = $number . ': ' . ($detail['message'] ?? 'detail invoice tidak ditemukan.');
+                continue;
+            }
+
+            try {
+                $this->mirrorRefreshedInvoice($detail['body']['d']);
+                $this->storeRefreshedExternal(
+                    $number,
+                    ExternalDocument::TYPE_INV,
+                    $accurateId,
+                    (string) ($detail['body']['d']['number'] ?? $number),
+                    isset($detail['body']['d']['status']) ? (string) $detail['body']['d']['status'] : null
+                );
+                $imported++;
+            } catch (\Throwable $e) {
+                $failed++;
+                $errors[] = $number . ': ' . $e->getMessage();
+                Log::warning('detail-sales.refresh-ext', [
+                    'doc_number' => $number,
+                    'type' => $type,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'type' => $type,
+            'page' => $page,
+            'page_size' => $pageSize,
+            'row_count' => $rowCount,
+            'processed' => count($rows),
+            'imported' => $imported,
+            'skipped' => $skipped,
+            'failed' => $failed,
+            'errors' => $errors,
+            'has_more' => $page * $pageSize < $rowCount,
+        ]);
+    }
+
+    /** Catat dokumen Accurate hasil refresh tanpa menimpa payload pembuatan lama. */
+    private function storeRefreshedExternal(string $doc, string $type, int $accurateId, string $number, ?string $status): void
+    {
+        $row = ExternalDocument::withTrashed()->firstOrNew([
+            'doc_number' => $doc,
+            'type' => $type,
+        ]);
+
+        if ($row->payload === null) {
+            $row->payload = json_encode([
+                'source' => 'refresh',
+                'doc_number' => $doc,
+                'type' => $type,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        $row->fill([
+            'accurate_id' => $accurateId,
+            'accurate_number' => $number,
+            'accurate_status' => $status,
+            'http_status' => 200,
+        ]);
+
+        $row->deleted_at = null;
+        $row->save();
+    }
+
+    /**
+     * Mirror invoice Accurate ke detail_sales + detail_sales_items (tab External).
+     * Dipakai refresh karena invoice belum tentu ada di tab Internal.
+     */
+    private function mirrorRefreshedInvoice(array $d): void
+    {
+        $doc = trim((string) ($d['number'] ?? ''));
+        if ($doc === '') {
+            throw new \RuntimeException('Nomor invoice kosong pada respons Accurate.');
+        }
+
+        $customer = is_array($d['customer'] ?? null) ? $d['customer'] : [];
+        $customerCode = trim((string) ($customer['customerNo'] ?? $d['customerNo'] ?? ''));
+        $customerName = trim((string) ($customer['name'] ?? ''));
+        $transDate = $this->parseAccurateDate($d['transDate'] ?? null);
+
+        $amount = (float) ($d['salesAmount'] ?? 0);
+        $tax = (float) ($d['tax1Amount'] ?? 0);
+        $total = (float) ($d['totalAmount'] ?? 0);
+
+        $items = [];
+        $sumDpp = 0.0;
+        $sumTax = 0.0;
+
+        foreach (($d['detailItem'] ?? []) as $item) {
+            $qty = (float) ($item['quantity'] ?? 0);
+            $price = (float) ($item['unitPrice'] ?? 0);
+            $lineAmount = $qty * $price;
+            $sumDpp += (float) ($item['dppAmount'] ?? $lineAmount);
+            $sumTax += (float) ($item['tax1Amount'] ?? 0);
+
+            $items[] = [
+                'source_type' => DetailSaleItem::SOURCE_EXTERNAL,
+                'doc_number' => $doc,
+                'customer_code' => $customerCode,
+                'transaction_date' => $transDate,
+                'item_no' => (string) ($item['item']['no'] ?? ''),
+                'item_description' => (string) ($item['detailName'] ?? $item['item']['name'] ?? ''),
+                'unit_price' => $price,
+                'qty' => $qty,
+                'unit' => (string) ($item['itemUnit']['name'] ?? ''),
+                'amount' => $lineAmount,
+                'discount' => 0,
+            ];
+        }
+
+        if ($amount <= 0) {
+            $amount = $sumDpp;
+        }
+        if ($tax <= 0) {
+            $tax = $sumTax;
+        }
+        if ($total <= 0) {
+            $total = $amount + $tax;
+        }
+
+        $owing = $d['primeOwing'] ?? null;
+        if (! is_numeric($owing)) {
+            $owing = (($d['status'] ?? '') === 'OUTSTANDING' || ($d['outstanding'] ?? false) === true) ? $total : 0;
+        }
+        $owing = max(0, (float) $owing);
+        $paid = max(0, $total - $owing);
+
+        DB::transaction(function () use ($doc, $customerCode, $customerName, $transDate, $total, $amount, $tax, $owing, $paid, $items) {
+            DetailSale::updateOrCreate(
+                [
+                    'source_type' => DetailSale::SOURCE_EXTERNAL,
+                    'doc_number' => $doc,
+                ],
+                [
+                    'fp_status' => null,
+                    'customer_code' => $customerCode,
+                    'customer_name' => $customerName,
+                    'transaction_date' => $transDate,
+                    'description' => $doc,
+                    'invoice_amount' => $total,
+                    'amount' => $amount,
+                    'tax_base' => $tax,
+                    'discount' => 0,
+                    'return_amount' => 0,
+                    'owing' => $owing,
+                    'payment_amount' => $paid,
+                    'calculate_field' => $total,
+                ]
+            );
+
+            DetailSaleItem::where('source_type', DetailSaleItem::SOURCE_EXTERNAL)
+                ->where('doc_number', $doc)
+                ->delete();
+
+            foreach ($items as $item) {
+                $item['customer_name'] = $customerName;
+                DetailSaleItem::create($item);
+            }
+        });
+    }
+
+    private function parseAccurateDate(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        foreach (['d/m/Y', 'Y-m-d'] as $format) {
+            try {
+                return Carbon::createFromFormat($format, trim($value))->startOfDay();
+            } catch (\Throwable) {
+                // coba format berikutnya
+            }
+        }
+
+        try {
+            return Carbon::parse($value)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Ambil dokumen dari Accurate lalu catat ke external_documents bila belum ada.
      * Mengembalikan null bila dokumen tidak ada di Accurate.
      */

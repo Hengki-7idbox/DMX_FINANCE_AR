@@ -113,6 +113,13 @@
                 </span>
             </div>
             @if($tab === 'external')
+            <button type="button" id="refresh_ext_btn" onclick="openRefreshModal()"
+                    class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh Data
+            </button>
             <div class="dropdown dropdown-end">
                 <button type="button" id="bulk_btn" tabindex="0" disabled
                         class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
@@ -494,6 +501,34 @@
             <div id="ext_result_body" class="py-3 text-sm"></div>
             <div class="modal-action">
                 <button type="button" class="btn btn-primary" onclick="closeExtResult()">Tutup</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <dialog id="refresh_modal" class="modal">
+        <div class="modal-box max-w-md">
+            <h3 class="text-lg font-bold text-foreground">Refresh Data dari Accurate</h3>
+            <p class="py-1 text-sm text-muted-foreground">
+                Tarik dokumen <strong>SO</strong>, <strong>DO</strong>, dan <strong>Invoice</strong> pada periode ini.
+                Dokumen yang sudah tercatat akan dilewati.
+            </p>
+            <div class="grid grid-cols-2 gap-3 py-2">
+                <div>
+                    <label for="refresh_from" class="mb-1 block text-xs font-medium text-muted-foreground">Dari Tanggal</label>
+                    <input type="date" id="refresh_from"
+                           class="w-full min-h-9 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                </div>
+                <div>
+                    <label for="refresh_to" class="mb-1 block text-xs font-medium text-muted-foreground">Sampai Tanggal</label>
+                    <input type="date" id="refresh_to"
+                           class="w-full min-h-9 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                </div>
+            </div>
+            <p id="refresh_error" class="text-sm text-destructive"></p>
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('refresh_modal').close()">Batal</button>
+                <button type="button" id="refresh_submit" class="btn btn-primary" onclick="startRefreshExternal()">Tarik dari Accurate</button>
             </div>
         </div>
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
@@ -1913,6 +1948,200 @@
                         });
                 });
             });
+
+            // ==== Refresh tab External: tarik SO/DO/INV dari Accurate per periode ====
+            var REFRESH_PREPARE_URL = @json(route('detail-sales.refresh-ext.prepare'));
+            var REFRESH_CHUNK_URL = @json(route('detail-sales.refresh-ext.chunk'));
+
+            function formatCount(value) {
+                return new Intl.NumberFormat('id-ID').format(Number(value || 0));
+            }
+
+            function sleep(ms) {
+                return new Promise(function (resolve) { setTimeout(resolve, ms); });
+            }
+
+            function refreshPost(url, payload) {
+                return fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                    },
+                    body: JSON.stringify(payload)
+                }).then(function (res) {
+                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                });
+            }
+
+            function toIsoDate(date) {
+                var m = String(date.getMonth() + 1).padStart(2, '0');
+                var d = String(date.getDate()).padStart(2, '0');
+                return date.getFullYear() + '-' + m + '-' + d;
+            }
+
+            window.openRefreshModal = function () {
+                var now = new Date();
+                var from = document.getElementById('refresh_from');
+                var to = document.getElementById('refresh_to');
+                if (from && !from.value) from.value = toIsoDate(new Date(now.getFullYear(), now.getMonth(), 1));
+                if (to && !to.value) to.value = toIsoDate(now);
+                document.getElementById('refresh_error').textContent = '';
+                document.getElementById('refresh_modal').showModal();
+            };
+
+            function updateRefreshProgress(el, done, total) {
+                var pct = total > 0 ? Math.min(100, Math.round(done * 100 / total)) : 0;
+                el.textContent = formatCount(done) + ' data dari ' + formatCount(total) + ' data (' + pct + '%)';
+            }
+
+            // Setelah refresh, buka tab external dengan filter bulan/tahun periode yang ditarik
+            // supaya data baru langsung terlihat.
+            function refreshReloadUrl(from, to) {
+                var params = new URLSearchParams(window.location.search);
+                params.set('tab', 'external');
+
+                var start = new Date(from + 'T00:00:00');
+                var end = new Date(to + 'T00:00:00');
+                var months = [];
+                var years = [];
+                var cur = new Date(start.getFullYear(), start.getMonth(), 1);
+                var last = new Date(end.getFullYear(), end.getMonth(), 1);
+
+                while (cur <= last && months.length < 240) {
+                    var m = cur.getMonth() + 1;
+                    var y = cur.getFullYear();
+                    if (months.indexOf(m) === -1) months.push(m);
+                    if (years.indexOf(y) === -1) years.push(y);
+                    cur.setMonth(cur.getMonth() + 1);
+                }
+
+                if (months.length) {
+                    params.set('bulan', months.join(','));
+                    params.set('tahun', years.join(','));
+                } else {
+                    params.delete('bulan');
+                    params.delete('tahun');
+                }
+
+                return window.location.pathname + '?' + params.toString();
+            }
+
+            window.startRefreshExternal = async function () {
+                if (bulkRunning) return;
+
+                var from = document.getElementById('refresh_from').value;
+                var to = document.getElementById('refresh_to').value;
+                var err = document.getElementById('refresh_error');
+
+                if (!from || !to) {
+                    err.textContent = 'Isi tanggal mulai dan tanggal sampai.';
+                    return;
+                }
+                if (from > to) {
+                    err.textContent = 'Tanggal mulai tidak boleh melebihi tanggal sampai.';
+                    return;
+                }
+
+                var submit = document.getElementById('refresh_submit');
+                submit.disabled = true;
+                err.textContent = '';
+
+                var dlg = document.getElementById('bulk_progress_modal');
+                var list = document.getElementById('bulk_progress_list');
+                var title = document.getElementById('bulk_progress_title');
+                var text = document.getElementById('bulk_progress_text');
+                var closeBtn = document.getElementById('bulk_progress_close');
+
+                document.getElementById('refresh_modal').close();
+                bulkRunning = true;
+                list.innerHTML = '';
+                title.textContent = 'Refresh Data Accurate';
+                text.textContent = 'Menghitung total data di Accurate...';
+                closeBtn.disabled = true;
+                closeBtn.textContent = 'Selesai';
+                if (dlg && !dlg.open) dlg.showModal();
+
+                try {
+                    var prep = await refreshPost(REFRESH_PREPARE_URL, { date_from: from, date_to: to });
+                    if (!prep.ok || !prep.body.ok) {
+                        throw new Error((prep.body && prep.body.message) || 'Gagal menghitung data di Accurate.');
+                    }
+
+                    var counts = prep.body.counts || {};
+                    var total = Number(prep.body.total || 0);
+                    var done = 0, imported = 0, skipped = 0, failed = 0;
+
+                    if (total === 0) {
+                        text.textContent = 'Tidak ada dokumen pada periode ini.';
+                        closeBtn.disabled = false;
+                        importToast('success', 'Tidak ada dokumen di Accurate pada periode tersebut.');
+                        return;
+                    }
+
+                    var types = [['so', 'SO'], ['do', 'DO'], ['inv', 'INV']];
+
+                    for (var t = 0; t < types.length; t++) {
+                        var type = types[t][0];
+                        var label = types[t][1];
+                        var typeTotal = Number(counts[type] || 0);
+                        if (!typeTotal) continue;
+
+                        bulkAddResult('\u23f3', label + ': ' + formatCount(typeTotal) + ' dokumen akan dicek');
+                        var page = 1;
+
+                        while (true) {
+                            var res = await refreshPost(REFRESH_CHUNK_URL, {
+                                date_from: from,
+                                date_to: to,
+                                type: type,
+                                page: page
+                            });
+
+                            if (!res.ok || !res.body.ok) {
+                                throw new Error((res.body && res.body.message) || ('Gagal mengambil ' + label + ' halaman ' + page + '.'));
+                            }
+
+                            var b = res.body;
+                            done += Number(b.processed || 0);
+                            imported += Number(b.imported || 0);
+                            skipped += Number(b.skipped || 0);
+                            failed += Number(b.failed || 0);
+                            updateRefreshProgress(text, Math.min(done, total), total);
+
+                            var summary = label + ' hal. ' + page + ': ' + formatCount(b.imported) + ' baru, '
+                                + formatCount(b.skipped) + ' sudah tercatat';
+                            if (b.failed) summary += ', ' + formatCount(b.failed) + ' gagal';
+                            bulkAddResult(b.imported ? '\u2705' : '\u23ed', summary);
+                            (b.errors || []).forEach(function (e) { bulkAddResult('\u274c', e); });
+
+                            if (!b.has_more) break;
+                            page++;
+                            await sleep(300);
+                        }
+                    }
+
+                    text.textContent = 'Selesai: ' + formatCount(imported) + ' baru, ' + formatCount(skipped)
+                        + ' sudah tercatat, ' + formatCount(failed) + ' gagal dari ' + formatCount(total) + ' data.';
+                    closeBtn.disabled = false;
+                    closeBtn.textContent = 'Selesai';
+                    importToast(failed > 0 ? 'error' : 'success',
+                        'Refresh: ' + formatCount(imported) + ' baru, ' + formatCount(skipped)
+                        + ' sudah tercatat, ' + formatCount(failed) + ' gagal.');
+
+                    setTimeout(function () { window.location.href = refreshReloadUrl(from, to); }, 2000);
+                } catch (e) {
+                    text.textContent = 'Gagal: ' + e.message;
+                    closeBtn.disabled = false;
+                    closeBtn.textContent = 'Tutup';
+                    importToast('error', e.message);
+                } finally {
+                    bulkRunning = false;
+                    submit.disabled = false;
+                }
+            };
 
             // Tutup action menu saat DataTable redraw + sinkronkan checkbox dgn Set
             $('#detail-sales-table').on('draw.dt', function() {
