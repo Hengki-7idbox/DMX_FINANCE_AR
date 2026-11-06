@@ -251,6 +251,14 @@
         @if($tab === 'external')
         <button type="button"
                 class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                onclick="checkExtDocFromMenu()">
+            <svg class="h-4 w-4 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Cek Tahap Dokumen
+        </button>
+        <button type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
                 onclick="setGungGungFromMenu()">
             <svg class="h-4 w-4 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -842,6 +850,64 @@
             if (doc) showProducts(doc);
         }
 
+        var CHECK_EXT_URL = @json(route('detail-sales.check-ext'));
+
+        // Tandai baris sedang dicek (spinner di kolom Tahap).
+        function setExtChecking(doc, checking) {
+            updateDsRows(function (row) {
+                return String(row.doc_number || '') === String(doc || '');
+            }, function (row) {
+                row.ext_checking = !!checking;
+            });
+        }
+
+        function checkExtDocFromMenu() {
+            var doc = actionMenuDoc;
+            closeActionMenu();
+            if (doc) checkExtDocRequest(doc);
+        }
+
+        function checkExtDoc(btn) {
+            if (!btn || btn.disabled) return;
+            checkExtDocRequest(btn.getAttribute('data-doc'));
+        }
+
+        // Cek SO/DO/INV satu dokumen langsung ke Accurate, lalu update kolom Tahap.
+        function checkExtDocRequest(doc) {
+            if (!doc) return Promise.resolve();
+
+            setExtChecking(doc, true);
+
+            return fetch(CHECK_EXT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                },
+                body: JSON.stringify({ doc_number: doc })
+            })
+                .then(function (res) {
+                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                })
+                .then(function (r) {
+                    if (!r.ok || !r.body.ok) {
+                        importToast('error', (r.body && r.body.message) || 'Gagal cek dokumen di Accurate.');
+                        return;
+                    }
+
+                    if (r.body.ext) applyExtFlags(doc, r.body.ext);
+                    importToast('success', r.body.message || 'Status dokumen diperbarui.');
+                })
+                .catch(function () {
+                    importToast('error', 'Gagal menghubungi server.');
+                })
+                .then(function () {
+                    setExtChecking(doc, false);
+                });
+        }
+
         var FP_STATUS_URL = @json(route('detail-sales.fp-status'));
         var FP_STATUS_CSRF = @json(csrf_token());
 
@@ -1363,10 +1429,24 @@
                 orderable: false,
                 searchable: false,
                 className: 'px-2 py-1.5',
-                render: function (v, type) {
-                    if (!v || !STAGE_LABEL[v]) return type === 'display' ? '<span class="text-muted-foreground">-</span>' : '';
-                    if (type !== 'display') return STAGE_LABEL[v];
-                    return '<span class="' + BADGE_BASE + (STAGE_CLASS[v] || 'border border-border text-foreground') + '">' + STAGE_LABEL[v] + '</span>';
+                render: function (v, type, row) {
+                    if (type !== 'display') return (v && STAGE_LABEL[v]) ? STAGE_LABEL[v] : '';
+
+                    var badge = (v && STAGE_LABEL[v])
+                        ? '<span class="' + BADGE_BASE + (STAGE_CLASS[v] || 'border border-border text-foreground') + '">' + STAGE_LABEL[v] + '</span>'
+                        : '<span class="text-muted-foreground">-</span>';
+
+                    var checking = !!row.ext_checking;
+                    var icon = checking
+                        ? '<svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="3" stroke-opacity="0.3" /><path stroke-linecap="round" stroke-width="3" d="M21 12a9 9 0 00-9-9" /></svg>'
+                        : '<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>';
+
+                    return '<span class="inline-flex items-center gap-1.5">' + badge
+                        + '<button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-info/10 text-info ring-1 ring-info/30 hover:bg-info/20 disabled:opacity-60 disabled:cursor-wait"'
+                        + ' data-doc="' + escapeHtml(row.doc_number || '') + '"'
+                        + (checking ? ' disabled' : '')
+                        + ' onclick="checkExtDoc(this)" title="Cek tahap SO/DO/INV di Accurate" aria-label="Cek tahap dokumen">'
+                        + icon + '</button></span>';
                 }
             };
 

@@ -1073,6 +1073,70 @@ class DetailSaleController extends Controller
         return $issues;
     }
 
+    /**
+     * Cek satu nomor dokumen langsung ke Accurate: sudah ada SO, DO, dan/atau INV?
+     * Hasilnya disinkronkan ke external_documents agar kolom "Tahap" ikut berubah.
+     */
+    public function checkExternalDoc(Request $request)
+    {
+        $data = $request->validate([
+            'doc_number' => ['required', 'string', 'max:50'],
+        ]);
+
+        $doc = $data['doc_number'];
+
+        $client = new AccurateApiClient();
+        if (! $client->configured()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'API Token dan Signature Secret Accurate belum diisi di Settings.',
+            ], 422);
+        }
+
+        $numbers = [];
+
+        foreach ([ExternalDocument::TYPE_SO, ExternalDocument::TYPE_DO, ExternalDocument::TYPE_INV] as $type) {
+            $lookup = $client->lookupByNumber(ExternalDocument::MODULES[$type], $doc);
+
+            if (! $lookup['ok']) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Gagal cek ' . strtoupper($type) . ' ' . $doc . ': '
+                        . ($lookup['message'] ?? 'tidak ada respons Accurate.'),
+                ], 422);
+            }
+
+            $row = $this->recordExternalDoc($doc, $type, $lookup['row']);
+            if ($row !== null) {
+                $numbers[$type] = (string) $row->accurate_number;
+            }
+        }
+
+        $ext = $this->externalDocFlags($doc);
+
+        $stages = [];
+        $labels = [
+            ExternalDocument::TYPE_SO => 'SO',
+            ExternalDocument::TYPE_DO => 'DO',
+            ExternalDocument::TYPE_INV => 'INV',
+        ];
+        foreach ($labels as $type => $label) {
+            if (! empty($ext[$type])) {
+                $number = $numbers[$type] ?? '';
+                $stages[] = ($number !== '' && $number !== $doc) ? $label . ' (' . $number . ')' : $label;
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'ext' => $ext,
+            'numbers' => $numbers,
+            'message' => $stages === []
+                ? 'Tidak ada SO/DO/INV untuk ' . $doc . ' di Accurate.'
+                : $doc . ': ' . implode(', ', $stages) . ' ditemukan di Accurate.',
+        ]);
+    }
+
     public function deleteExternalDoc(Request $request)
     {
         $data = $request->validate([
@@ -1586,7 +1650,23 @@ class DetailSaleController extends Controller
             return $row;
         }
 
-        $found = $client->findByNumber(ExternalDocument::MODULES[$type], $doc);
+        return $this->recordExternalDoc(
+            $doc,
+            $type,
+            $client->findByNumber(ExternalDocument::MODULES[$type], $doc)
+        );
+    }
+
+    /**
+     * Simpan hasil cek Accurate ke external_documents. Baris null berarti
+     * dokumen tidak ditemukan -> baris lokal di-soft-delete.
+     */
+    private function recordExternalDoc(string $doc, string $type, ?array $found): ?ExternalDocument
+    {
+        $row = ExternalDocument::withTrashed()
+            ->where('doc_number', $doc)
+            ->where('type', $type)
+            ->first();
 
         if ($found === null) {
             if ($row !== null && $row->deleted_at === null) {
@@ -1602,7 +1682,7 @@ class DetailSaleController extends Controller
 
         $row ??= new ExternalDocument(['doc_number' => $doc, 'type' => $type]);
         $row->fill([
-            'accurate_id' => isset($found['id']) ? (int) $found['id'] : null,
+            'accurate_id' => (int) $found['id'],
             'accurate_number' => isset($found['number']) ? (string) $found['number'] : $doc,
             'accurate_status' => isset($found['status']) ? (string) $found['status'] : null,
             'http_status' => 200,

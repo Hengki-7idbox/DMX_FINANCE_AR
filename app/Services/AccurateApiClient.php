@@ -78,6 +78,20 @@ class AccurateApiClient
      */
     public function findByNumber(string $module, string $number): ?array
     {
+        $result = $this->lookupByNumber($module, $number);
+
+        return $result['ok'] ? $result['row'] : null;
+    }
+
+    /**
+     * Seperti findByNumber(), tetapi membedakan "dokumen tidak ada" dari
+     * "panggilan API gagal" supaya pemanggil tidak menghapus data lokal
+     * saat Accurate sedang tidak bisa dihubungi.
+     *
+     * @return array{ok:bool,row:?array,message:?string}
+     */
+    public function lookupByNumber(string $module, string $number): array
+    {
         $result = $this->get('/accurate/api/' . $module . '/list.do', [
             'filter.number.op' => 'EQUAL',
             'filter.number.val' => $number,
@@ -85,12 +99,17 @@ class AccurateApiClient
         ]);
 
         if (! $result['ok']) {
-            return null;
+            return [
+                'ok' => false,
+                'row' => null,
+                'message' => $result['message'] ?? 'Gagal menghubungi Accurate.',
+            ];
         }
 
         $rows = $result['body']['d'] ?? [];
+        $row = is_array($rows) && isset($rows[0]) && is_array($rows[0]) ? $rows[0] : null;
 
-        return is_array($rows) && isset($rows[0]) && is_array($rows[0]) ? $rows[0] : null;
+        return ['ok' => true, 'row' => $row, 'message' => null];
     }
 
     /**

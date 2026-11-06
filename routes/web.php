@@ -61,6 +61,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('detail-sales/export-xml-external', [DetailSaleController::class, 'exportXmlExternal'])->name('detail-sales.export-xml-external');
     Route::post('detail-sales/export-xml-coretax', [DetailSaleController::class, 'exportXmlCoretax'])->name('detail-sales.export-xml-coretax');
     Route::post('detail-sales/create-ext', [DetailSaleController::class, 'createExternalDoc'])->name('detail-sales.create-ext');
+    Route::post('detail-sales/check-ext', [DetailSaleController::class, 'checkExternalDoc'])->name('detail-sales.check-ext');
     Route::post('detail-sales/refresh-ext/prepare', [DetailSaleController::class, 'prepareRefreshExternal'])->name('detail-sales.refresh-ext.prepare');
     Route::post('detail-sales/refresh-ext/chunk', [DetailSaleController::class, 'refreshExternalChunk'])->name('detail-sales.refresh-ext.chunk');
     Route::post('detail-sales/create-item-unit', [DetailSaleController::class, 'createItemUnit'])->name('detail-sales.create-item-unit');
