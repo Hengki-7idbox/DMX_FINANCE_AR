@@ -37,22 +37,36 @@
         <div class="rounded-lg border border-border bg-card p-4 shadow-sm">
             <p class="text-sm text-muted-foreground">Kredit (CR)</p>
             <p class="text-2xl font-semibold text-success">{{ number_format($stats['cr_count'], 0, ',', '.') }} <span class="text-base font-normal text-muted-foreground">baris</span></p>
+            @php
+                $crPaidPct = $stats['cr_count'] > 0 ? $stats['cr_with_internal'] / $stats['cr_count'] * 100 : 0;
+                $crExternalPct = $stats['cr_count'] > 0 ? $stats['cr_with_external'] / $stats['cr_count'] * 100 : 0;
+            @endphp
             <p class="mt-1 text-xs text-muted-foreground">
-                No Dok Internal terisi {{ number_format($stats['cr_with_internal'], 0, ',', '.') }} ·
-                No Dok External terisi {{ number_format($stats['cr_with_external'], 0, ',', '.') }} ·
-                Keduanya {{ number_format($stats['cr_with_both'], 0, ',', '.') }}
+                Sudah pelunasan
+                <span class="font-medium text-foreground">{{ number_format($stats['cr_with_internal'], 0, ',', '.') }}/{{ number_format($stats['cr_count'], 0, ',', '.') }}</span>
+                ({{ number_format($crPaidPct, 1, ',', '.') }}%)
+                · Dikerjakan di external
+                <span class="font-medium text-foreground">{{ number_format($stats['cr_with_external'], 0, ',', '.') }}</span>
+                ({{ number_format($crExternalPct, 1, ',', '.') }}%)
             </p>
-            <p class="mt-1 text-xs text-muted-foreground">Nominal {{ number_format($stats['credit'], 2, ',', '.') }}</p>
+            <p class="mt-1 text-xs text-muted-foreground">Keduanya {{ number_format($stats['cr_with_both'], 0, ',', '.') }} · Nominal {{ number_format($stats['credit'], 2, ',', '.') }}</p>
         </div>
         <div class="rounded-lg border border-border bg-card p-4 shadow-sm">
             <p class="text-sm text-muted-foreground">Debet (DB)</p>
             <p class="text-2xl font-semibold text-danger">{{ number_format($stats['db_count'], 0, ',', '.') }} <span class="text-base font-normal text-muted-foreground">baris</span></p>
+            @php
+                $dbPaidPct = $stats['db_count'] > 0 ? $stats['db_with_internal'] / $stats['db_count'] * 100 : 0;
+                $dbExternalPct = $stats['db_count'] > 0 ? $stats['db_with_external'] / $stats['db_count'] * 100 : 0;
+            @endphp
             <p class="mt-1 text-xs text-muted-foreground">
-                No Dok Internal terisi {{ number_format($stats['db_with_internal'], 0, ',', '.') }} ·
-                No Dok External terisi {{ number_format($stats['db_with_external'], 0, ',', '.') }} ·
-                Keduanya {{ number_format($stats['db_with_both'], 0, ',', '.') }}
+                Sudah pelunasan (DBK)
+                <span class="font-medium text-foreground">{{ number_format($stats['db_with_internal'], 0, ',', '.') }}/{{ number_format($stats['db_count'], 0, ',', '.') }}</span>
+                ({{ number_format($dbPaidPct, 1, ',', '.') }}%)
+                · Dikerjakan di external
+                <span class="font-medium text-foreground">{{ number_format($stats['db_with_external'], 0, ',', '.') }}</span>
+                ({{ number_format($dbExternalPct, 1, ',', '.') }}%)
             </p>
-            <p class="mt-1 text-xs text-muted-foreground">Nominal {{ number_format($stats['debit'], 2, ',', '.') }}</p>
+            <p class="mt-1 text-xs text-muted-foreground">Keduanya {{ number_format($stats['db_with_both'], 0, ',', '.') }} · Nominal {{ number_format($stats['debit'], 2, ',', '.') }}</p>
         </div>
     </div>
 
