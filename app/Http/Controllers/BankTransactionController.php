@@ -45,6 +45,39 @@ class BankTransactionController extends Controller
             'debit' => (float) (clone $base)->where('position', 'DB')->sum('amount'),
         ];
 
+        // Rincian per posisi: jumlah baris dan berapa yang sudah punya
+        // No Dok Internal / No Dok External.
+        $documentBreakdown = (clone $base)
+            ->selectRaw('
+                position,
+                COUNT(*) as row_count,
+                SUM(CASE WHEN document_internal IS NOT NULL AND document_internal <> "" THEN 1 ELSE 0 END) as with_internal,
+                SUM(CASE WHEN document_external IS NOT NULL AND document_external <> "" THEN 1 ELSE 0 END) as with_external,
+                SUM(CASE WHEN document_internal IS NOT NULL AND document_internal <> ""
+                          AND document_external IS NOT NULL AND document_external <> "" THEN 1 ELSE 0 END) as with_both
+            ')
+            ->groupBy('position')
+            ->get();
+
+        foreach ($documentBreakdown as $row) {
+            if (! in_array($row->position, ['CR', 'DB'], true)) {
+                continue;
+            }
+
+            $prefix = $row->position === 'CR' ? 'cr' : 'db';
+            $stats[$prefix . '_count'] = (int) $row->row_count;
+            $stats[$prefix . '_with_internal'] = (int) $row->with_internal;
+            $stats[$prefix . '_with_external'] = (int) $row->with_external;
+            $stats[$prefix . '_with_both'] = (int) $row->with_both;
+        }
+
+        foreach (['cr', 'db'] as $prefix) {
+            foreach (['count', 'with_internal', 'with_external', 'with_both'] as $key) {
+                $stats[$prefix . '_' . $key] ??= 0;
+            }
+        }
+
+
         $bankAccounts = BankAccount::orderBy('bank_name')->get();
         $years = BankTransaction::query()
             ->whereNotNull('period_year')

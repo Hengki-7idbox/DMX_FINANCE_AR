@@ -25,26 +25,34 @@
     @endif
 
     {{-- Ringkasan --}}
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5 mb-4">
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3 mb-4">
         <div class="rounded-lg border border-border bg-card p-4 shadow-sm">
             <p class="text-sm text-muted-foreground">Total Baris</p>
             <p class="text-2xl font-semibold">{{ number_format($stats['total'], 0, ',', '.') }}</p>
+            <p class="mt-1 text-xs text-muted-foreground">
+                Cocok Baserow {{ number_format($stats['matched'], 0, ',', '.') }} ·
+                Belum ditemukan {{ number_format($stats['not_found'], 0, ',', '.') }}
+            </p>
         </div>
         <div class="rounded-lg border border-border bg-card p-4 shadow-sm">
-            <p class="text-sm text-muted-foreground">Cocok Baserow</p>
-            <p class="text-2xl font-semibold text-success">{{ number_format($stats['matched'], 0, ',', '.') }}</p>
+            <p class="text-sm text-muted-foreground">Kredit (CR)</p>
+            <p class="text-2xl font-semibold text-success">{{ number_format($stats['cr_count'], 0, ',', '.') }} <span class="text-base font-normal text-muted-foreground">baris</span></p>
+            <p class="mt-1 text-xs text-muted-foreground">
+                No Dok Internal terisi {{ number_format($stats['cr_with_internal'], 0, ',', '.') }} ·
+                No Dok External terisi {{ number_format($stats['cr_with_external'], 0, ',', '.') }} ·
+                Keduanya {{ number_format($stats['cr_with_both'], 0, ',', '.') }}
+            </p>
+            <p class="mt-1 text-xs text-muted-foreground">Nominal {{ number_format($stats['credit'], 2, ',', '.') }}</p>
         </div>
         <div class="rounded-lg border border-border bg-card p-4 shadow-sm">
-            <p class="text-sm text-muted-foreground">Belum Ditemukan</p>
-            <p class="text-2xl font-semibold text-destructive">{{ number_format($stats['not_found'], 0, ',', '.') }}</p>
-        </div>
-        <div class="rounded-lg border border-border bg-card p-4 shadow-sm">
-            <p class="text-sm text-muted-foreground">Total Kredit (CR)</p>
-            <p class="text-2xl font-semibold">{{ number_format($stats['credit'], 2, ',', '.') }}</p>
-        </div>
-        <div class="rounded-lg border border-border bg-card p-4 shadow-sm">
-            <p class="text-sm text-muted-foreground">Total Debet (DB)</p>
-            <p class="text-2xl font-semibold">{{ number_format($stats['debit'], 2, ',', '.') }}</p>
+            <p class="text-sm text-muted-foreground">Debet (DB)</p>
+            <p class="text-2xl font-semibold text-danger">{{ number_format($stats['db_count'], 0, ',', '.') }} <span class="text-base font-normal text-muted-foreground">baris</span></p>
+            <p class="mt-1 text-xs text-muted-foreground">
+                No Dok Internal terisi {{ number_format($stats['db_with_internal'], 0, ',', '.') }} ·
+                No Dok External terisi {{ number_format($stats['db_with_external'], 0, ',', '.') }} ·
+                Keduanya {{ number_format($stats['db_with_both'], 0, ',', '.') }}
+            </p>
+            <p class="mt-1 text-xs text-muted-foreground">Nominal {{ number_format($stats['debit'], 2, ',', '.') }}</p>
         </div>
     </div>
 
@@ -153,13 +161,27 @@
                                 @if($transaction->source === 'BASEROW') title="Saldo dari Baserow, bisa berbeda dari CSV" @endif>
                                 {{ number_format((float) $transaction->balance, 2, ',', '.') }}
                             </td>
-                            <td class="px-3 py-2 whitespace-nowrap">{{ $transaction->document_internal ?: '—' }}</td>
-                            <td class="px-3 py-2 whitespace-nowrap">{{ $transaction->document_external ?: '—' }}</td>
+                            <td class="px-3 py-2">
+                                <input type="text"
+                                       value="{{ $transaction->document_internal }}"
+                                       placeholder="No Dok Internal..."
+                                       data-inline-field="document_internal"
+                                       data-url="{{ route('bank-transactions.fields', $transaction) }}"
+                                       class="flex h-8 w-full min-w-[160px] rounded-md border border-border bg-background px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="text"
+                                       value="{{ $transaction->document_external }}"
+                                       placeholder="No Dok External..."
+                                       data-inline-field="document_external"
+                                       data-url="{{ route('bank-transactions.fields', $transaction) }}"
+                                       class="flex h-8 w-full min-w-[160px] rounded-md border border-border bg-background px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            </td>
                             <td class="px-3 py-2">
                                 <input type="text"
                                        value="{{ $transaction->note }}"
                                        placeholder="Tulis catatan..."
-                                       data-inline-note
+                                       data-inline-field="note"
                                        data-url="{{ route('bank-transactions.fields', $transaction) }}"
                                        class="flex h-8 w-full min-w-[200px] rounded-md border border-border bg-background px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                             </td>
@@ -331,8 +353,9 @@
         document.addEventListener('DOMContentLoaded', function () {
             const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-            document.querySelectorAll('[data-inline-note]').forEach(function (input) {
+            document.querySelectorAll('[data-inline-field]').forEach(function (input) {
                 let original = input.value;
+                const field = input.dataset.field;
 
                 const save = async function () {
                     if (input.value === original) {
@@ -350,7 +373,7 @@
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': csrf,
                             },
-                            body: JSON.stringify({ note: input.value }),
+                            body: JSON.stringify({ [field]: input.value }),
                         });
 
                         if (!response.ok) {
