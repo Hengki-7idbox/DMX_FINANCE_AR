@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BankAccount;
 use App\Models\BankTransaction;
+use App\Services\BaserowSyncService;
 use App\Services\BcaStatementParser;
 use App\Services\BankStatementImporter;
 use Illuminate\Http\Request;
@@ -194,6 +195,53 @@ class BankTransactionController extends Controller
         $bankTransaction->load(['bankAccount', 'importBatch']);
 
         return view('bank-transactions.show', compact('bankTransaction'));
+    }
+
+    /**
+     * Info modal sync: rentang bulan Baserow dan daftar rekening.
+     */
+    public function syncInfo(BaserowSyncService $sync)
+    {
+        try {
+            return response()->json(['ok' => true] + $sync->info());
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Sync satu bulan Baserow (dipanggil bertahap dari modal).
+     */
+    public function syncMonth(Request $request, BaserowSyncService $sync)
+    {
+        $validated = $request->validate([
+            'bank_account_id' => 'required|integer|exists:bank_accounts,id',
+            'month' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+            'fill_empty' => 'sometimes|boolean',
+        ]);
+
+        // Satu bulan bisa berisi ribuan baris Baserow.
+        ignore_user_abort(true);
+        set_time_limit(0);
+
+        try {
+            $result = $sync->syncMonth(
+                (int) $validated['bank_account_id'],
+                $validated['month'],
+                (bool) ($validated['fill_empty'] ?? true),
+                $request->user()?->id
+            );
+
+            return response()->json(['ok' => true] + $result);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     public function updateFields(Request $request, BankTransaction $bankTransaction)

@@ -281,7 +281,7 @@ class BankStatementImporter
                 continue;
             }
 
-            $candidateBalance = (float) ($candidate['balance_sen'] ?? 0);
+            $candidateBalance = (float) ($candidate['balance_raw'] ?? 0);
             if (abs($candidateBalance - $balanceSen) < 0.5
                 || abs($candidateBalance - (float) $row['balance']) < 0.5) {
                 $exact[] = $candidate;

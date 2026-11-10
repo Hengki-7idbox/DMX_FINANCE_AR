@@ -138,6 +138,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('payments/{invoice}/pay', [PaymentController::class, 'pay'])->name('payments.pay');
     
     // Bank
+    Route::get('bank-transactions/sync/info', [BankTransactionController::class, 'syncInfo'])->name('bank-transactions.sync.info');
+    Route::post('bank-transactions/sync/month', [BankTransactionController::class, 'syncMonth'])->name('bank-transactions.sync.month');
     Route::get('bank-transactions/import', [BankTransactionController::class, 'importForm'])->name('bank-transactions.import');
     Route::post('bank-transactions/import/preview', [BankTransactionController::class, 'preview'])->name('bank-transactions.import.preview');
     Route::post('bank-transactions/import/store', [BankTransactionController::class, 'store'])->name('bank-transactions.import.store');

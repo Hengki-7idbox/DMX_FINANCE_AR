@@ -40,7 +40,17 @@
                 </div>
                 <div>
                     <dt class="text-muted-foreground">Saldo</dt>
-                    <dd class="font-medium font-mono">{{ number_format((float) $bankTransaction->balance, 2, ',', '.') }}</dd>
+                    <dd class="font-medium font-mono">
+                        <span @class([
+                            'inline-block rounded px-1',
+                            'bg-amber-500/25' => $bankTransaction->source === 'BASEROW',
+                        ]) @if($bankTransaction->source === 'BASEROW') title="Saldo dari Baserow, bisa berbeda dari CSV" @endif>
+                            {{ number_format((float) $bankTransaction->balance, 2, ',', '.') }}
+                        </span>
+                        @if($bankTransaction->source === 'BASEROW')
+                            <span class="block text-xs text-muted-foreground">Saldo dari Baserow (best-effort), akan diganti setelah rekening koran CSV periode ini diimport.</span>
+                        @endif
+                    </dd>
                 </div>
                 <div class="sm:col-span-2">
                     <dt class="text-muted-foreground">Keterangan</dt>
