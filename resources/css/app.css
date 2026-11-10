@@ -97,6 +97,11 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Alpine: hindari flash konten modal sebelum Alpine siap */
+[x-cloak] {
+    display: none !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;

@@ -138,7 +138,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('payments/{invoice}/pay', [PaymentController::class, 'pay'])->name('payments.pay');
     
     // Bank
-    Route::post('bank-transactions/import', [BankTransactionController::class, 'import'])->name('bank-transactions.import');
+    Route::get('bank-transactions/import', [BankTransactionController::class, 'importForm'])->name('bank-transactions.import');
+    Route::post('bank-transactions/import/preview', [BankTransactionController::class, 'preview'])->name('bank-transactions.import.preview');
+    Route::post('bank-transactions/import/store', [BankTransactionController::class, 'store'])->name('bank-transactions.import.store');
+    Route::patch('bank-transactions/{bankTransaction}/fields', [BankTransactionController::class, 'updateFields'])->name('bank-transactions.fields');
     Route::resource('bank-transactions', BankTransactionController::class)->only(['index', 'show']);
     
     // Rekonsiliasi

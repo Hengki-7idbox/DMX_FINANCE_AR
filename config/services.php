@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'baserow' => [
+        'url' => env('BASEROW_URL'),
+        'token' => env('BASEROW_TOKEN'),
+        'database_id' => env('BASEROW_DATABASE_ID'),
+        'table_id' => env('BASEROW_TABLE_ID', '632'),
+        'date_filter_field' => env('BASEROW_DATE_FIELD', 'Tanggal'),
+    ],
+
 ];
