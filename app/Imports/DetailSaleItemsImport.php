@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\DetailSaleItem;
+use App\Support\DateParser;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
@@ -212,24 +213,8 @@ class DetailSaleItemsImport implements ToCollection, WithChunkReading
 
     private function parseDate(mixed $value): ?string
     {
-        $raw = $this->clean($value);
-        if ($raw === '') {
-            return null;
-        }
-
-        foreach (['d/m/y', 'd/m/Y', 'd M Y', 'd M y'] as $format) {
-            $parsed = \DateTime::createFromFormat($format, $raw);
-            if ($parsed !== false) {
-                return $parsed->format('Y-m-d');
-            }
-        }
-
-        $timestamp = strtotime($raw);
-        if ($timestamp === false) {
-            return null;
-        }
-
-        return date('Y-m-d', $timestamp);
+        // Parser terpusat: d/m/Y diutamakan (konvensi Indonesia/Accurate), lihat DateParser.
+        return DateParser::parseString($this->clean($value));
     }
 
     private function parseAmount(mixed $value): float

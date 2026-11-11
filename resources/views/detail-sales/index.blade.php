@@ -566,6 +566,21 @@
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
 
+    <dialog id="import_warning_modal" class="modal">
+        <div class="modal-box max-w-lg">
+            <h3 class="text-lg font-bold text-foreground">Peringatan Tanggal Import</h3>
+            <p class="whitespace-pre-line py-2 text-sm text-muted-foreground">{{ session('import_warning') }}</p>
+            <p class="pb-2 text-xs text-tertiary">
+                Tanggal yang jauh di depan biasanya berarti tanggal dan bulan tertukar di file export
+                (mis. 12/10/2026 dibaca 10 Desember 2026, padahal maksudnya 12 Oktober 2026).
+            </p>
+            <div class="modal-action">
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('import_warning_modal').close()">Mengerti</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
     <dialog id="create_unit_modal" class="modal">
         <div class="modal-box max-w-md">
             <h3 class="text-lg font-bold text-foreground">Tambah Satuan ke Master Item</h3>
@@ -614,6 +629,11 @@
             @endif
             @if(session('error'))
             importToast('error', @json(session('error')));
+            @endif
+
+            @if(session('import_warning'))
+            var warningModal = document.getElementById('import_warning_modal');
+            if (warningModal && !warningModal.open) warningModal.showModal();
             @endif
         })();
 

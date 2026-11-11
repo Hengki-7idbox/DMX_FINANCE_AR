@@ -461,11 +461,29 @@ class DetailSaleController extends Controller
                     'skipped' => $skipped,
                     'rows_read' => $salesImport->getRowsRead(),
                 ]);
+
+                if ($salesImport->getFutureDateCount() > 0) {
+                    $importWarning = $this->buildFutureDateWarning($salesImport);
+
+                    Log::warning('detail-sales.import tanggal melewati bulan berjalan', [
+                        'tab' => $tab,
+                        'session_id' => $session->id,
+                        'future_date_count' => $salesImport->getFutureDateCount(),
+                        'samples' => $salesImport->getFutureDateSamples(),
+                        'cutoff' => $salesImport->getFutureDateCutoff(),
+                    ]);
+                }
             }
 
-            return redirect()
+            $redirect = redirect()
                 ->route('detail-sales.index', ['tab' => $tab])
                 ->with('success', $message);
+
+            if (isset($importWarning)) {
+                $redirect->with('import_warning', $importWarning);
+            }
+
+            return $redirect;
         } catch (ValidationException $e) {
             $this->finalizeSession($session, $salesImport, true);
             $errors = $e->errors();
@@ -498,6 +516,34 @@ class DetailSaleController extends Controller
                 ->route('detail-sales.index', ['tab' => $tab])
                 ->with('error', 'Import gagal: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Pesan peringatan bila hasil import memuat tanggal melewati akhir bulan berjalan
+     * (indikasi tanggal/bulan tertukar pada file export).
+     */
+    private function buildFutureDateWarning(DetailSalesImport $import): string
+    {
+        $bulan = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+        ];
+
+        $cutoff = $import->getFutureDateCutoff();
+        $label = $cutoff
+            ? ($bulan[(int) substr($cutoff, 5, 2)] . ' ' . substr($cutoff, 0, 4))
+            : 'bulan berjalan';
+
+        $samples = $import->getFutureDateSamples();
+        $contoh = $samples === []
+            ? ''
+            : ' Contoh dokumen: ' . implode(', ', $samples) . '.';
+
+        return $import->getFutureDateCount()
+            . " baris bertanggal melewati akhir {$label} ikut terimpor."
+            . $contoh
+            . ' Kemungkinan tanggal dan bulan tertukar (format d/m/Y vs m/d/Y) — periksa kembali sebelum data dipakai.';
     }
 
     /**

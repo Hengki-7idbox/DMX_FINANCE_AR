@@ -4,6 +4,7 @@ namespace App\Imports;
 
 use App\Models\DetailSale;
 use App\Models\ImportSessionDetail;
+use App\Support\DateParser;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\ToCollection;
@@ -54,6 +55,14 @@ class DetailSalesImport implements ToCollection, WithChunkReading
     private int $rowsRead = 0;
     private bool $headerDetected = false;
     private bool $headerFound = false;
+
+    /** Jumlah baris yang tanggalnya melewati akhir bulan berjalan (indikasi tanggal tertukar). */
+    private int $futureDateCount = 0;
+
+    /** @var list<string> contoh nomor dokumen bertanggal "masa depan" (maks 5). */
+    private array $futureDateSamples = [];
+
+    private ?string $futureDateCutoff = null;
 
     public function chunkSize(): int
     {
@@ -138,6 +147,8 @@ class DetailSalesImport implements ToCollection, WithChunkReading
                     'payment_amount' => $this->parseAmount($row[self::COL_PAYMENT] ?? null),
                     'calculate_field' => $this->parseAmount($row[self::COL_CALC] ?? null),
                 ];
+
+                $this->recordFutureDate($payload['transaction_date'], $invoice);
 
                 $this->upsert($payload);
             } catch (\Illuminate\Database\QueryException $e) {
@@ -337,33 +348,46 @@ class DetailSalesImport implements ToCollection, WithChunkReading
 
     private function parseDate(mixed $value): ?string
     {
-        $raw = $this->clean($value);
-        if ($raw === '') {
-            return null;
+        // Parser terpusat: d/m/Y diutamakan (konvensi Indonesia/Accurate), lihat DateParser.
+        return DateParser::parseString($this->clean($value));
+    }
+
+    /**
+     * Catat baris yang tanggal transaksinya melewati akhir bulan berjalan.
+     * Dipakai untuk memunculkan modal peringatan setelah import (indikasi
+     * tanggal/bulan tertukar, mis. 12/10/2026 terbaca 10 Des).
+     */
+    private function recordFutureDate(?string $date, string $doc): void
+    {
+        if ($date === null) {
+            return;
         }
 
-        // Export Accurate locale Indonesia: "02 Des 2025" / "'02 Des 2025"
-        // (apostrophe = text-format prefix di .xls). strtotime hanya mengerti
-        // bulan Inggris — terjemahkan dulu, fallback ke strtotime untuk format lama.
-        $raw = ltrim($raw, "'");
-        $idToEn = [
-            'Jan' => 'Jan', 'Feb' => 'Feb', 'Mar' => 'Mar', 'Apr' => 'Apr',
-            'Mei' => 'May', 'Jun' => 'Jun', 'Jul' => 'Jul',
-            'Agu' => 'Aug', 'Agt' => 'Aug', 'Sep' => 'Sep',
-            'Okt' => 'Oct', 'Nov' => 'Nov', 'Des' => 'Dec',
-        ];
-        $normalized = preg_replace_callback(
-            '/\b(Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Agt|Sep|Okt|Nov|Des)\b/iu',
-            fn ($m) => $idToEn[ucfirst(strtolower($m[1]))] ?? $m[1],
-            $raw
-        );
-
-        $timestamp = strtotime($normalized !== null ? $normalized : $raw);
-        if ($timestamp === false) {
-            return null;
+        $this->futureDateCutoff ??= now()->endOfMonth()->format('Y-m-d');
+        if ($date <= $this->futureDateCutoff) {
+            return;
         }
 
-        return date('Y-m-d', $timestamp);
+        $this->futureDateCount++;
+        if (count($this->futureDateSamples) < 5 && ! in_array($doc, $this->futureDateSamples, true)) {
+            $this->futureDateSamples[] = $doc;
+        }
+    }
+
+    public function getFutureDateCount(): int
+    {
+        return $this->futureDateCount;
+    }
+
+    /** @return list<string> */
+    public function getFutureDateSamples(): array
+    {
+        return $this->futureDateSamples;
+    }
+
+    public function getFutureDateCutoff(): ?string
+    {
+        return $this->futureDateCutoff;
     }
 
     private function parseAmount(mixed $value): float
