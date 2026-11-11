@@ -71,14 +71,29 @@ class RollbackImportSession extends Command
 
         $newDocs = $details->where('change_type', 'new')->pluck('doc_number')->unique()->values();
 
-        // Entri `changed` paling awal per dokumen (old_values = state sebelum sesi).
-        $firstChanged = $details
-            ->where('change_type', 'changed')
-            ->sortBy('id')
-            ->unique('doc_number')
-            ->keyBy('doc_number');
+        // State sebelum sesi = nilai `old` PALING AWAL per field per dokumen.
+        // Tidak cukup memakai entri changed pertama: entri pertama hanya memuat
+        // field yang berubah pada baris itu, sedangkan field lain bisa berubah di
+        // baris berikutnya (dulu ini meninggalkan sisa data impor yang salah).
+        $restoreValues = [];
+        foreach ($details->where('change_type', 'changed')->sortBy('id') as $detail) {
+            $doc = $detail->doc_number;
+            foreach ($this->decodeValues($detail->old_values) as $field => $value) {
+                if (! in_array($field, self::RESTORABLE, true)) {
+                    continue;
+                }
 
-        $restoreDocs = $firstChanged->keys()->diff($newDocs)->values();
+                if (! array_key_exists($field, $restoreValues[$doc] ?? [])) {
+                    $restoreValues[$doc][$field] = $value;
+                }
+            }
+        }
+
+        $restoreDocs = collect(array_keys($restoreValues))->diff($newDocs)->values();
+        foreach ($newDocs as $doc) {
+            unset($restoreValues[$doc]);
+        }
+
         $deleteDocs = $newDocs;
 
         $this->line("Dokumen baru (dihapus)     : {$deleteDocs->count()}");
@@ -106,9 +121,9 @@ class RollbackImportSession extends Command
         }
 
         if ($restoreDocs->isNotEmpty()) {
-            $sample = $firstChanged[$restoreDocs->first()];
-            $old = $this->decodeValues($sample->old_values);
-            $this->line("Contoh restore {$sample->doc_number}: tanggal " . ($old['transaction_date'] ?? '-')
+            $sampleDoc = $restoreDocs->first();
+            $old = $restoreValues[$sampleDoc] ?? [];
+            $this->line("Contoh restore {$sampleDoc}: tanggal " . ($old['transaction_date'] ?? '-')
                 . ', customer ' . ($old['customer_name'] ?? '-')
                 . ', invoice ' . ($old['invoice_amount'] ?? '-'));
         }
@@ -142,16 +157,11 @@ class RollbackImportSession extends Command
         $deletedItems = 0;
 
         DB::transaction(function () use (
-            $session, $firstChanged, $restoreDocs, $deleteDocs,
+            $session, $restoreValues, $restoreDocs, $deleteDocs,
             &$restored, &$deleted, &$deletedItems
         ) {
             foreach ($restoreDocs as $doc) {
-                $old = $this->decodeValues($firstChanged[$doc]->old_values);
-                if ($old === []) {
-                    continue;
-                }
-
-                $update = array_intersect_key($old, array_flip(self::RESTORABLE));
+                $update = $restoreValues[$doc] ?? [];
                 if ($update === []) {
                     continue;
                 }

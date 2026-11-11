@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\DetailSale;
 use App\Models\DetailSaleItem;
 use App\Support\DateParser;
 use Illuminate\Support\Collection;
@@ -46,17 +47,46 @@ class DetailSaleItemsImport implements ToCollection, WithChunkReading
     /** @var array<string,bool> dokumen yang sudah dibersihkan (dihapus item lamanya) di import ini */
     private array $clearedDocs = [];
 
+    /** @var array<string,bool> cache keberadaan dokumen di detail_sales (mode onlyExistingDocs) */
+    private array $docExists = [];
+
     public function chunkSize(): int
     {
         // 2000 baris per chunk — memori stabil walau file item sangat panjang.
         return 2000;
     }
 
-    public function __construct(private readonly string $sourceType = DetailSaleItem::SOURCE_EXTERNAL)
-    {
+    /**
+     * @param  bool  $onlyExistingDocs  Lewati dokumen yang belum ada di detail_sales
+     *                                  (mencegah item orphan saat file memuat dokumen yang tidak diimpor).
+     * @param  bool  $dryRun  Hitung saja, tanpa menghapus/menulis item.
+     */
+    public function __construct(
+        private readonly string $sourceType = DetailSaleItem::SOURCE_EXTERNAL,
+        private readonly bool $onlyExistingDocs = false,
+        private readonly bool $dryRun = false,
+    ) {
         if (!in_array($this->sourceType, [DetailSaleItem::SOURCE_INTERNAL, DetailSaleItem::SOURCE_EXTERNAL], true)) {
             $this->sourceType = DetailSaleItem::SOURCE_EXTERNAL;
         }
+    }
+
+    public function isHeaderFound(): bool
+    {
+        return $this->headerFound;
+    }
+
+    /** @return list<string> */
+    public function getTouchedDocs(): array
+    {
+        return array_keys($this->clearedDocs);
+    }
+
+    private function documentExists(string $doc): bool
+    {
+        return $this->docExists[$doc] ??= DetailSale::where('source_type', $this->sourceType)
+            ->where('doc_number', $doc)
+            ->exists();
     }
 
     public function collection(Collection $rows): void
@@ -108,13 +138,26 @@ class DetailSaleItemsImport implements ToCollection, WithChunkReading
 
             $docKey = $this->limit($invoice, 50);
 
+            if ($this->onlyExistingDocs && ! $this->documentExists($docKey)) {
+                $this->skipped++;
+                continue;
+            }
+
             // Re-import = GANTI (bukan tumpuk): hapus item lama dokumen ini satu kali.
             // Chunk-safe: ditandai agar dokumen lintas-chunk tidak dihapus berulang.
             if (! isset($this->clearedDocs[$docKey])) {
                 $this->clearedDocs[$docKey] = true;
-                DetailSaleItem::where('source_type', $this->sourceType)
-                    ->where('doc_number', $docKey)
-                    ->delete();
+
+                if (! $this->dryRun) {
+                    DetailSaleItem::where('source_type', $this->sourceType)
+                        ->where('doc_number', $docKey)
+                        ->delete();
+                }
+            }
+
+            if ($this->dryRun) {
+                $this->created++;
+                continue;
             }
 
             DetailSaleItem::create([
