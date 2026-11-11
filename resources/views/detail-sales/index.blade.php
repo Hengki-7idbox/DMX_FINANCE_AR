@@ -152,11 +152,11 @@
                     <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="chain">Buat SO &rarr; DO &rarr; INV</button></li>
                 </ul>
             </div>
+            @endif
             <button type="button" id="bulk_delete_btn" disabled onclick="bulkDeleteExt()"
                     class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-destructive/40 bg-background px-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
                 Hapus Dokumen
             </button>
-            @endif
             <div class="dropdown dropdown-end">
                 <button type="button" id="export_btn" tabindex="0" disabled
                         class="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
@@ -275,15 +275,15 @@
             </svg>
             Export XML External
         </button>
+        @endif
         <button type="button"
                 class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
                 onclick="deleteDocChainFromMenu()">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
             </svg>
-            Hapus Dokumen (INV → DO → SO)
+            Hapus Dokumen (INV &rarr; DO &rarr; SO)
         </button>
-        @endif
     </div>
 
     {{-- Import Detail Sales Modal --}}
@@ -947,6 +947,13 @@
 
         var EXPORT_XML_URL = @json(route('detail-sales.export-xml-external'));
         var EXPORT_XML_CSRF = @json(csrf_token());
+        var TAB_EXTERNAL = @json($tab === 'external');
+        var ACCURATE_ALIAS = @json($accurateAlias ?? null);
+
+        // Label database Accurate untuk ditampilkan di konfirmasi/toast (mencegah salah company).
+        function accurateLabel() {
+            return ACCURATE_ALIAS ? ' (' + ACCURATE_ALIAS + ')' : '';
+        }
 
         // Unduh 3 file XML External (Sales Order, Delivery Order, Sales Invoice).
         function downloadExternalXml(payload) {
@@ -1284,7 +1291,7 @@
             if (!doc) return;
 
             askConfirm('Hapus Dokumen',
-                'Hapus dokumen ' + doc + ' di Accurate?\nUrutan: INV → DO → SO.',
+                'Hapus dokumen ' + doc + ' di Accurate' + accurateLabel() + '?\nUrutan: INV → DO → SO.',
                 function () {
                     fetch(DELETE_EXT_CHAIN_URL, {
                         method: 'POST',
@@ -1308,6 +1315,11 @@
                             }
 
                             importToast('success', r.body.message || 'Dokumen dihapus dari Accurate.');
+
+                            // Tab external: mirror detail_sales sudah dibersihkan backend — muat ulang agar baris hilang.
+                            if (TAB_EXTERNAL) {
+                                setTimeout(function () { location.reload(); }, 900);
+                            }
                         })
                         .catch(function () {
                             importToast('error', 'Gagal menghubungi server.');
@@ -1802,6 +1814,11 @@
             window.closeBulkModal = function () {
                 var dlg = document.getElementById('bulk_progress_modal');
                 if (dlg && dlg.open) dlg.close();
+                // Bulk hapus di tab external: mirror detail_sales sudah dibersihkan — muat ulang tabel.
+                if (window.__reloadAfterBulk) {
+                    window.__reloadAfterBulk = false;
+                    location.reload();
+                }
             };
 
             function bulkCreateExt(kind) {
@@ -1902,8 +1919,13 @@
                     return;
                 }
 
+                var shown = docs.slice(0, 5).join(', ');
+                var rest = docs.length > 5 ? ' dan ' + (docs.length - 5) + ' lainnya' : '';
+
                 askConfirm('Hapus Dokumen',
-                    'Hapus dokumen untuk ' + docs.length + ' baris di Accurate?\nUrutan: INV → DO → SO.',
+                    'Hapus ' + docs.length + ' dokumen di Accurate' + accurateLabel() + '?\n'
+                        + shown + rest
+                        + '\n\nUrutan: INV → DO → SO. Tindakan ini tidak bisa dibatalkan.',
                     function () { runBulkDelete(docs); },
                     'Ya, Hapus',
                     true
@@ -1981,6 +2003,13 @@
                 nextDoc(0).then(function () {
                     bulkRunning = false;
                     text.textContent = 'Selesai: ' + ok + ' dihapus, ' + skipped + ' tidak ada, ' + failed + ' gagal.';
+
+                    if (TAB_EXTERNAL && (ok > 0 || skipped > 0)) {
+                        window.__reloadAfterBulk = true;
+                        text.textContent += ' Tab akan dimuat ulang saat ditutup.';
+                        closeBtn.textContent = 'Selesai & Muat Ulang';
+                    }
+
                     closeBtn.disabled = false;
                     importToast(failed > 0 ? 'error' : 'success',
                         'Bulk Hapus: ' + ok + ' dihapus, ' + skipped + ' tidak ada, ' + failed + ' gagal.');

@@ -214,10 +214,19 @@ class DetailSaleController extends Controller
             ? 'Daftar invoice dengan nilai owing (belum lunas)'
             : 'Detail transaksi sales per invoice';
 
+        // Alias database Accurate (untuk label di konfirmasi hapus/cek). Di-cache 1 jam.
+        $accurateAlias = null;
+        try {
+            $accurateAlias = (new AccurateApiClient())->identity()['alias'] ?? null;
+        } catch (\Throwable $e) {
+            $accurateAlias = null;
+        }
+
         return view('detail-sales.index', compact(
             'detailSales', 'tab', 'payload',
             'availableBulan', 'availableTahun', 'filterBulan', 'filterTahun', 'totalAll',
-            'isInvoices', 'tabRoute', 'pageTitle', 'pageDescription'
+            'isInvoices', 'tabRoute', 'pageTitle', 'pageDescription',
+            'accurateAlias'
         ));
     }
 
@@ -1127,13 +1136,18 @@ class DetailSaleController extends Controller
             }
         }
 
+        $alias = $client->identity()['alias'] ?? null;
+
         return response()->json([
             'ok' => true,
             'ext' => $ext,
             'numbers' => $numbers,
+            'database' => $alias,
             'message' => $stages === []
                 ? 'Tidak ada SO/DO/INV untuk ' . $doc . ' di Accurate.'
-                : $doc . ': ' . implode(', ', $stages) . ' ditemukan di Accurate.',
+                : $doc . ': ' . implode(', ', $stages) . ' ditemukan di Accurate'
+                    . ($alias ? ' (' . $alias . ')' : '')
+                    . '.',
         ]);
     }
 
@@ -1267,6 +1281,7 @@ class DetailSaleController extends Controller
 
         $ok = $failed === null;
         $deleted = array_filter($results, fn ($r) => empty($r['skipped']));
+        $alias = $client->identity()['alias'] ?? null;
 
         return response()->json([
             'ok' => $ok,
@@ -1274,9 +1289,12 @@ class DetailSaleController extends Controller
                 ? strtoupper($failed) . ' ' . $doc . ' gagal dihapus. ' . ($results[count($results) - 1]['message'] ?? '')
                 : ($deleted === []
                     ? 'Tidak ada dokumen ' . $doc . ' di Accurate.'
-                    : 'Dokumen ' . $doc . ' dihapus (INV → DO → SO).'),
+                    : 'Dokumen ' . $doc . ' dihapus (INV → DO → SO)'
+                        . ($alias ? ' (' . $alias . ')' : '')
+                        . '.'),
             'results' => $results,
             'ext' => $this->externalDocFlags($doc),
+            'database' => $alias,
         ], $ok ? 200 : 422);
     }
 

@@ -51,6 +51,41 @@ class AccurateApiClient
         return $this->fallbackHost;
     }
 
+    /**
+     * Identitas database dari api-token.do (alias, id, aplikasi, user token).
+     * Di-cache 1 jam; mengembalikan null bila token belum diisi atau Accurate gagal.
+     *
+     * @return array{alias: ?string, database_id: ?int, application: ?string, user: ?string}|null
+     */
+    public function identity(): ?array
+    {
+        $cached = Cache::get('accurate.identity');
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        if (! $this->configured()) {
+            return null;
+        }
+
+        $result = $this->request('POST', 'https://account.accurate.id/api/api-token.do', new stdClass());
+        if (! ($result['ok'] ?? false)) {
+            return null;
+        }
+
+        $d = $result['body']['d'] ?? [];
+        $identity = [
+            'alias' => is_string($d['database']['alias'] ?? null) ? $d['database']['alias'] : null,
+            'database_id' => isset($d['database']['id']) ? (int) $d['database']['id'] : null,
+            'application' => is_string($d['application']['name'] ?? null) ? $d['application']['name'] : null,
+            'user' => is_string($d['user']['fullName'] ?? null) ? $d['user']['fullName'] : null,
+        ];
+
+        Cache::put('accurate.identity', $identity, 3600);
+
+        return $identity;
+    }
+
     public function post(string $path, array $payload): array
     {
         return $this->request('POST', $this->host() . $path, $payload);
