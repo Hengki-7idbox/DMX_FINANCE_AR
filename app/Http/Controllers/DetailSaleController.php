@@ -1224,11 +1224,10 @@ class DetailSaleController extends Controller
         }
 
         $target->delete();
-        $this->cleanExternalInvoiceMirror($doc, $type);
 
         return response()->json([
             'ok' => true,
-            'message' => strtoupper($type) . ' ' . $doc . ' dihapus dari Accurate.',
+            'message' => strtoupper($type) . ' ' . $doc . ' dihapus dari Accurate. Data tab External tidak diubah.',
             'ext' => $this->externalDocFlags($doc),
         ]);
     }
@@ -1274,7 +1273,6 @@ class DetailSaleController extends Controller
             }
 
             $row->delete();
-            $this->cleanExternalInvoiceMirror($doc, $type);
 
             $results[] = ['type' => $type, 'ok' => true, 'skipped' => false, 'message' => 'dihapus'];
         }
@@ -1289,9 +1287,9 @@ class DetailSaleController extends Controller
                 ? strtoupper($failed) . ' ' . $doc . ' gagal dihapus. ' . ($results[count($results) - 1]['message'] ?? '')
                 : ($deleted === []
                     ? 'Tidak ada dokumen ' . $doc . ' di Accurate.'
-                    : 'Dokumen ' . $doc . ' dihapus (INV → DO → SO)'
+                    : 'Dokumen ' . $doc . ' dihapus dari Accurate (INV → DO → SO)'
                         . ($alias ? ' (' . $alias . ')' : '')
-                        . '.'),
+                        . '. Data tab External tidak diubah.'),
             'results' => $results,
             'ext' => $this->externalDocFlags($doc),
             'database' => $alias,
@@ -1721,17 +1719,6 @@ class DetailSaleController extends Controller
             ExternalDocument::TYPE_DO => in_array(ExternalDocument::TYPE_DO, $types, true),
             ExternalDocument::TYPE_INV => in_array(ExternalDocument::TYPE_INV, $types, true),
         ];
-    }
-
-    /** Bersihkan mirror tab external saat INV dihapus (perilaku lama dipertahankan). */
-    private function cleanExternalInvoiceMirror(string $doc, string $type): void
-    {
-        if ($type !== ExternalDocument::TYPE_INV) {
-            return;
-        }
-
-        DetailSaleItem::where('source_type', DetailSaleItem::SOURCE_EXTERNAL)->where('doc_number', $doc)->delete();
-        DetailSale::where('source_type', DetailSale::SOURCE_EXTERNAL)->where('doc_number', $doc)->delete();
     }
 
     private function storeExternalDocument(string $doc, string $type, array $payload, array $result): void
