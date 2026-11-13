@@ -19,6 +19,7 @@ use App\Services\AccurateApiClient;
 use App\Services\AccurateItemUnitService;
 use App\Services\CoretaxXmlBuilder;
 use App\Services\ExternalXmlBuilder;
+use App\Support\Taxability;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -1810,6 +1811,10 @@ class DetailSaleController extends Controller
         $doc = (string) $header->doc_number;
 
         $items = [];
+        // Kode customer external ber-"TNPWP" -> non-PPN: jangan centang PPN
+        // pada dokumen maupun item. Kode lain tetap ber-PPN seperti sebelumnya.
+        $taxable = ! Taxability::isNonPpnCustomer($customerNo);
+
         foreach ($prepared as $row) {
             $item = [
                 'itemNo' => (string) $row['item_no_external'],
@@ -1818,7 +1823,7 @@ class DetailSaleController extends Controller
                 'itemUnitName' => (string) $row['line']->unit,
                 'unitPrice' => (float) $row['line']->unit_price,
                 'itemDiscPercent' => '0',
-                'useTax1' => true,
+                'useTax1' => $taxable,
             ];
 
             if ($type !== ExternalDocument::TYPE_SO) {
@@ -1839,7 +1844,7 @@ class DetailSaleController extends Controller
             'customerNo' => $customerNo,
             'currencyCode' => 'IDR',
             'rate' => 1,
-            'taxable' => true,
+            'taxable' => $taxable,
             'inclusiveTax' => false,
             'paymentTermName' => $termDays === 0 ? 'C.O.D' : 'Net ' . $termDays,
             'shipDate' => $date,
@@ -1953,7 +1958,9 @@ class DetailSaleController extends Controller
         }
 
         $rate = (float) Setting::get('tax_rate', 11);
-        $tax = round($dpp * $rate / 100, 2);
+        // PPN hanya ditambahkan bila dokumen memang taxable (bukan customer TNPWP).
+        $taxable = (bool) ($payload['taxable'] ?? true);
+        $tax = $taxable ? round($dpp * $rate / 100, 2) : 0.0;
         $total = round($dpp + $tax, 2);
         $customerName = $this->accurateCustomerName($client, (string) $payload['customerNo']) ?? $header->customer_name;
 
