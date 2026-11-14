@@ -987,6 +987,15 @@ class DetailSaleController extends Controller
 
         $payload = $this->buildExternalPayload($type, $header, $prepared, $customerNo, $soNumber, $doNumber);
 
+        if ($type === ExternalDocument::TYPE_INV) {
+            $this->linkInvoiceLinesToDeliveryOrder(
+                $payload,
+                $client,
+                $doNumber,
+                $doDoc?->accurate_id !== null ? (int) $doDoc->accurate_id : null
+            );
+        }
+
         // Dokumen sudah pernah dibuat di Accurate (mis. sebelum fitur ini) -> adopsi nomornya.
         $found = $client->findByNumber($module, $doc);
         if ($found !== null) {
@@ -1861,6 +1870,81 @@ class DetailSaleController extends Controller
         }
 
         return $payload;
+    }
+
+    /**
+     * Hubungkan tiap baris invoice ke baris DO yang tepat lewat deliveryOrderDetailId.
+     *
+     * Tanpa ini, Accurate hanya mencocokkan berdasarkan nomor DO + kode barang.
+     * Bila satu barang punya beberapa baris di DO (mis. baris harga normal + baris
+     * bonus harga 0), semua baris invoice dianggap menumpuk ke baris DO pertama
+     * sehingga muncul "Quantity ... in Invoice is greater than delivered qty".
+     *
+     * @param  array<string,mixed>  $payload
+     */
+    private function linkInvoiceLinesToDeliveryOrder(array &$payload, AccurateApiClient $client, string $doNumber, ?int $doId = null): void
+    {
+        if ($doNumber === '' || empty($payload['detailItem'])) {
+            return;
+        }
+
+        if ($doId === null) {
+            $doRow = $client->findByNumber(ExternalDocument::MODULES[ExternalDocument::TYPE_DO], $doNumber);
+            $doId = isset($doRow['id']) ? (int) $doRow['id'] : null;
+        }
+
+        if ($doId === null) {
+            return;
+        }
+
+        $result = $client->get('/accurate/api/delivery-order/detail.do', ['id' => $doId]);
+        if (! ($result['ok'] ?? false)) {
+            return;
+        }
+
+        $detail = $result['body']['d'] ?? [];
+        if (isset($detail[0]) && is_array($detail[0])) {
+            $detail = $detail[0];
+        }
+
+        $barisDo = $detail['detailItem'] ?? [];
+        if (! is_array($barisDo) || $barisDo === []) {
+            return;
+        }
+
+        $sisa = [];
+        foreach ($barisDo as $baris) {
+            $item = is_array($baris['item'] ?? null) ? $baris['item'] : [];
+            $unit = is_array($baris['itemUnit'] ?? null) ? $baris['itemUnit'] : [];
+
+            $sisa[] = [
+                'id' => $baris['id'] ?? null,
+                'itemNo' => (string) ($item['no'] ?? ''),
+                'unit' => (string) ($unit['name'] ?? ''),
+                'soDetailId' => $baris['salesOrderDetailId'] ?? null,
+            ];
+        }
+
+        foreach ($payload['detailItem'] as &$item) {
+            foreach ($sisa as $pos => $baris) {
+                if ((string) ($item['itemNo'] ?? '') !== $baris['itemNo']
+                    || (string) ($item['itemUnitName'] ?? '') !== $baris['unit']) {
+                    continue;
+                }
+
+                $item['deliveryOrderDetailId'] = $baris['id'];
+
+                if ($baris['soDetailId'] !== null) {
+                    $item['salesOrderDetailId'] = $baris['soDetailId'];
+                }
+
+                unset($sisa[$pos]);
+                $sisa = array_values($sisa);
+
+                break;
+            }
+        }
+        unset($item);
     }
 
     private function externalFailure(array $reasons)
