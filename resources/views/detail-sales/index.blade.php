@@ -1024,6 +1024,7 @@
         }
 
         var CREATE_EXT_URL = @json(route('detail-sales.create-ext'));
+        var CREATE_EXT_BULK_URL = @json(route('detail-sales.create-ext-bulk'));
 
         function showExtResult(title, items, type) {
             var dlg = document.getElementById('ext_result_modal');
@@ -1884,47 +1885,106 @@
 
                 var ok = 0, skipped = 0, failed = 0;
                 var unitIssueFail = null;
-                var total = docs.length * types.length;
-                var step = 0;
+                var timings = {};
+                var current = docs.slice();
+                var stageStart = 0;
+                var stageText = '';
+                var stageTimer = setInterval(function () {
+                    if (!stageText) return;
+                    var sec = Math.round((Date.now() - stageStart) / 1000);
+                    text.textContent = stageText + ' (' + sec + ' dtk)';
+                }, 1000);
 
-                function nextDoc(i) {
-                    if (i >= docs.length) return Promise.resolve();
+                // Satu request per tahap (SO -> DO -> INV). Hanya dokumen yang berhasil
+                // di tahap sebelumnya yang dilanjutkan, jadi dokumen gagal tidak
+                // dipaksakan ke tahap berikutnya.
+                function runStage(i) {
+                    if (i >= types.length || !current.length) return Promise.resolve();
 
-                    var doc = docs[i];
-                    var chain = Promise.resolve();
+                    var type = types[i];
+                    var stageLabel = type.toUpperCase();
+                    stageText = 'Tahap ' + (i + 1) + '/' + types.length + ' \u2014 ' + stageLabel
+                        + ' untuk ' + current.length + ' dokumen';
+                    stageStart = Date.now();
+                    text.textContent = stageText + '...';
 
-                    types.forEach(function (type) {
-                        chain = chain.then(function () {
-                            step++;
-                            text.textContent = 'Memproses ' + step + '/' + total + ' \u2014 ' + doc + ' (' + type.toUpperCase() + ')';
-                            return createExtDocRequest(doc, type, null, { silent: true }).then(function (res) {
-                                if (res.ok) {
-                                    if (res.already) {
+                    return fetch(CREATE_EXT_BULK_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                        },
+                        body: JSON.stringify({ docs: current, types: [type] })
+                    })
+                        .then(function (res) {
+                            return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                        })
+                        .then(function (r) {
+                            if (!r.ok || !r.body || !r.body.ok) {
+                                var reason = (r.body && r.body.message) || 'Gagal menghubungi server.';
+                                current.forEach(function (doc) {
+                                    failed++;
+                                    bulkAddResult('\u274c', doc + ' ' + stageLabel + ': ' + reason);
+                                });
+                                current = [];
+                                return;
+                            }
+
+                            timings[type] = r.body.timings ? r.body.timings[type] : null;
+
+                            var next = [];
+                            (r.body.results || []).forEach(function (item) {
+                                if (item.ok) {
+                                    if (item.already) {
                                         skipped++;
-                                        bulkAddResult('\u23ed', doc + ' ' + type.toUpperCase() + ': sudah ada (' + res.number + ')');
+                                        bulkAddResult('\u23ed', item.doc + ' ' + stageLabel + ': sudah ada (' + item.number + ')');
                                     } else {
                                         ok++;
-                                        bulkAddResult('\u2705', doc + ' ' + type.toUpperCase() + ': ' + (res.number || '') + ' dibuat');
+                                        bulkAddResult('\u2705', item.doc + ' ' + stageLabel + ': ' + (item.number || '') + ' dibuat');
                                     }
+
+                                    (item.notes || []).forEach(function (n) {
+                                        bulkAddResult('\u2022', n);
+                                    });
+
+                                    next.push(item.doc);
+                                    markExtDocState(item.doc, type, true);
                                 } else {
                                     failed++;
-                                    bulkAddResult('\u274c', doc + ' ' + type.toUpperCase() + ': ' + (res.message || 'gagal'));
-                                    if (res.unit_issues && res.unit_issues.length && !unitIssueFail) {
-                                        unitIssueFail = { doc: doc, type: type, issues: res.unit_issues };
+                                    bulkAddResult('\u274c', item.doc + ' ' + stageLabel + ': ' + (item.message || 'gagal'));
+
+                                    if (item.unit_issues && item.unit_issues.length && !unitIssueFail) {
+                                        unitIssueFail = { doc: item.doc, type: type, issues: item.unit_issues };
                                     }
                                 }
                             });
-                        });
-                    });
 
-                    return chain
-                        .then(function () { return new Promise(function (resolve) { setTimeout(resolve, 300); }); })
-                        .then(function () { return nextDoc(i + 1); });
+                            current = next;
+                        })
+                        .catch(function () {
+                            var reason = 'Gagal menghubungi server.';
+                            current.forEach(function (doc) {
+                                failed++;
+                                bulkAddResult('\u274c', doc + ' ' + stageLabel + ': ' + reason);
+                            });
+                            current = [];
+                        })
+                        .then(function () { return runStage(i + 1); });
                 }
 
-                nextDoc(0).then(function () {
+                runStage(0).then(function () {
                     bulkRunning = false;
-                    text.textContent = 'Selesai: ' + ok + ' berhasil, ' + skipped + ' sudah ada, ' + failed + ' gagal.';
+                    clearInterval(stageTimer);
+                    stageText = '';
+                    var timingText = Object.keys(timings).map(function (t) {
+                        var ms = timings[t];
+                        return t.toUpperCase() + ' ' + (ms != null ? (ms / 1000).toFixed(1) + 's' : '-');
+                    }).join(', ');
+
+                    text.textContent = 'Selesai: ' + ok + ' berhasil, ' + skipped + ' sudah ada, ' + failed + ' gagal.'
+                        + (timingText ? ' (' + timingText + ')' : '');
                     closeBtn.disabled = false;
                     importToast(failed > 0 ? 'error' : 'success',
                         'Bulk ' + label + ': ' + ok + ' berhasil, ' + skipped + ' sudah ada, ' + failed + ' gagal.');
