@@ -145,10 +145,47 @@ class DetailSaleController extends Controller
             }
         }
 
+        // Kode customer pasangan (internal <-> external) untuk kolom "Customer No." tambahan.
+        // Diutamakan kode yang benar-benar dipakai dokumen (baris tab lawan dengan
+        // doc_number sama), lalu fallback ke mapping customer.
+        $docNumbers = $detailSales->pluck('doc_number')->all();
+        $internalCustByDoc = [];
+        $externalCustByDoc = [];
+        if ($docNumbers !== []) {
+            $internalCustByDoc = DetailSale::where('source_type', DetailSale::SOURCE_INTERNAL)
+                ->whereIn('doc_number', $docNumbers)
+                ->pluck('customer_code', 'doc_number')
+                ->all();
+            $externalCustByDoc = DetailSale::where('source_type', DetailSale::SOURCE_EXTERNAL)
+                ->whereIn('doc_number', $docNumbers)
+                ->pluck('customer_code', 'doc_number')
+                ->all();
+        }
+
+        $custExternalMap = [];
+        $custInternalMap = [];
+        foreach (MappingCustomer::query()->get(['kode_internal', 'kode_external']) as $mapping) {
+            $internalCode = (string) $mapping->kode_internal;
+            $externalCode = (string) $mapping->kode_external;
+
+            if ($internalCode !== '' && ! array_key_exists($internalCode, $custExternalMap)) {
+                $custExternalMap[$internalCode] = $externalCode;
+            }
+            if ($externalCode !== '' && ! array_key_exists($externalCode, $custInternalMap)) {
+                $custInternalMap[$externalCode] = $internalCode;
+            }
+        }
+
         // Payload ringkas untuk render client-side (DataTables deferRender).
         $payload = $detailSales->map(fn ($r) => [
             'id' => $r->id,
             'customer_code' => $r->customer_code,
+            'customer_code_external' => $tab === DetailSale::SOURCE_EXTERNAL
+                ? $r->customer_code
+                : ($externalCustByDoc[(string) $r->doc_number] ?? $custExternalMap[(string) $r->customer_code] ?? null),
+            'customer_code_internal' => $tab === DetailSale::SOURCE_INTERNAL
+                ? $r->customer_code
+                : ($internalCustByDoc[(string) $r->doc_number] ?? $custInternalMap[(string) $r->customer_code] ?? null),
             'customer_name' => $r->customer_name,
             'doc_number' => $r->doc_number,
             'transaction_date' => $r->transaction_date?->format('Y-m-d'),
@@ -1023,6 +1060,12 @@ class DetailSaleController extends Controller
 
         if (! $result['ok']) {
             $reason = $result['message'] ?? ('Accurate menolak pembuatan ' . strtoupper($type) . '.');
+
+            // Pelanggan non-aktif di Accurate hampir selalu berarti mapping ganda:
+            // aplikasi memilih mapping pertama, yang bisa jadi customer lama.
+            if (preg_match('/non\s*aktif|tidak\s*aktif|suspended/i', $reason)) {
+                $reason = $this->nonActiveCustomerHint($reason, $custCode, $customerNo);
+            }
 
             $payload = [
                 'ok' => false,
@@ -1945,6 +1988,33 @@ class DetailSaleController extends Controller
             }
         }
         unset($item);
+    }
+
+    /**
+     * Perjelas pesan "pelanggan Non Aktif" dari Accurate.
+     *
+     * Pesan asli hanya menyebut nama pelanggan. Penyebab paling sering adalah satu
+     * kode internal punya beberapa mapping, sehingga yang terpilih justru customer
+     * lama yang sudah dinonaktifkan di Accurate.
+     */
+    private function nonActiveCustomerHint(string $reason, string $internalCode, string $externalCode): string
+    {
+        $mappings = MappingCustomer::query()
+            ->where('kode_internal', $internalCode)
+            ->pluck('kode_external')
+            ->all();
+
+        $hint = $reason . ' Kode tujuan di Accurate: ' . $externalCode . '.';
+
+        if (count($mappings) > 1) {
+            $hint .= ' Kode internal ' . $internalCode . ' punya ' . count($mappings)
+                . ' mapping (' . implode(', ', $mappings) . ').'
+                . ' Hapus mapping yang tidak dipakai di menu Mapping Customer agar dokumen diarahkan ke customer yang aktif.';
+        } else {
+            $hint .= ' Periksa status pelanggan tersebut di menu Customer Accurate (Non Aktif).';
+        }
+
+        return $hint;
     }
 
     private function externalFailure(array $reasons)

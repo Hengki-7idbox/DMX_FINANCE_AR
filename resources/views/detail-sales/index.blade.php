@@ -183,7 +183,7 @@
     <x-card>
         {{-- Horizontally scrollable data table: card tetap di batas, scroll hanya di wrapper --}}
         <div class="table-container w-full overflow-x-auto overflow-y-hidden">
-            <table id="detail-sales-table" class="w-full min-w-[1320px] caption-bottom text-sm whitespace-nowrap">
+            <table id="detail-sales-table" class="w-full min-w-[1420px] caption-bottom text-sm whitespace-nowrap">
                 <thead class="border-b border-border">
                     <tr>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Aksi</th>
@@ -205,6 +205,9 @@
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Customer No.</th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Customer Name</th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Invoice No.</th>
+                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">
+                            {{ $tab === 'internal' ? 'Customer No. (External)' : 'Customer No. (Internal)' }}
+                        </th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Invoice Date</th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Description</th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Invoice Invoice Amount</th>
@@ -1547,6 +1550,21 @@
                     if (HAS_EXT) cols.splice(2, 0, extCol('so'), extCol('do'), extCol('inv'));
                     if (HAS_STAGE) cols.splice(3, 0, TAHAP_COL);
                     if (HAS_FP) cols.splice(4, 0, FP_COL);
+
+                    // Kolom "Customer No." pasangan: tab internal -> kode external,
+                    // tab external -> kode internal. Disisipkan tepat setelah Invoice No.
+                    var docIdx = cols.findIndex(function (c) { return c.data === 'doc_number'; });
+                    if (docIdx !== -1) {
+                        cols.splice(docIdx + 1, 0, {
+                            data: HAS_EXT ? 'customer_code_external' : 'customer_code_internal',
+                            className: 'px-2 py-1.5 text-foreground',
+                            render: function (v, type) {
+                                if (type !== 'display') return v || '';
+                                return v ? escapeHtml(v) : '<span class="text-muted-foreground">-</span>';
+                            }
+                        });
+                    }
+
                     return cols;
                 })(),
                 layout: {
