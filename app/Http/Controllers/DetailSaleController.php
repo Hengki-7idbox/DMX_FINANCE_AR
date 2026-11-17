@@ -1119,6 +1119,11 @@ class DetailSaleController extends Controller
         }
         unset($row);
 
+        // Qty di data internal tersimpan dalam satuan dasar (mis. Crt), sedangkan
+        // harga bisa dalam satuan lain (Kg/Pcs). Samakan qty dengan satuan yang
+        // dikirim supaya Accurate tidak membaca qty dasar sebagai Kg/Pcs.
+        $this->applyUnitConversion($prepared, $client);
+
         $soNumber = (string) ($soDoc?->accurate_number ?? $doc);
         $doNumber = (string) ($doDoc?->accurate_number ?? $doc);
 
@@ -2237,6 +2242,187 @@ class DetailSaleController extends Controller
         return false;
     }
 
+    /**
+     * Samakan qty tiap baris dengan satuan yang dikirim ke Accurate.
+     *
+     * Data internal menyimpan qty dalam satuan dasar item (mis. Crt) sementara
+     * harga bisa per satuan lain (Kg/Pcs). Tanpa konversi, Accurate membaca
+     * qty dasar sebagai Kg/Pcs sehingga total dokumen mengecil.
+     *
+     * @param  array<int,array{line:DetailSaleItem,qty:float}>  $prepared
+     */
+    private function applyUnitConversion(array &$prepared, AccurateApiClient $client): void
+    {
+        $codes = [];
+        foreach ($prepared as $row) {
+            $code = trim((string) ($row['item_no_external'] ?? ''));
+            if ($code !== '') {
+                $codes[$code] = true;
+            }
+        }
+
+        if ($codes === []) {
+            return;
+        }
+
+        $units = $this->itemUnitRatios($client, array_keys($codes));
+
+        foreach ($prepared as &$row) {
+            $line = $row['line'];
+            $qtyBase = (float) $row['qty'];
+            $price = (float) $line->unit_price;
+            $unit = trim((string) $line->unit);
+
+            $row['qty_send'] = $qtyBase;
+            $row['unit_send'] = $unit;
+            $row['price_send'] = $price;
+
+            if ($qtyBase <= 0) {
+                continue;
+            }
+
+            $originalQty = (float) $line->qty;
+            $target = $originalQty > 0
+                ? (float) $line->amount * ($qtyBase / $originalQty)
+                : $qtyBase * $price;
+
+            if ($target <= 0) {
+                continue;
+            }
+
+            $info = $units[$this->normalizeItemCode((string) ($row['item_no_external'] ?? ''))] ?? null;
+            if ($info === null) {
+                continue;
+            }
+
+            $tolerance = max(1.0, abs($target) * 0.005);
+            $ratio = $info['units'][$this->normalizeUnitName($unit)] ?? null;
+            $unitSupported = $ratio !== null && $ratio > 0;
+
+            // 1) Qty baris sudah sepadan dengan harganya (qty x harga = nilai baris):
+            //    kirim apa adanya selama satuannya dikenal item Accurate.
+            if ($unitSupported && abs(($qtyBase * $price) - $target) <= $tolerance) {
+                $row['qty_send'] = $qtyBase;
+                $row['unit_send'] = $unit;
+                $row['price_send'] = $price;
+                continue;
+            }
+
+            // 2) Qty internal dalam satuan dasar: konversi ke satuan baris (Kg/Pcs).
+            if ($unitSupported) {
+                $qtySend = $qtyBase / $ratio;
+
+                // Qty pecahan kecil sering hanya pembulatan dari satuan dasar
+                // (mis. 0,23 Crt = 9,2 Pcs padahal aslinya 9 Pcs). Pakai angka
+                // bulat bila nilainya jadi persis sama dengan nilai baris.
+                $qtyBulat = round($qtySend);
+                if ($qtyBulat > 0 && abs(($qtyBulat * $price) - $target) <= 0.01) {
+                    $row['qty_send'] = $qtyBulat;
+                    $row['unit_send'] = $unit;
+                    $row['price_send'] = $price;
+                    continue;
+                }
+
+                if (abs(($qtySend * $price) - $target) <= $tolerance) {
+                    $row['qty_send'] = $qtySend;
+                    $row['unit_send'] = $unit;
+                    $row['price_send'] = $price;
+                    continue;
+                }
+            }
+
+            // 3) Satuan baris tidak cocok/tidak dikenal: pakai satuan dasar item.
+            //    Harga dipertahankan bila qty dasar sudah sepadan; kalau tidak,
+            //    harga diturunkan dari nilai baris supaya total dokumen tidak geser.
+            $row['qty_send'] = $qtyBase;
+            $row['unit_send'] = $info['base'];
+            $row['price_send'] = abs(($qtyBase * $price) - $target) <= $tolerance
+                ? $price
+                : round($target / $qtyBase, 6);
+        }
+        unset($row);
+    }
+
+    /**
+     * Rasio satuan item Accurate: kode => ['base' => 'Crt', 'units' => ['crt' => 1, 'kg' => 0.2]].
+     * Rasio = jumlah satuan dasar per 1 satuan tersebut. Di-cache 1 hari.
+     *
+     * @param  array<int,string>  $codes
+     * @return array<string,array{base:string,units:array<string,float>}>
+     */
+    private function itemUnitRatios(AccurateApiClient $client, array $codes): array
+    {
+        $map = [];
+        $missing = [];
+
+        foreach ($codes as $code) {
+            $key = $this->normalizeItemCode($code);
+            if ($key === '') {
+                continue;
+            }
+
+            $cached = Cache::get('accurate.item.units.' . md5($key));
+            if (is_array($cached)) {
+                $map[$key] = $cached;
+            } else {
+                $missing[$key] = $code;
+            }
+        }
+
+        foreach (array_chunk(array_values($missing), 20) as $chunk) {
+            $query = [
+                'sp.pageSize' => 100,
+                'fields' => 'id,no,unit1,unit2,unit3,unit4,unit5,ratio2,ratio3,ratio4,ratio5',
+                'filter.no.op' => 'EQUAL',
+            ];
+
+            foreach (array_values($chunk) as $index => $code) {
+                $query['filter.no.val[' . $index . ']'] = $code;
+            }
+
+            $result = $client->get('/accurate/api/item/list.do', $query);
+            if (! ($result['ok'] ?? false)) {
+                continue;
+            }
+
+            foreach (($result['body']['d'] ?? []) as $row) {
+                $no = $this->normalizeItemCode((string) ($row['no'] ?? ''));
+                $base = trim((string) ($row['unit1']['name'] ?? ''));
+
+                if ($no === '' || $base === '') {
+                    continue;
+                }
+
+                $units = [$this->normalizeUnitName($base) => 1.0];
+                for ($i = 2; $i <= 5; $i++) {
+                    $name = trim((string) ($row['unit' . $i]['name'] ?? ''));
+                    $ratio = (float) ($row['ratio' . $i] ?? 0);
+                    if ($name !== '' && $ratio > 0) {
+                        $units[$this->normalizeUnitName($name)] = $ratio;
+                    }
+                }
+
+                $info = ['base' => $base, 'units' => $units];
+                $map[$no] = $info;
+                Cache::put('accurate.item.units.' . md5($no), $info, 86400);
+            }
+
+            usleep(150000);
+        }
+
+        return $map;
+    }
+
+    private function normalizeItemCode(string $code): string
+    {
+        return strtoupper(trim($code));
+    }
+
+    private function normalizeUnitName(string $unit): string
+    {
+        return strtolower(trim($unit));
+    }
+
     private function buildExternalPayload(string $type, DetailSale $header, array $prepared, string $customerNo, string $soNumber, string $doNumber): array
     {
         $termId = Customer::where('source_type', Customer::SOURCE_INTERNAL)
@@ -2257,9 +2443,9 @@ class DetailSaleController extends Controller
             $item = [
                 'itemNo' => (string) $row['item_no_external'],
                 'detailName' => (string) $row['item_name_external'],
-                'quantity' => (float) $row['qty'],
-                'itemUnitName' => (string) $row['line']->unit,
-                'unitPrice' => (float) $row['line']->unit_price,
+                'quantity' => (float) ($row['qty_send'] ?? $row['qty']),
+                'itemUnitName' => (string) ($row['unit_send'] ?? $row['line']->unit),
+                'unitPrice' => (float) ($row['price_send'] ?? $row['line']->unit_price),
                 'itemDiscPercent' => '0',
                 'useTax1' => $taxable,
             ];

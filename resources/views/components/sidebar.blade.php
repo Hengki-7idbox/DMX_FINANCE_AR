@@ -114,6 +114,19 @@
                 </a>
             </div>
 
+            {{-- Penerimaan Barang --}}
+            <div class="pt-4">
+                <p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-tertiary">Penerimaan Barang</p>
+
+                <a href="{{ route('receive-items.index') }}"
+                   class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium {{ request()->routeIs('receive-items.*') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground' }}">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V7a2 2 0 00-2-2H6a2 2 0 00-2 2v6m16 0v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4m16 0h-4l-2 3H10l-2-3H4" />
+                    </svg>
+                    Terima Barang
+                </a>
+            </div>
+
             {{-- Olah Data --}}
             <div class="pt-4">
                 <p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-tertiary">Olah Data</p>

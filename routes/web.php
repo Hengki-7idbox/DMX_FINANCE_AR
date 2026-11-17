@@ -24,6 +24,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\OlahDataController;
+use App\Http\Controllers\ReceiveItemController;
 
 // Public Routes
 Route::get('/', function () {
@@ -101,6 +102,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('coretax-keywords', [CoretaxKeywordController::class, 'store'])->name('coretax-keywords.store');
     Route::delete('coretax-keywords/clear', [CoretaxKeywordController::class, 'clear'])->name('coretax-keywords.clear');
     Route::delete('coretax-keywords/{coretaxKeyword}', [CoretaxKeywordController::class, 'destroy'])->name('coretax-keywords.destroy');
+
+    // Penerimaan Barang
+    Route::prefix('penerimaan-barang')->name('receive-items.')->group(function () {
+        Route::get('/', [ReceiveItemController::class, 'index'])->name('index');
+        Route::post('import', [ReceiveItemController::class, 'store'])->name('import');
+        Route::post('imports/{import}/check', [ReceiveItemController::class, 'check'])->name('check');
+        Route::post('submit', [ReceiveItemController::class, 'submit'])->name('submit');
+        Route::delete('imports/{import}', [ReceiveItemController::class, 'destroyImport'])->name('imports.destroy');
+        Route::get('drafts/{draft}/lines', [ReceiveItemController::class, 'lines'])->name('lines');
+        Route::put('drafts/{draft}', [ReceiveItemController::class, 'updateDraft'])->name('drafts.update');
+        Route::put('lines/{line}', [ReceiveItemController::class, 'updateLine'])->name('lines.update');
+        Route::delete('lines/{line}', [ReceiveItemController::class, 'destroyLine'])->name('lines.destroy');
+        Route::post('vendors', [ReceiveItemController::class, 'vendorStore'])->name('vendors.store');
+        Route::put('vendors/{vendor}', [ReceiveItemController::class, 'vendorUpdate'])->name('vendors.update');
+        Route::delete('vendors/{vendor}', [ReceiveItemController::class, 'vendorDestroy'])->name('vendors.destroy');
+    });
 
     // Olah Data
     Route::prefix('olah-data')->name('olah-data.')->group(function () {
