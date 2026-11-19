@@ -15,6 +15,7 @@ use App\Http\Controllers\MappingProductController;
 use App\Http\Controllers\MappingUnitController;
 use App\Http\Controllers\CoretaxItemCodeController;
 use App\Http\Controllers\CoretaxKeywordController;
+use App\Http\Controllers\TaxXmlExternalController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BankTransactionController;
@@ -105,6 +106,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('coretax-keywords', [CoretaxKeywordController::class, 'store'])->name('coretax-keywords.store');
     Route::delete('coretax-keywords/clear', [CoretaxKeywordController::class, 'clear'])->name('coretax-keywords.clear');
     Route::delete('coretax-keywords/{coretaxKeyword}', [CoretaxKeywordController::class, 'destroy'])->name('coretax-keywords.destroy');
+
+    // Tax
+    Route::get('tax/download-xml-external', [TaxXmlExternalController::class, 'index'])->name('tax.download-xml-external');
+    Route::get('tax/download-xml-external/summary', [TaxXmlExternalController::class, 'summary'])->name('tax.download-xml-external.summary');
+    Route::get('tax/download-xml-external/skipped-export', [TaxXmlExternalController::class, 'skippedExport'])->name('tax.download-xml-external.skipped-export');
+    Route::post('tax/download-xml-external', [TaxXmlExternalController::class, 'download'])->name('tax.download-xml-external.download');
 
     // Penerimaan Barang
     Route::prefix('penerimaan-barang')->name('receive-items.')->group(function () {

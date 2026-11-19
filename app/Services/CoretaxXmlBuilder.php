@@ -48,6 +48,8 @@ class CoretaxXmlBuilder
     private array $keywords = [];
     /** @var array<int,string> dokumen yang dilewati beserta alasannya */
     private array $skipped = [];
+    /** @var array<int,array<string,mixed>> detail dokumen yang dilewati (untuk export Excel) */
+    private array $skippedDetails = [];
     /** @var array<string,array<string,bool>> unit belum dipetakan per dokumen */
     private array $unmappedUnits = [];
 
@@ -71,6 +73,7 @@ class CoretaxXmlBuilder
     public function build(array $docNumbers, string $sourceType): array
     {
         $this->skipped = [];
+        $this->skippedDetails = [];
         $this->unmappedUnits = [];
 
         $docNumbers = array_values(array_unique(array_filter(array_map('strval', $docNumbers))));
@@ -153,6 +156,17 @@ class CoretaxXmlBuilder
             'unmapped' => $unmapped,
             'unmapped_default' => $this->unitDefault,
         ];
+    }
+
+    /**
+     * Detail terstruktur dokumen yang dilewati pada build() terakhir.
+     * Dipakai export Excel supaya tim bisa memperbaiki data (NIK/NPWP, kode barang).
+     *
+     * @return array<int,array{doc:string,date:string,customer_code:string,customer_name:string,tax_number:string,nitku:string,reasons:array<int,string>}>
+     */
+    public function skippedDetails(): array
+    {
+        return $this->skippedDetails;
     }
 
     private function wrap(string $invoices): string
@@ -260,8 +274,20 @@ class CoretaxXmlBuilder
         // membatalkan seluruh export) dan alasannya ditampilkan ke pengguna.
         $problems = [];
 
-        if (! $isKtp && ! preg_match('/^\d{16}$/', $taxNumber)) {
-            $problems[] = "Customer {$code} ({$buyerName}) belum punya NPWP 16 digit.";
+        // NIK/NPWP wajib 16 digit untuk semua tipe. Khusus customer KTP,
+        // Coretax juga memvalidasi struktur NIK (kode wilayah & tanggal lahir);
+        // 16 digit yang sebenarnya nomor NPWP (mis. berawalan 02/07) tetap ditolak.
+        if ($taxNumber === '') {
+            $problems[] = "Customer {$code} ({$buyerName}) belum punya "
+                . ($isKtp ? 'NIK' : 'NPWP') . ' 16 digit.';
+        } elseif ($taxNumber === '0000000000000000') {
+            $problems[] = "Customer {$code} ({$buyerName}) masih memakai placeholder "
+                . '0000000000000000; isi ' . ($isKtp ? 'NIK' : 'NPWP') . ' yang sebenarnya.';
+        } elseif (! preg_match('/^\d{16}$/', $taxNumber)) {
+            $problems[] = "Customer {$code} ({$buyerName}) "
+                . ($isKtp ? 'NIK' : 'NPWP') . " '{$taxNumber}' harus 16 digit angka.";
+        } elseif ($isKtp && ($nikProblem = $this->nikProblem($taxNumber)) !== null) {
+            $problems[] = "Customer {$code} ({$buyerName}) NIK '{$taxNumber}' tidak valid: {$nikProblem}.";
         }
 
         if ($nitku !== '' && ! preg_match('/^\d{22}$/', $nitku)) {
@@ -285,6 +311,17 @@ class CoretaxXmlBuilder
         if ($problems !== []) {
             // Satu entri = satu dokumen, agar jumlah di notifikasi akurat.
             $this->skipped[] = $doc . ' — ' . implode(' ', $problems);
+
+            // Data terstruktur untuk export Excel "dokumen dilewati".
+            $this->skippedDetails[] = [
+                'doc' => $doc,
+                'date' => $date,
+                'customer_code' => $code,
+                'customer_name' => $buyerName !== '' ? $buyerName : (string) $header->customer_name,
+                'tax_number' => $taxNumber,
+                'nitku' => $nitku,
+                'reasons' => $problems,
+            ];
 
             return null;
         }
@@ -337,6 +374,39 @@ class CoretaxXmlBuilder
             . $this->tag('BuyerIDTKU', $buyerIdtku)
             . '<ListOfGoodService>' . $goodServices . '</ListOfGoodService>'
             . '</TaxInvoice>';
+    }
+
+    /**
+     * Validasi struktur NIK 16 digit: kode provinsi dan tanggal lahir.
+     *
+     * Coretax menolak NIK yang kode wilayahnya tidak dikenal atau tanggal/
+     * bulannya tidak wajar — biasanya karena nomor NPWP diisi sebagai NIK
+     * (mis. 0266707900615000 / 0759068877028000).
+     */
+    private function nikProblem(string $nik): ?string
+    {
+        $province = (int) substr($nik, 0, 2);
+        if ($province < 11) {
+            return "kode provinsi '{$province}' tidak dikenal";
+        }
+
+        $day = (int) substr($nik, 6, 2);
+        $month = (int) substr($nik, 8, 2);
+
+        // NIK perempuan: tanggal lahir ditambah 40.
+        if ($day > 40) {
+            $day -= 40;
+        }
+
+        if ($day < 1 || $day > 31) {
+            return "tanggal lahir '{$day}' tidak wajar";
+        }
+
+        if ($month < 1 || $month > 12) {
+            return "bulan lahir '{$month}' tidak wajar";
+        }
+
+        return null;
     }
 
     /**
