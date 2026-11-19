@@ -1334,6 +1334,44 @@ class DetailSaleController extends Controller
         // dikirim supaya Accurate tidak membaca qty dasar sebagai Kg/Pcs.
         $this->applyUnitConversion($prepared, $client);
 
+        // Harga wajib sama dengan internal. Setelah konversi satuan, pastikan
+        // qty x harga sepadan dengan nilai baris (setelah memperhitungkan diskon
+        // invoice). Kalau tidak, dokumen tidak dikirim — lebih baik dicek dulu
+        // daripada membuat invoice dengan angka karangan.
+        $discRate = ((float) $header->amount + (float) $header->discount) > 0
+            ? (float) $header->discount / ((float) $header->amount + (float) $header->discount)
+            : 0.0;
+
+        foreach ($prepared as $row) {
+            $line = $row['line'];
+            if ((float) $line->amount <= 0) {
+                continue;
+            }
+
+            // Nilai baris diskalakan bila qty-nya berkurang karena retur.
+            $scale = (float) $line->qty != 0.0 ? (float) $row['qty'] / (float) $line->qty : 1.0;
+            $value = (float) $line->amount * $scale;
+
+            $gross = (float) ($row['qty_send'] ?? $row['qty'])
+                * (float) ($row['price_send'] ?? $line->unit_price);
+            $tolerance = max(1.0, abs($value) * 0.01);
+
+            if (abs($gross - $value) <= $tolerance) {
+                continue; // amount = nilai kotor
+            }
+            if (abs($gross * (1 - $discRate) - $value) <= $tolerance) {
+                continue; // amount = nilai setelah diskon
+            }
+
+            $reasons[] = 'Item ' . $line->item_no . ' (' . $line->item_description . '): qty x harga '
+                . number_format($gross, 2, ',', '.') . ' tidak sama dengan nilai baris '
+                . number_format($value, 2, ',', '.') . '. Periksa satuan/harga item.';
+        }
+
+        if ($reasons !== []) {
+            return $this->preparedFailure($reasons);
+        }
+
         $soNumber = (string) ($soDoc?->accurate_number ?? $doc);
         $doNumber = (string) ($doDoc?->accurate_number ?? $doc);
 
@@ -2256,6 +2294,9 @@ class DetailSaleController extends Controller
         $amount = (float) ($d['salesAmount'] ?? 0);
         $tax = (float) ($d['tax1Amount'] ?? 0);
         $total = (float) ($d['totalAmount'] ?? 0);
+        // Diskon invoice yang benar-benar tercatat di Accurate. Dipakai tab
+        // external untuk menghitung ulang diskon di XML Coretax.
+        $cashDiscount = max(0.0, (float) ($d['cashDiscount'] ?? 0));
 
         $items = [];
         $sumDpp = 0.0;
@@ -2300,7 +2341,7 @@ class DetailSaleController extends Controller
         $owing = max(0, (float) $owing);
         $paid = max(0, $total - $owing);
 
-        DB::transaction(function () use ($doc, $customerCode, $customerName, $transDate, $total, $amount, $tax, $owing, $paid, $items) {
+        DB::transaction(function () use ($doc, $customerCode, $customerName, $transDate, $total, $amount, $tax, $cashDiscount, $owing, $paid, $items) {
             DetailSale::updateOrCreate(
                 [
                     'source_type' => DetailSale::SOURCE_EXTERNAL,
@@ -2315,7 +2356,7 @@ class DetailSaleController extends Controller
                     'invoice_amount' => $total,
                     'amount' => $amount,
                     'tax_base' => $tax,
-                    'discount' => 0,
+                    'discount' => $cashDiscount,
                     'return_amount' => 0,
                     'owing' => $owing,
                     'payment_amount' => $paid,
@@ -2552,13 +2593,12 @@ class DetailSaleController extends Controller
             }
 
             // 3) Satuan baris tidak cocok/tidak dikenal: pakai satuan dasar item.
-            //    Harga dipertahankan bila qty dasar sudah sepadan; kalau tidak,
-            //    harga diturunkan dari nilai baris supaya total dokumen tidak geser.
+            //    Harga TIDAK boleh diubah — harus sama dengan harga internal.
+            //    Kalau qty tidak sepadan, prepareExternalDoc akan menandai dokumen
+            //    ini perlu dicek (tidak dikirim dengan angka karangan).
             $row['qty_send'] = $qtyBase;
             $row['unit_send'] = $info['base'];
-            $row['price_send'] = abs(($qtyBase * $price) - $target) <= $tolerance
-                ? $price
-                : round($target / $qtyBase, 6);
+            $row['price_send'] = $price;
         }
         unset($row);
     }
@@ -2666,25 +2706,12 @@ class DetailSaleController extends Controller
         // Harga item tetap harga gross; diskon dikirim terpisah lewat cashDiscount,
         // bukan dengan menurunkan unitPrice.
         $invoiceDiscount = max(0.0, round((float) $header->discount, 2));
-        // Amount internal = nilai setelah diskon (DPP), jadi gross = amount + diskon.
-        $grossTotal = (float) $header->amount + $invoiceDiscount;
-        $discRate = $grossTotal > 0 && $invoiceDiscount > 0
-            ? $invoiceDiscount / $grossTotal
-            : 0.0;
 
         foreach ($prepared as $row) {
             $qty = (float) ($row['qty_send'] ?? $row['qty']);
-            $priceNet = (float) ($row['price_send'] ?? $row['line']->unit_price);
-            $priceGross = $priceNet;
-
-            if ($discRate > 0 && $discRate < 1) {
-                $calc = $priceNet / (1 - $discRate);
-
-                // Pakai harga gross baris internal bila hasilnya sama (kasus satuan
-                // tidak berubah) supaya harga tetap bulat seperti Accurate.
-                $linePrice = (float) $row['line']->unit_price;
-                $priceGross = abs($calc - $linePrice) < 0.01 ? $linePrice : round($calc, 6);
-            }
+            // Harga SELALU harga internal (kotor). Diskon invoice dikirim terpisah
+            // lewat cashDiscount, tidak pernah ditempel ke harga satuan.
+            $priceGross = (float) ($row['price_send'] ?? $row['line']->unit_price);
 
             $item = [
                 'itemNo' => (string) $row['item_no_external'],
@@ -2999,13 +3026,13 @@ class DetailSaleController extends Controller
     {
         $doc = (string) $header->doc_number;
 
-        $dpp = 0.0;
+        $grossDpp = 0.0;
         $items = [];
         foreach ($payload['detailItem'] as $item) {
             $qty = (float) $item['quantity'];
             $price = (float) $item['unitPrice'];
             $amount = $qty * $price;
-            $dpp += $amount;
+            $grossDpp += $amount;
 
             $items[] = [
                 'source_type' => DetailSaleItem::SOURCE_EXTERNAL,
@@ -3023,6 +3050,10 @@ class DetailSaleController extends Controller
         }
 
         $rate = (float) Setting::get('tax_rate', 11);
+        // Diskon invoice dicatat terpisah (bukan ditempel ke harga).
+        // DPP = nilai kotor barang - cashDiscount.
+        $cashDiscount = max(0.0, round((float) ($payload['cashDiscount'] ?? 0), 2));
+        $dpp = max(0.0, $grossDpp - $cashDiscount);
         // PPN hanya ditambahkan bila dokumen memang taxable (bukan customer TNPWP).
         $taxable = (bool) ($payload['taxable'] ?? true);
         $tax = $taxable ? round($dpp * $rate / 100, 2) : 0.0;
@@ -3042,7 +3073,7 @@ class DetailSaleController extends Controller
                 'invoice_amount' => $total,
                 'amount' => $dpp,
                 'tax_base' => $tax,
-                'discount' => 0,
+                'discount' => $cashDiscount,
                 'return_amount' => 0,
                 'owing' => $total,
                 'payment_amount' => 0,

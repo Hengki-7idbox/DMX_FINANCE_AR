@@ -257,6 +257,8 @@ class CoretaxXmlBuilder
             $returnQty[$key] = ($returnQty[$key] ?? 0) + (float) $ret->quantity;
         }
 
+        $isExternal = $sourceType === DetailSale::SOURCE_EXTERNAL;
+
         $activeLines = [];
         $totalGross = 0.0;
         foreach ($lines as $line) {
@@ -265,9 +267,25 @@ class CoretaxXmlBuilder
                 continue;
             }
 
-            $gross = (float) $line->unit_price * $netQty;
-            $activeLines[] = ['line' => $line, 'qty' => $netQty, 'gross' => $gross];
-            $totalGross += $gross;
+            if ($isExternal) {
+                // Tab external: nilai baris diambil dari invoice external (amount).
+                // Sebagian data menyimpan harga per Kg dengan qty Crt, sehingga
+                // qty x harga tidak sama dengan nilai baris. Harga diturunkan dari
+                // nilai baris agar Price x Qty = TaxBase (validasi Coretax).
+                $value = (float) $line->amount;
+                $price = $netQty != 0.0 ? round($value / $netQty, 2) : 0.0;
+
+                if ($value <= 0 || $price <= 0) {
+                    $price = (float) $line->unit_price;
+                    $value = $price * $netQty;
+                }
+            } else {
+                $price = (float) $line->unit_price;
+                $value = $price * $netQty;
+            }
+
+            $activeLines[] = ['line' => $line, 'qty' => $netQty, 'gross' => $value, 'price' => $price];
+            $totalGross += $value;
         }
 
         // Masalah dokumen dikumpulkan dulu; bila ada, dokumen dilewati (tidak
@@ -336,14 +354,37 @@ class CoretaxXmlBuilder
         $addInfo = $trxCode === '08' ? 'TD.00510' : '';
         $facilityStamp = $trxCode === '08' ? 'TD.01110' : '';
 
-        // Diskon invoice (satu nilai untuk seluruh dokumen) dialokasikan
-        // proporsional terhadap nilai kotor tiap baris sisa.
-        $discountTotal = $this->invoiceDiscountTotal($financeLines);
-        $useLineDiscount = $discountTotal <= 0;
+        if ($isExternal) {
+            // Tab external: pakai angka invoice external itu sendiri.
+            // Diskon = total nilai baris - DPP invoice (header.amount). Untuk
+            // invoice lama yang harganya sudah dipotong diskon, selisihnya 0
+            // sehingga diskon tidak dipotong dua kali.
+            $headerDpp = max(0.0, (float) $header->amount);
+            $discountTotal = $headerDpp > 0 ? max(0.0, $totalGross - $headerDpp) : 0.0;
+            if ($discountTotal < 1.0) {
+                $discountTotal = 0.0;
+            }
 
-        // Retur tanpa rincian item (sales_returns kosong) tetap harus menurunkan DPP:
-        // skalakan qty + diskon agar total = invoice_amount - return_amount.
-        $factor = $this->returnFactor($header, $totalGross, $discountTotal);
+            // Retur tanpa rincian item: DPP final = amount - return_amount.
+            $targetDpp = max(0.0, $headerDpp - (float) $header->return_amount);
+            $base = $totalGross - $discountTotal;
+            $factor = ($base > 0 && $targetDpp > 0 && abs($targetDpp - $base) > 0.01)
+                ? $targetDpp / $base
+                : 1.0;
+
+            // Diskon selalu dialokasikan proporsional; jangan pakai diskon per
+            // baris karena nilainya diskon invoice yang tersimpan berulang.
+            $useLineDiscount = false;
+        } else {
+            // Diskon invoice (satu nilai untuk seluruh dokumen) dialokasikan
+            // proporsional terhadap nilai kotor tiap baris sisa.
+            $discountTotal = $this->invoiceDiscountTotal($financeLines);
+            $useLineDiscount = $discountTotal <= 0;
+
+            // Retur tanpa rincian item (sales_returns kosong) tetap harus menurunkan DPP:
+            // skalakan qty + diskon agar total = invoice_amount - return_amount.
+            $factor = $this->returnFactor($header, $totalGross, $discountTotal);
+        }
 
         $goodServices = '';
         foreach ($activeLines as $row) {
@@ -351,7 +392,15 @@ class CoretaxXmlBuilder
                 ? (float) $row['line']->discount
                 : ($totalGross > 0 ? $discountTotal * ($row['gross'] / $totalGross) : 0.0);
 
-            $goodServices .= $this->buildItem($row['line'], $sourceType, $row['qty'], $lineDiscount, $doc, $factor);
+            $goodServices .= $this->buildItem(
+                $row['line'],
+                $sourceType,
+                $row['qty'],
+                $lineDiscount,
+                $doc,
+                $factor,
+                $row['price']
+            );
         }
 
         return '<TaxInvoice>'
@@ -489,7 +538,8 @@ class CoretaxXmlBuilder
         float $qty,
         float $discount,
         string $doc,
-        float $factor = 1.0
+        float $factor = 1.0,
+        ?float $price = null
     ): string {
         $itemNo = (string) $line->item_no;
         $resolved = $this->resolveItemCode($line, $sourceType);
@@ -506,7 +556,7 @@ class CoretaxXmlBuilder
             $this->unmappedUnits[$doc][$unit === '' ? '(kosong)' : $unit] = true;
         }
 
-        $price = (float) $line->unit_price;
+        $price = $price ?? (float) $line->unit_price;
 
         if ($factor !== 1.0) {
             $qty *= $factor;
