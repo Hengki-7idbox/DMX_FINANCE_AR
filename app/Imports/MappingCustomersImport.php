@@ -25,6 +25,7 @@ class MappingCustomersImport implements ToCollection
     private int $created = 0;
     private int $updated = 0;
     private int $skipped = 0;
+    private int $duplicates = 0;
 
     public function collection(Collection $rows): void
     {
@@ -101,6 +102,14 @@ class MappingCustomersImport implements ToCollection
             $existing->save();
             $this->updated++;
         } else {
+            // Satu kode internal sebaiknya hanya punya satu pasangan di Accurate.
+            // Mapping tambahan tetap dibuat, tetapi dihitung agar bisa diperingatkan:
+            // aplikasi memilih baris pertama dan bisa mengenai customer yang sudah
+            // Non Aktif sehingga dokumen ditolak Accurate.
+            if (MappingCustomer::where('kode_internal', $payload['kode_internal'])->exists()) {
+                $this->duplicates++;
+            }
+
             MappingCustomer::create($payload);
             $this->created++;
         }
@@ -172,5 +181,10 @@ class MappingCustomersImport implements ToCollection
     public function getSkippedCount(): int
     {
         return $this->skipped;
+    }
+
+    public function getDuplicateCount(): int
+    {
+        return $this->duplicates;
     }
 }

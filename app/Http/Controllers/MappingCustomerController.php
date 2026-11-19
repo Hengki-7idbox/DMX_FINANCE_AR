@@ -6,6 +6,7 @@ use App\Imports\MappingCustomersImport;
 use App\Models\Customer;
 use App\Models\MappingCustomer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Validators\ValidationException;
 
@@ -32,13 +33,30 @@ class MappingCustomerController extends Controller
                 && isset($externalCodes[$row->kode_external]);
         });
 
+        // Satu kode internal idealnya hanya punya satu pasangan di Accurate. Bila lebih dari satu,
+        // aplikasi memilih baris pertama dan bisa mengenai customer yang sudah Non Aktif
+        // (mis. B004 untuk FAUZIA V-009-C) sehingga pembuatan SO/DO/Invoice ditolak Accurate.
+        $duplicateCodes = MappingCustomer::query()
+            ->select('kode_internal', DB::raw('COUNT(*) as total'))
+            ->groupBy('kode_internal')
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('total', 'kode_internal')
+            ->all();
+
+        $mappingCustomers->each(function (MappingCustomer $row) use ($duplicateCodes) {
+            $row->is_duplicate = isset($duplicateCodes[$row->kode_internal]);
+        });
+
+        $duplicateCount = count($duplicateCodes);
+
         $matchCount = $mappingCustomers->where('is_match', true)->count();
         $notMatchCount = $mappingCustomers->count() - $matchCount;
 
         return view('mapping-customers.index', compact(
             'mappingCustomers',
             'matchCount',
-            'notMatchCount'
+            'notMatchCount',
+            'duplicateCount'
         ));
     }
 
@@ -55,6 +73,7 @@ class MappingCustomerController extends Controller
             $created = $import->getCreatedCount();
             $updated = $import->getUpdatedCount();
             $skipped = $import->getSkippedCount();
+            $duplicated = $import->getDuplicateCount();
 
             if ($created + $updated === 0) {
                 return redirect()
@@ -68,9 +87,14 @@ class MappingCustomerController extends Controller
             }
             $message .= '.';
 
+            if ($duplicated > 0) {
+                $message .= " Peringatan: {$duplicated} baris membuat kode internal punya lebih dari satu mapping Customer."
+                    . ' Periksa badge "Ganda" lalu hapus mapping yang tidak dipakai.';
+            }
+
             return redirect()
                 ->route('mapping-customers.index')
-                ->with('success', $message);
+                ->with($duplicated > 0 ? 'error' : 'success', $message);
         } catch (ValidationException $e) {
             $errors = $e->errors();
             $firstErrors = [];

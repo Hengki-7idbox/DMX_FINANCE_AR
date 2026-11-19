@@ -70,6 +70,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('detail-sales/delete-ext', [DetailSaleController::class, 'deleteExternalDoc'])->name('detail-sales.delete-ext');
     Route::post('detail-sales/delete-ext-chain', [DetailSaleController::class, 'deleteExternalDocChain'])->name('detail-sales.delete-ext-chain');
     Route::put('detail-sales/faktur-pajak-status', [DetailSaleController::class, 'updateFakturPajakStatus'])->name('detail-sales.fp-status');
+    Route::post('detail-sales/match-status', [DetailSaleController::class, 'matchStatus'])->name('detail-sales.match-status');
+    Route::post('detail-sales/match-status-bulk', [DetailSaleController::class, 'matchStatusBulk'])->name('detail-sales.match-status-bulk');
     Route::get('faktur-pajak', [FakturPajakController::class, 'index'])->name('faktur-pajak.index');
     Route::post('faktur-pajak/import', [FakturPajakController::class, 'import'])->name('faktur-pajak.import');
     Route::delete('faktur-pajak/clear', [FakturPajakController::class, 'clear'])->name('faktur-pajak.clear');
@@ -88,6 +90,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('mapping-products/{mappingProduct}', [MappingProductController::class, 'destroy'])->name('mapping-products.destroy');
     Route::get('mapping-units', [MappingUnitController::class, 'index'])->name('mapping-units.index');
     Route::post('mapping-units', [MappingUnitController::class, 'store'])->name('mapping-units.store');
+    Route::post('mapping-units/quick-save', [MappingUnitController::class, 'quickSave'])->name('mapping-units.quick-save');
     Route::post('mapping-units/import', [MappingUnitController::class, 'import'])->name('mapping-units.import');
     Route::delete('mapping-units/clear', [MappingUnitController::class, 'clear'])->name('mapping-units.clear');
     Route::put('mapping-units/{mappingUnit}', [MappingUnitController::class, 'update'])->name('mapping-units.update');

@@ -20,6 +20,7 @@ class Customer extends Model
         'customer_group_id',
         'customer_type',
         'tax_number',
+        'nitku',
         'address',
         'city',
         'phone',

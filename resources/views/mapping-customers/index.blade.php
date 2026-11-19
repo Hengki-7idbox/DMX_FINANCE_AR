@@ -37,6 +37,9 @@
             <span class="ml-2 inline-flex flex-wrap gap-1 align-middle">
                 <x-badge type="success" label="Match: {{ $matchCount }}" />
                 <x-badge type="danger" label="Not Match: {{ $notMatchCount }}" />
+                @if(($duplicateCount ?? 0) > 0)
+                    <x-badge type="warning" label="Kode Ganda: {{ $duplicateCount }}" />
+                @endif
             </span>
         @endif
     </x-alert>
@@ -80,6 +83,11 @@
                                     <x-badge type="success" label="Match" />
                                 @else
                                     <x-badge type="danger" label="Not Match" />
+                                @endif
+                                @if($row->is_duplicate ?? false)
+                                    <span class="ml-1" title="Kode internal ini punya lebih dari satu mapping ke customer external. Hapus yang tidak dipakai agar dokumen tidak diarahkan ke customer yang salah.">
+                                        <x-badge type="warning" label="Ganda" />
+                                    </span>
                                 @endif
                             </td>
                             <td class="px-2 py-1.5 text-muted-foreground">{{ $row->source_id ?? '-' }}</td>

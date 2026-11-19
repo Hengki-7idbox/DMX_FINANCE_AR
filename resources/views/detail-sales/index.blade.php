@@ -56,6 +56,9 @@
                 <option value="match">Match</option>
                 <option value="unmatch">Unmatch</option>
                 <option value="no_pair">Tidak ada pasangan</option>
+                @if($tab === 'internal')
+                <option value="full_return">Full Retur</option>
+                @endif
             </select>
         </div>
         @if($tab === 'external')
@@ -112,6 +115,14 @@
                     0 data dipilih
                 </span>
             </div>
+            <button type="button" id="refresh_match_btn" onclick="refreshAllMatchStatus(this)"
+                    title="Hitung ulang status Match/Unmatch dari data lokal (tanpa cek Accurate) untuk baris yang dicentang; kalau tidak ada yang dicentang, semua baris yang tampil"
+                    class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+                <svg id="refresh_match_icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span id="refresh_match_label">Refresh Status</span>
+            </button>
             @if($tab === 'external')
             <button type="button" id="refresh_ext_btn" onclick="openRefreshModal()"
                     class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -193,16 +204,38 @@
                                    aria-label="Pilih semua baris" />
                         </th>
                         @if($tab === 'internal')
-                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">SO EXT</th>
-                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">DO EXT</th>
-                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">INV EXT</th>
+                        @foreach(['so' => 'SO EXT', 'do' => 'DO EXT', 'inv' => 'INV EXT'] as $stage => $stageLabel)
+                        <th class="px-2 pb-1 pt-2 text-left align-top font-medium text-muted-foreground">
+                            <span class="block">{{ $stageLabel }}</span>
+                            <select id="f_ext_{{ $stage }}"
+                                    class="mt-1 w-full min-h-7 rounded-md border border-border bg-background px-1 py-0.5 text-xs font-normal text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                    aria-label="Filter {{ $stageLabel }}">
+                                <option value="">Semua</option>
+                                <option value="create">Create</option>
+                                <option value="exists">data exists</option>
+                            </select>
+                        </th>
+                        @endforeach
                         @endif
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Status</th>
                         @if($tab === 'external')
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Tahap</th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Faktur Pajak</th>
                         @endif
-                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">Customer No.</th>
+                        <th class="px-2 pb-1 pt-2 text-left align-top font-medium text-muted-foreground">
+                            <span class="block">Customer No.</span>
+                            @if($tab === 'external')
+                            <select id="f_cust_type"
+                                    class="mt-1 w-full min-h-7 rounded-md border border-border bg-background px-1 py-0.5 text-xs font-normal text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                    aria-label="Filter Customer No.">
+                                <option value="">Semua</option>
+                                <option value="ktp">KTP</option>
+                                <option value="npwp">NPWP</option>
+                                <option value="tnpwp">TNPWP</option>
+                                <option value="etc">ETC</option>
+                            </select>
+                            @endif
+                        </th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Customer Name</th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Invoice No.</th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">
@@ -540,6 +573,25 @@
             <div class="modal-action">
                 <button type="button" class="btn btn-ghost" onclick="document.getElementById('refresh_modal').close()">Batal</button>
                 <button type="button" id="refresh_submit" class="btn btn-primary" onclick="startRefreshExternal()">Tarik dari Accurate</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <dialog id="match_check_modal" class="modal">
+        <div class="modal-box max-w-sm">
+            <h3 class="text-lg font-bold text-foreground">Cek Dokumen</h3>
+            <p class="py-1 text-sm text-muted-foreground">
+                Nomor invoice: <span id="match_check_doc" class="font-medium text-foreground"></span>
+            </p>
+            <ul class="mb-2 space-y-1 text-sm text-muted-foreground">
+                <li><strong class="text-foreground">Cek Match saja</strong> — cepat, memakai data lokal.</li>
+                <li><strong class="text-foreground">Cek + Accurate</strong> — mengecek SO/DO/INV ke Accurate (±3 request, lebih lambat).</li>
+            </ul>
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="closeMatchCheckModal()">Batal</button>
+                <button type="button" id="match_check_local" class="btn btn-outline" onclick="runMatchCheck('local')">Cek Match saja</button>
+                <button type="button" id="match_check_accurate" class="btn btn-primary" onclick="runMatchCheck('accurate')">Cek + Accurate</button>
             </div>
         </div>
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
@@ -909,7 +961,7 @@
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRF-TOKEN': EXPORT_XML_CSRF
                 },
-                body: JSON.stringify({ doc_number: doc })
+                body: JSON.stringify({ doc_number: doc, tab: MATCH_TAB })
             })
                 .then(function (res) {
                     return res.json().then(function (j) { return { ok: res.ok, body: j }; });
@@ -921,6 +973,7 @@
                     }
 
                     if (r.body.ext) applyExtFlags(doc, r.body.ext);
+                    if (r.body.match_status) applyMatchStatus(doc, r.body.match_status);
                     importToast('success', r.body.message || 'Status dokumen diperbarui.');
                 })
                 .catch(function () {
@@ -928,6 +981,205 @@
                 })
                 .then(function () {
                     setExtChecking(doc, false);
+                });
+        }
+
+        var MATCH_STATUS_URL = @json(route('detail-sales.match-status'));
+        var MATCH_STATUS_BULK_URL = @json(route('detail-sales.match-status-bulk'));
+        var MATCH_TAB = @json($tab);
+
+        // Tandai baris sedang dihitung ulang statusnya (spinner di kolom Status).
+        function setMatchChecking(doc, checking) {
+            updateDsRows(function (row) {
+                return String(row.doc_number || '') === String(doc || '');
+            }, function (row) {
+                row.match_checking = !!checking;
+            });
+        }
+
+        function applyMatchStatus(doc, status) {
+            if (!status) return;
+            updateDsRows(function (row) {
+                return String(row.doc_number || '') === String(doc || '');
+            }, function (row) {
+                row.status = status;
+            });
+        }
+
+        // Hitung ulang status Match/Unmatch satu baris tanpa reload halaman.
+        // Klik tombol refresh: pengguna pilih cek match saja (cepat) atau cek ke Accurate.
+        var matchCheckDoc = null;
+        var matchCheckRunning = false;
+
+        function refreshMatchStatus(btn) {
+            if (!btn || btn.disabled) return;
+            var doc = btn.getAttribute('data-doc');
+            if (!doc) return;
+
+            matchCheckDoc = doc;
+
+            var label = document.getElementById('match_check_doc');
+            if (label) label.textContent = doc;
+
+            var dlg = document.getElementById('match_check_modal');
+            if (!dlg) {
+                runMatchCheck('local');
+                return;
+            }
+            if (!dlg.open) dlg.showModal();
+        }
+
+        function closeMatchCheckModal() {
+            var dlg = document.getElementById('match_check_modal');
+            if (dlg && dlg.open) dlg.close();
+        }
+
+        function setMatchCheckBusy(busy) {
+            matchCheckRunning = !!busy;
+            ['match_check_local', 'match_check_accurate'].forEach(function (id) {
+                var b = document.getElementById(id);
+                if (b) b.disabled = !!busy;
+            });
+        }
+
+        // mode: 'local' = hitung match dari data lokal, 'accurate' = cek SO/DO/INV ke Accurate.
+        function runMatchCheck(mode) {
+            if (matchCheckRunning) return;
+            var doc = matchCheckDoc;
+            if (!doc) return;
+
+            closeMatchCheckModal();
+            setMatchChecking(doc, true);
+            setMatchCheckBusy(true);
+
+            var url = mode === 'accurate' ? CHECK_EXT_URL : MATCH_STATUS_URL;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                },
+                body: JSON.stringify({ doc_number: doc, tab: MATCH_TAB })
+            })
+                .then(function (res) {
+                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                })
+                .then(function (r) {
+                    if (!r.ok || !r.body.ok) {
+                        importToast('error', (r.body && r.body.message) || 'Gagal memperbarui status.');
+                        return;
+                    }
+
+                    if (mode === 'accurate' && r.body.ext) applyExtFlags(doc, r.body.ext);
+
+                    var status = mode === 'accurate' ? r.body.match_status : r.body.status;
+                    applyMatchStatus(doc, status);
+
+                    importToast('success', mode === 'accurate'
+                        ? (r.body.message || 'Status dokumen diperbarui.')
+                        : 'Status match ' + doc + ' diperbarui.');
+                })
+                .catch(function () {
+                    importToast('error', 'Gagal menghubungi server.');
+                })
+                .then(function () {
+                    setMatchChecking(doc, false);
+                    setMatchCheckBusy(false);
+                    matchCheckDoc = null;
+                });
+        }
+
+        // Hitung ulang status semua baris yang tampil (hasil filter bulan/tahun).
+        function refreshAllMatchStatus(btn) {
+            if (!btn || btn.disabled) return;
+            if (!window.jQuery || !jQuery.fn.DataTable || !jQuery.fn.DataTable.isDataTable('#detail-sales-table')) return;
+
+            var api = jQuery('#detail-sales-table').DataTable();
+
+            // Baris yang dicentang diprioritaskan; kalau tidak ada, pakai semua baris
+            // yang tampil (hasil filter bulan/tahun).
+            var docs = window.dsSelectedDocNumbers ? window.dsSelectedDocNumbers() : [];
+            var onlySelected = docs.length > 0;
+
+            if (!onlySelected) {
+                api.rows().every(function () {
+                    var row = this.data();
+                    if (row && row.doc_number) docs.push(String(row.doc_number));
+                });
+            }
+
+            if (!docs.length) {
+                return;
+            }
+
+            var chunkSize = 800;
+            var chunks = [];
+            for (var i = 0; i < docs.length; i += chunkSize) {
+                chunks.push(docs.slice(i, i + chunkSize));
+            }
+
+            var icon = document.getElementById('refresh_match_icon');
+            var label = document.getElementById('refresh_match_label');
+            btn.disabled = true;
+            if (icon) icon.classList.add('animate-spin');
+            if (label) label.textContent = 'Memperbarui...';
+
+            function postBulk(chunk) {
+                return fetch(MATCH_STATUS_BULK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                    },
+                    body: JSON.stringify({ docs: chunk, tab: MATCH_TAB })
+                }).then(function (res) {
+                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                });
+            }
+
+            var applied = 0;
+            var chain = Promise.resolve();
+
+            chunks.forEach(function (chunk, index) {
+                chain = chain.then(function () {
+                    if (label) label.textContent = 'Memperbarui ' + (index + 1) + '/' + chunks.length + '...';
+
+                    return postBulk(chunk).then(function (r) {
+                        if (!r.ok || !r.body.ok) {
+                            var msg = (r.body && r.body.message)
+                                || ((r.body && r.body.errors && r.body.errors[0]) || 'Gagal memperbarui status.');
+                            throw new Error(msg);
+                        }
+
+                        var statuses = r.body.statuses || {};
+                        updateDsRows(function (row) {
+                            return Object.prototype.hasOwnProperty.call(statuses, String(row.doc_number || ''));
+                        }, function (row) {
+                            row.status = statuses[String(row.doc_number || '')];
+                        });
+
+                        applied += Object.keys(statuses).length;
+                    });
+                });
+            });
+
+            chain
+                .then(function () {
+                    importToast('success', applied + ' status dokumen diperbarui'
+                        + (onlySelected ? ' (hanya yang dipilih)' : '') + '.');
+                })
+                .catch(function (err) {
+                    importToast('error', (err && err.message) || 'Gagal menghubungi server.');
+                })
+                .then(function () {
+                    btn.disabled = false;
+                    if (icon) icon.classList.remove('animate-spin');
+                    if (label) label.textContent = 'Refresh Status';
                 });
         }
 
@@ -1031,7 +1283,10 @@
             var head = document.getElementById('ext_result_title');
             var body = document.getElementById('ext_result_body');
             head.textContent = title;
-            head.className = 'text-lg font-bold ' + (type === 'error' ? 'text-destructive' : 'text-success');
+            var tone = type === 'error'
+                ? 'text-destructive'
+                : (type === 'warning' ? 'text-warning' : 'text-success');
+            head.className = 'text-lg font-bold ' + tone;
             if (items && items.length) {
                 body.innerHTML = '<ul class="list-disc space-y-1 pl-5">'
                     + items.map(function (t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('')
@@ -1390,6 +1645,28 @@
                             URL.revokeObjectURL(url);
                         }, i * 350);
                     });
+
+                    var skipped = Array.isArray(r.body.skipped) ? r.body.skipped : [];
+                    var unmapped = Array.isArray(r.body.unmapped) ? r.body.unmapped : [];
+                    var unmappedDefault = r.body.unmapped_default || '';
+
+                    if (skipped.length || unmapped.length) {
+                        var notices = skipped.slice();
+
+                        if (unmapped.length) {
+                            unmapped.forEach(function (u) {
+                                notices.push('Unit "' + u + '" belum dipetakan → dipakai default ' + (unmappedDefault || '-') + '.');
+                            });
+                            notices.push('Lengkapi pemetaannya di menu Mapping Unit agar tidak memakai unit default.');
+                        }
+
+                        var title = r.body.count + ' invoice diexport';
+                        if (skipped.length) title += ', ' + skipped.length + ' dokumen dilewati';
+                        if (unmapped.length) title += ', ' + unmapped.length + ' unit belum dipetakan';
+
+                        showExtResult(title, notices, 'warning');
+                    }
+
                     importToast('success', r.body.count + ' invoice → XML Coretax diunduh.');
                 })
                 .catch(function () {
@@ -1424,10 +1701,27 @@
 
             var selectedIds = new Set();
 
+            // Nomor dokumen yang dicentang, dipakai tombol Refresh Status.
+            window.dsSelectedDocNumbers = function () {
+                if (!selectedIds.size) return [];
+                if (!window.jQuery || !jQuery.fn.DataTable || !jQuery.fn.DataTable.isDataTable('#detail-sales-table')) return [];
+
+                var docs = [];
+                jQuery('#detail-sales-table').DataTable().rows().every(function () {
+                    var row = this.data();
+                    if (row && selectedIds.has(Number(row.id)) && row.doc_number) {
+                        docs.push(String(row.doc_number));
+                    }
+                });
+
+                return docs;
+            };
+
             var BADGE_BASE = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ';
             function badgeHtml(status) {
                 if (status === 'match') return '<span class="' + BADGE_BASE + 'bg-success/10 text-success">Match</span>';
                 if (status === 'unmatch') return '<span class="' + BADGE_BASE + 'bg-info/10 text-info">Unmatch</span>';
+                if (status === 'full_return') return '<span class="' + BADGE_BASE + 'bg-warning/10 text-warning">Full Retur</span>';
                 return '<span class="' + BADGE_BASE + 'border border-border text-foreground">Tidak ada pasangan</span>';
             }
 
@@ -1481,6 +1775,8 @@
             };
 
             var HAS_EXT = @json($tab === 'internal');
+            // Tombol refresh per baris di kolom Status (tab external sudah punya tombol cek sendiri).
+            var HAS_MATCH_REFRESH = @json($tab === 'internal');
             function extCol(type) {
                 return {
                     data: 'ext_' + type,
@@ -1523,7 +1819,23 @@
                                 + ' aria-label="Pilih baris ' + escapeHtml(d.doc_number || d.id) + '" />';
                         } },
                     { data: 'status', className: 'px-2 py-1.5',
-                        render: function (v, type) { return type === 'display' ? badgeHtml(v) : (v || ''); } },
+                        render: function (v, type, row) {
+                            if (type !== 'display') return (v || '');
+                            var badge = badgeHtml(v);
+                            if (!HAS_MATCH_REFRESH) return badge;
+
+                            var checking = !!row.match_checking;
+                            var icon = checking
+                                ? '<svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="3" stroke-opacity="0.3" /><path stroke-linecap="round" stroke-width="3" d="M21 12a9 9 0 00-9-9" /></svg>'
+                                : '<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>';
+
+                            return '<span class="inline-flex items-center gap-1.5">' + badge
+                                + '<button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-info/10 text-info ring-1 ring-info/30 hover:bg-info/20 disabled:opacity-60 disabled:cursor-wait"'
+                                + ' data-doc="' + escapeHtml(row.doc_number || '') + '"'
+                                + (checking ? ' disabled' : '')
+                                + ' onclick="refreshMatchStatus(this)" title="Klik untuk pilih: cek match saja atau cek + Accurate" aria-label="Cek status dokumen">'
+                                + icon + '</button></span>';
+                        } },
                     { data: 'customer_code', className: 'px-2 py-1.5 text-foreground',
                         render: function (v, type) { if (type !== 'display') return v || ''; return escapeHtml(v || '-'); } },
                     { data: 'customer_name', className: 'px-2 py-1.5 font-medium text-foreground max-w-[160px] truncate',
@@ -1645,6 +1957,29 @@
                 var d1 = $('#f_tgl_dari').val() || '';
                 var d2 = $('#f_tgl_sampai').val() || '';
                 if (s.length && s.indexOf(row.status || '') === -1) return false;
+                // Filter di header kolom SO/DO/INV EXT: create = belum ada, exists = sudah ada.
+                var extFilters = { so: $('#f_ext_so').val() || '', do: $('#f_ext_do').val() || '', inv: $('#f_ext_inv').val() || '' };
+                for (var stage in extFilters) {
+                    var want = extFilters[stage];
+                    if (!want) continue;
+                    var has = !!row['ext_' + stage];
+                    if (want === 'create' && has) return false;
+                    if (want === 'exists' && !has) return false;
+                }
+                // Filter Customer No. (tab external): KTP / NPWP / TNPWP / ETC.
+                var custType = $('#f_cust_type').val() || '';
+                if (custType) {
+                    var code = (row.customer_code || '').toUpperCase();
+                    var isTnpwp = code.indexOf('TNPWP') !== -1;
+                    var isKtp = !isTnpwp && code.indexOf('KTP') !== -1;
+                    var isNpwp = !isTnpwp && code.indexOf('NPWP') !== -1;
+                    var isEtc = !isTnpwp && !isKtp && !isNpwp;
+
+                    if ((custType === 'ktp' && !isKtp)
+                        || (custType === 'npwp' && !isNpwp)
+                        || (custType === 'tnpwp' && !isTnpwp)
+                        || (custType === 'etc' && !isEtc)) return false;
+                }
                 if (fp.length) {
                     var hasFp = !!row.fp_number;
                     var isGung = row.fp_status === 'gung_gung';
@@ -1663,7 +1998,7 @@
                 return true;
             });
 
-            $('#f_status, #f_nama, #f_faktur').on('change', function() {
+            $('#f_status, #f_nama, #f_faktur, #f_ext_so, #f_ext_do, #f_ext_inv, #f_cust_type').on('change', function() {
                 filterTable.draw();
             });
 
@@ -1685,6 +2020,7 @@
 
             $('#f_reset').on('click', function() {
                 $('#f_status, #f_nama, #f_faktur').val([]);
+                $('#f_ext_so, #f_ext_do, #f_ext_inv').val('');
                 $('#f_tgl_dari, #f_tgl_sampai').val('');
                 var params = new URLSearchParams(window.location.search);
                 params.delete('bulan');
@@ -1703,8 +2039,14 @@
             var EXPORT_CSRF = @json(csrf_token());
             var EXPORT_TAB = @json($tab);
 
+            // Baris yang sedang tampil di halaman pagination aktif (bukan seluruh hasil filter).
+            // Dipakai agar "Check All" hanya menyeleksi halaman aktif.
+            function currentPageRows() {
+                return filterTable.rows({ page: 'current', search: 'applied' });
+            }
+
             function syncVisibleChecks() {
-                filterTable.rows({ search: 'applied' }).every(function() {
+                currentPageRows().every(function() {
                     var node = this.node();
                     if (!node) return;
                     var cb = node.querySelector('.row-check');
@@ -1715,7 +2057,7 @@
             function syncSelectAll() {
                 var all = document.getElementById('select_all_rows');
                 var total = 0, checked = 0;
-                filterTable.rows({ search: 'applied' }).every(function() {
+                currentPageRows().every(function() {
                     var d = this.data();
                     if (!d) return;
                     total++;
@@ -1756,10 +2098,18 @@
                 syncSelectAll();
             }
 
+            // Sinkronkan status header & checkbox tiap kali tabel digambar ulang
+            // (pindah halaman, sorting, pencarian/filter, ubah jumlah per halaman).
+            filterTable.on('draw.dt', function () {
+                syncVisibleChecks();
+                updateExportUI();
+            });
+
             document.addEventListener('change', function(e) {
                 var t = e.target;
                 if (t.id === 'select_all_rows') {
-                    filterTable.rows({ search: 'applied' }).every(function() {
+                    // Hanya baris pada halaman aktif - halaman lain tidak terpengaruh.
+                    currentPageRows().every(function() {
                         var d = this.data();
                         if (!d) return;
                         if (t.checked) selectedIds.add(d.id);

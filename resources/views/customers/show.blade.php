@@ -41,6 +41,10 @@
                     <p class="font-medium">{{ $customer->tax_number ?? '-' }}</p>
                 </div>
                 <div>
+                    <p class="text-sm text-muted-foreground">NITKU</p>
+                    <p class="font-medium">{{ $customer->nitku ?? '-' }}</p>
+                </div>
+                <div>
                     <p class="text-sm text-muted-foreground">Payment Term</p>
                     <p class="font-medium">{{ $customer->paymentTerm->term_name ?? '-' }} ({{ $customer->paymentTerm->days ?? 0 }} days)</p>
                 </div>

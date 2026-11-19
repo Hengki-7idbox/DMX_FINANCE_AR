@@ -1,7 +1,7 @@
 <x-layouts.app>
     <x-slot name="header">
-        <x-page-header title="Mapping Unit" description="Pemetaan satuan ukur internal → kode unit Coretax (UM.xxxx)">
-            <x-button onclick="openCreateModal()">Tambah Data</x-button>
+        <x-page-header title="Mapping Unit" description="Pemetaan satuan ukur Accurate Online → kode unit Coretax (UM.xxxx)">
+            <x-button variant="outline" onclick="refreshUnits()">Refresh dari Accurate</x-button>
             <x-button onclick="document.getElementById('import_modal').showModal()">Import</x-button>
             <x-button variant="destructive" onclick="document.getElementById('clear_modal').showModal()">Clear Data</x-button>
         </x-page-header>
@@ -15,42 +15,84 @@
         <x-alert type="success" class="mb-4">{{ session('success') }}</x-alert>
     @endif
 
+    <div id="save_error_banner"
+         class="mb-4 hidden rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div class="flex items-start gap-3">
+            <span id="save_error_text" class="flex-1"></span>
+            <button type="button" onclick="window.location.reload()"
+                    class="shrink-0 font-semibold underline underline-offset-2">Muat ulang</button>
+        </div>
+    </div>
+
+    @if($accurateError)
+        <x-alert type="warning" class="mb-4">
+            Gagal memuat daftar unit dari Accurate Online: {{ $accurateError }}
+            <br>Daftar di bawah diambil dari cache/data lokal. Coba <strong>Refresh dari Accurate</strong> lagi.
+        </x-alert>
+    @endif
+
+    @if($unmappedCount > 0)
+        <x-alert type="warning" class="mb-4">
+            <strong>{{ number_format($unmappedCount) }} unit belum dipetakan.</strong>
+            Unit tersebut akan memakai kode default <em>{{ \App\Models\Setting::get('coretax_unit_default', 'UM.0022') }}</em> saat export XML Coretax.
+        </x-alert>
+    @endif
+
     <x-alert type="info" class="mb-4">
-        Dipakai export XML Coretax untuk mengisi tag <strong>Unit</strong>. Kolom: Unit Internal | Unit Coretax (mis. <em>Kg</em> → <em>UM.0022</em>).
-        Aksi <strong>Edit</strong> / <strong>Hapus</strong> ada di menu titik-tiga pada kolom Aksi.
+        Daftar unit diambil langsung dari master <strong>Accurate Online</strong>. Pilih kode unit <strong>Coretax</strong> pada dropdown di kanan —
+        perubahan langsung tersimpan. Dipakai export XML Coretax untuk mengisi tag <strong>Unit</strong>;
+        bila belum dipilih, dipakai default dari Settings (<em>UM.0022</em>).
     </x-alert>
 
     <x-card>
         <div class="table-container w-full overflow-x-auto overflow-y-hidden">
-            <table id="mapping-units-table" class="w-full min-w-[600px] caption-bottom text-sm whitespace-nowrap">
+            <table id="mapping-units-table" class="w-full min-w-[760px] caption-bottom text-sm whitespace-nowrap">
                 <thead class="border-b border-border">
                     <tr>
-                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">Aksi</th>
+                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">Unit Accurate</th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">ID</th>
-                        <th class="h-10 px-2 text-left font-medium text-muted-foreground">Unit Internal</th>
+                        <th class="h-10 px-2 text-right font-medium text-muted-foreground">Dipakai</th>
                         <th class="h-10 px-2 text-left font-medium text-muted-foreground">Unit Coretax</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($mappingUnits as $row)
-                        <tr class="border-b border-border transition-colors hover:bg-accent/50"
-                            data-row-id="{{ $row->id }}"
-                            data-unit-internal="{{ $row->unit_internal }}"
-                            data-unit-coretax="{{ $row->unit_coretax }}">
-                            <td class="px-2 py-1.5 sticky left-0 bg-card z-10">
-                                <button type="button"
-                                        class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-info/15 text-info ring-1 ring-info/40 hover:bg-info/30"
-                                        data-id="{{ $row->id }}"
-                                        onclick="openActionMenu(this)"
-                                        aria-label="Action">
-                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                    </svg>
-                                </button>
+                    @forelse($rows as $row)
+                        <tr class="border-b border-border transition-colors hover:bg-accent/50">
+                            <td class="px-2 py-1.5 font-medium text-foreground">
+                                {{ $row['name'] }}
+                                @unless($row['in_accurate'])
+                                    <span class="ml-1 inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning"
+                                          title="Unit ini muncul di data transaksi tetapi tidak ada di master Accurate Online">
+                                        tidak ada di Accurate
+                                    </span>
+                                @endunless
+                                <span data-unmapped-badge="{{ $row['name'] }}"
+                                      class="ml-1 inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive {{ empty($row['mapped']) ? '' : 'hidden' }}"
+                                      title="Unit ini belum dipetakan; export XML Coretax akan memakai kode default">
+                                    belum dipetakan
+                                </span>
                             </td>
-                            <td class="px-2 py-1.5 text-muted-foreground">{{ $row->id }}</td>
-                            <td class="px-2 py-1.5 font-medium text-foreground">{{ $row->unit_internal }}</td>
-                            <td class="px-2 py-1.5 text-foreground">{{ $row->unit_coretax }}</td>
+                            <td class="px-2 py-1.5 text-muted-foreground">{{ $row['id'] ?? '-' }}</td>
+                            <td class="px-2 py-1.5 text-right tabular-nums text-foreground">{{ number_format($row['usage'], 0, ',', '.') }}</td>
+                            <td class="px-2 py-1.5">
+                                <div class="flex items-center gap-2">
+                                    <select class="coretax-unit-select h-8 min-w-[220px] rounded-md border border-border bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                            data-unit="{{ $row['name'] }}"
+                                            data-saved="{{ $row['mapped'] ?? '' }}"
+                                            aria-label="Unit Coretax untuk {{ $row['name'] }}">
+                                        <option value="">— belum dipilih —</option>
+                                        @foreach($coretaxUnits as $code => $label)
+                                            <option value="{{ $code }}" @selected(($row['mapped'] ?? '') === $code)>
+                                                {{ $code }} — {{ $label }}
+                                            </option>
+                                        @endforeach
+                                        @if(!empty($row['mapped']) && ! array_key_exists($row['mapped'], $coretaxUnits))
+                                            <option value="{{ $row['mapped'] }}" selected>{{ $row['mapped'] }} — kode tidak dikenal</option>
+                                        @endif
+                                    </select>
+                                    <span class="save-state text-xs text-muted-foreground"></span>
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr class="border-b border-border">
@@ -62,70 +104,12 @@
                 </tbody>
             </table>
         </div>
-        @if($mappingUnits->isEmpty())
+        @if(empty($rows))
             <div class="p-4 text-center text-sm text-muted-foreground border-t border-border">
-                Belum ada data mapping unit. Tambah manual atau import Excel.
+                Belum ada unit yang bisa ditampilkan. Coba <strong>Refresh dari Accurate</strong>.
             </div>
         @endif
     </x-card>
-
-    <div id="action_menu" class="hidden fixed z-[100] w-44 rounded-lg border border-border bg-card p-1 shadow-xl">
-        <button type="button"
-                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
-                onclick="openEditFromMenu()">
-            Edit
-        </button>
-        <button type="button"
-                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
-                onclick="openDeleteFromMenu()">
-            Hapus
-        </button>
-    </div>
-
-    <dialog id="unit_form_modal" class="modal">
-        <div class="modal-box">
-            <h3 id="unit_form_title" class="font-bold text-lg text-foreground">Tambah Mapping Unit</h3>
-            <form id="unit_form" method="POST">
-                @csrf
-                <div id="unit_form_method" class="hidden"></div>
-                <div class="py-4 space-y-3">
-                    <div>
-                        <label for="form_unit_internal" class="block text-sm font-medium text-muted-foreground mb-1">Unit Internal</label>
-                        <input type="text" name="unit_internal" id="form_unit_internal" maxlength="50" required
-                               class="block w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-                    </div>
-                    <div>
-                        <label for="form_unit_coretax" class="block text-sm font-medium text-muted-foreground mb-1">Unit Coretax</label>
-                        <input type="text" name="unit_coretax" id="form_unit_coretax" maxlength="50" required placeholder="UM.0022"
-                               class="block w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-                    </div>
-                </div>
-                <div class="modal-action">
-                    <button type="submit" class="btn btn-primary">Simpan</button>
-                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('unit_form_modal').close()">Batal</button>
-                </div>
-            </form>
-        </div>
-        <form method="dialog" class="modal-backdrop"><button>close</button></form>
-    </dialog>
-
-    <dialog id="delete_unit_modal" class="modal">
-        <div class="modal-box">
-            <h3 class="font-bold text-lg text-foreground">Hapus Mapping?</h3>
-            <p class="py-3 text-sm text-muted-foreground">
-                Yakin hapus mapping <strong id="delete_unit_label">-</strong>?
-            </p>
-            <div class="modal-action">
-                <form id="delete_unit_form" method="POST">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-error">Ya, Hapus</button>
-                </form>
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('delete_unit_modal').close()">Batal</button>
-            </div>
-        </div>
-        <form method="dialog" class="modal-backdrop"><button>close</button></form>
-    </dialog>
 
     <dialog id="import_modal" class="modal">
         <div class="modal-box">
@@ -153,7 +137,7 @@
         <div class="modal-box">
             <h3 class="font-bold text-lg text-foreground">Hapus Semua Data?</h3>
             <p class="py-2 text-sm text-muted-foreground">
-                Semua data Mapping Unit ({{ number_format($mappingUnits->count()) }} baris) akan dihapus permanen.
+                Semua data Mapping Unit ({{ number_format($mappedCount) }} baris terisi) akan dihapus permanen.
             </p>
             <div class="modal-action">
                 <form action="{{ route('mapping-units.clear') }}" method="POST">
@@ -169,83 +153,127 @@
 
     @push('scripts')
     <script>
-        var actionRow = null;
-
-        function openCreateModal() {
-            var form = document.getElementById('unit_form');
-            form.reset();
-            form.action = @json(route('mapping-units.store'));
-            document.getElementById('unit_form_method').innerHTML = '';
-            document.getElementById('unit_form_title').textContent = 'Tambah Mapping Unit';
-            document.getElementById('unit_form_modal').showModal();
+        function refreshUnits() {
+            window.location.href = @json(route('mapping-units.index')) + '?refresh=1';
         }
 
-        function openActionMenu(btn) {
-            var tr = btn.closest('tr');
-            actionRow = {
-                id: tr.getAttribute('data-row-id'),
-                unit_internal: tr.getAttribute('data-unit-internal'),
-                unit_coretax: tr.getAttribute('data-unit-coretax')
-            };
-
-            var menu = document.getElementById('action_menu');
-            menu.classList.remove('hidden');
-            var rect = btn.getBoundingClientRect();
-            var menuW = menu.offsetWidth, menuH = menu.offsetHeight;
-            var left = rect.right + 6;
-            if (left + menuW > window.innerWidth - 8) left = rect.left - menuW - 6;
-            if (left < 8) left = 8;
-            var top = rect.top;
-            if (top + menuH > window.innerHeight - 8) top = window.innerHeight - menuH - 8;
-            if (top < 8) top = 8;
-            menu.style.left = left + 'px';
-            menu.style.top = top + 'px';
-        }
-
-        function closeActionMenu() {
-            document.getElementById('action_menu').classList.add('hidden');
-            actionRow = null;
-        }
-
-        function openEditFromMenu() {
-            if (!actionRow) return;
-            var row = actionRow;
-            closeActionMenu();
-            var form = document.getElementById('unit_form');
-            form.reset();
-            form.action = @json(route('mapping-units.update', ['mappingUnit' => '__ID__'])).replace('__ID__', row.id);
-            document.getElementById('unit_form_method').innerHTML = '<input type="hidden" name="_method" value="PUT">';
-            document.getElementById('unit_form_title').textContent = 'Edit Mapping Unit';
-            document.getElementById('form_unit_internal').value = row.unit_internal || '';
-            document.getElementById('form_unit_coretax').value = row.unit_coretax || '';
-            document.getElementById('unit_form_modal').showModal();
-        }
-
-        function openDeleteFromMenu() {
-            if (!actionRow) return;
-            var row = actionRow;
-            closeActionMenu();
-            document.getElementById('delete_unit_label').textContent = row.unit_internal + ' → ' + row.unit_coretax;
-            document.getElementById('delete_unit_form').action =
-                @json(route('mapping-units.destroy', ['mappingUnit' => '__ID__'])).replace('__ID__', row.id);
-            document.getElementById('delete_unit_modal').showModal();
-        }
+        // Halaman bisa dipulihkan dari cache browser (tombol Back / bfcache).
+        // Muat ulang agar nilai dropdown selalu sesuai data terbaru di server.
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', function() {
-            document.addEventListener('click', function(e) {
-                var btn = e.target.closest('[data-id][onclick*="openActionMenu"]');
-                if (btn) {
-                    e.stopPropagation();
-                    openActionMenu(btn);
-                    return;
-                }
-                if (!e.target.closest('#action_menu')) closeActionMenu();
+            var SAVE_URL = @json(route('mapping-units.quick-save'));
+            var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            var CSRF_TOKEN = csrfMeta ? csrfMeta.content : '';
+
+            document.querySelectorAll('.coretax-unit-select').forEach(function(sel) {
+                sel.addEventListener('change', function() {
+                    saveUnitMapping(sel);
+                });
             });
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') closeActionMenu();
-            });
-            window.addEventListener('scroll', closeActionMenu, true);
-            window.addEventListener('resize', closeActionMenu);
+
+            function saveUnitMapping(sel) {
+                var unit = sel.getAttribute('data-unit') || '';
+                var value = sel.value || '';
+                var state = sel.parentElement.querySelector('.save-state');
+                var previous = sel.getAttribute('data-saved') || '';
+
+                sel.disabled = true;
+                setState(state, 'Menyimpan...', 'text-muted-foreground');
+
+                fetch(SAVE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': CSRF_TOKEN
+                    },
+                    body: JSON.stringify({ unit_internal: unit, unit_coretax: value })
+                }).then(function(res) {
+                    return res.text().then(function(text) {
+                        var body = {};
+                        try { body = JSON.parse(text); } catch (e) { body = {}; }
+                        return { status: res.status, ok: res.ok, body: body };
+                    });
+                }).then(function(res) {
+                    if (!res.ok || !res.body.ok) {
+                        var errors = res.body.errors || {};
+                        var detail = res.body.message
+                            || (errors.unit_coretax && errors.unit_coretax[0])
+                            || (res.status === 419
+                                ? 'Sesi Anda sudah berakhir.'
+                                : (res.status === 200
+                                    ? 'Sesi mungkin sudah berakhir atau server menolak permintaan.'
+                                    : 'Gagal menyimpan.'));
+                        var err = new Error(detail);
+                        err.status = res.status;
+                        throw err;
+                    }
+
+                    // Server mengembalikan nama kanonik (mis. "CRT" tersimpan sebagai "Crt").
+                    var canonical = res.body.unit_internal || unit;
+                    sel.setAttribute('data-unit', canonical);
+                    sel.setAttribute('data-saved', value);
+                    setState(state, value === '' ? 'Dikosongkan' : 'Tersimpan', 'text-success');
+                    syncSiblings(canonical, value);
+                    hideSaveError();
+                }).catch(function(err) {
+                    sel.value = previous;
+                    setState(state, 'Gagal menyimpan', 'text-destructive');
+                    showSaveError(
+                        'Unit "' + unit + '" gagal disimpan'
+                        + (err.status ? ' (' + err.status + ')' : '')
+                        + ': ' + (err.message || 'tidak diketahui')
+                        + ' Muat ulang halaman lalu coba lagi.'
+                    );
+                }).finally(function() {
+                    sel.disabled = false;
+                });
+            }
+
+            // "Crt" dan "CRT" (juga "Kg"/"KG", "pac"/"Pac") adalah satu baris yang
+            // sama di database. Samakan tampilannya tanpa perlu reload.
+            function syncSiblings(canonical, value) {
+                var key = canonical.toLowerCase();
+
+                document.querySelectorAll('.coretax-unit-select').forEach(function(other) {
+                    var name = (other.getAttribute('data-unit') || '').toLowerCase();
+                    if (name !== key) return;
+
+                    other.value = value;
+                    other.setAttribute('data-saved', value);
+
+                    var state = other.parentElement.querySelector('.save-state');
+                    if (state) setState(state, value === '' ? 'Dikosongkan' : 'Tersimpan', 'text-success');
+
+                    var row = other.closest('tr');
+                    var badge = row ? row.querySelector('[data-unmapped-badge]') : null;
+                    if (badge) badge.classList.toggle('hidden', value !== '');
+                });
+            }
+
+            function showSaveError(message) {
+                var banner = document.getElementById('save_error_banner');
+                var text = document.getElementById('save_error_text');
+                if (!banner || !text) return;
+                text.textContent = message;
+                banner.classList.remove('hidden');
+            }
+
+            function hideSaveError() {
+                var banner = document.getElementById('save_error_banner');
+                if (banner) banner.classList.add('hidden');
+            }
+
+            function setState(el, text, cls) {
+                if (!el) return;
+                el.textContent = text;
+                el.className = 'save-state text-xs ' + cls;
+            }
 
             $('#mapping-units-table').DataTable({
                 pageLength: 25,
@@ -260,8 +288,6 @@
                     paginate: { first: 'Pertama', last: 'Terakhir', next: 'Selanjutnya', previous: 'Sebelumnya' }
                 }
             });
-
-            $('#mapping-units-table').on('draw.dt', function() { closeActionMenu(); });
         });
     </script>
     @endpush

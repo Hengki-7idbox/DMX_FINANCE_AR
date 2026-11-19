@@ -8,6 +8,7 @@ use App\Models\DetailSaleItem;
 use App\Models\MappingCustomer;
 use App\Models\MappingProduct;
 use App\Models\PaymentTerm;
+use App\Models\SalesReturn;
 use App\Models\Setting;
 
 /**
@@ -78,6 +79,11 @@ class ExternalXmlBuilder
             ->get()
             ->groupBy('doc_number');
 
+        // Retur per invoice: qty retur dikurangkan dari qty yang diexport.
+        $returns = SalesReturn::whereIn('invoice_no', $docNumbers)
+            ->get()
+            ->groupBy('invoice_no');
+
         $orderParts = '';
         $deliveryParts = '';
         $invoiceParts = '';
@@ -90,7 +96,7 @@ class ExternalXmlBuilder
             }
 
             $lines = $items->get($doc) ?? collect();
-            [$order, $delivery, $invoice] = $this->buildOne($header, $lines);
+            [$order, $delivery, $invoice] = $this->buildOne($header, $lines, $returns->get($doc) ?? collect());
             $orderParts .= $order;
             $deliveryParts .= $delivery;
             $invoiceParts .= $invoice;
@@ -115,7 +121,7 @@ class ExternalXmlBuilder
     /**
      * @return array{0:string,1:string,2:string}
      */
-    private function buildOne(DetailSale $header, $lines): array
+    private function buildOne(DetailSale $header, $lines, $returns = null): array
     {
         $doc = (string) $header->doc_number;
         $date = $header->transaction_date?->format('Y-m-d') ?? '';
@@ -126,10 +132,25 @@ class ExternalXmlBuilder
         $desc = trim((string) $header->description);
         $discount = (float) $header->discount;
 
+        // Qty retur dikurangkan: barang yang sudah diretur tidak ikut diexport.
+        $returnQty = [];
+        foreach ($returns ?? [] as $ret) {
+            $key = (string) $ret->item_no;
+            $returnQty[$key] = ($returnQty[$key] ?? 0) + (float) $ret->quantity;
+        }
+
+        $activeLines = [];
         $gross = 0.0;
         foreach ($lines as $line) {
-            $gross += (float) $line->qty * (float) $line->unit_price;
+            $qty = (float) $line->qty + ($returnQty[(string) $line->item_no] ?? 0.0);
+            if ($qty <= 0.005) {
+                continue;
+            }
+
+            $activeLines[] = ['line' => $line, 'qty' => $qty];
+            $gross += $qty * (float) $line->unit_price;
         }
+
         $net = $gross - $discount;
         $soTax = $gross * $this->taxRate / 100;
         $invTax = $net * $this->taxRate / 100;
@@ -139,15 +160,26 @@ class ExternalXmlBuilder
         $deliveryLines = '';
         $invoiceLines = '';
         $seq = 0;
-        foreach ($lines as $line) {
+        foreach ($activeLines as $row) {
+            $line = $row['line'];
             $itemNo = $this->itemCodeMap[$line->item_no] ?? (string) $line->item_no;
-            $itemDesc = $this->itemNameMap[$line->item_description] ?? trim((string) $line->item_description);
-            $qty = $this->num($line->qty);
+            $itemDesc = $this->itemNameMap[$line->item_description] ?? '';
+            if (trim($itemDesc) === '' || str_starts_with(ltrim($itemDesc), '=')) {
+                $itemDesc = trim((string) $line->item_description);
+
+                // Buang awalan karakter non-ASCII (mojibake dari import) bila
+                // masih ada nama yang bisa dibaca setelahnya.
+                $clean = trim((string) preg_replace('/^[^\x20-\x7E]+/u', '', $itemDesc));
+                if ($clean !== '') {
+                    $itemDesc = $clean;
+                }
+            }
+            $qty = $this->num($row['qty']);
             $price = $this->num($line->unit_price);
             $unit = $this->esc((string) $line->unit);
             $itemNoE = $this->esc($itemNo);
             $itemDescE = $this->esc($itemDesc);
-            $lineTax = $this->num((float) $line->qty * (float) $line->unit_price * $this->taxRate / 100);
+            $lineTax = $this->num((float) $row['qty'] * (float) $line->unit_price * $this->taxRate / 100);
 
             $orderLines .= '<ITEMLINE operation="Add">'
                 . '<KeyID>' . $seq . '</KeyID>'
@@ -178,7 +210,6 @@ class ExternalXmlBuilder
                 . '<GROUPSEQ/>'
                 . '<TAX1ID>' . $this->esc($this->tax1Id) . '</TAX1ID>'
                 . '<TAX1RATE>' . $this->num($this->taxRate) . '</TAX1RATE>'
-                . '<TAX1AMOUNT>' . $lineTax . '</TAX1AMOUNT>'
                 . '<ITEMDISCPC/>'
                 . '<SOSEQ>' . $seq . '</SOSEQ>'
                 . '<BRUTOUNITPRICE>' . $price . '</BRUTOUNITPRICE>'
@@ -203,7 +234,6 @@ class ExternalXmlBuilder
                 . '<GROUPSEQ/>'
                 . '<TAX1ID>' . $this->esc($this->tax1Id) . '</TAX1ID>'
                 . '<TAX1RATE>' . $this->num($this->taxRate) . '</TAX1RATE>'
-                . '<TAX1AMOUNT>' . $lineTax . '</TAX1AMOUNT>'
                 . '<ITEMDISCPC/>'
                 . '<SOSEQ>' . $seq . '</SOSEQ>'
                 . '<BRUTOUNITPRICE>' . $price . '</BRUTOUNITPRICE>'

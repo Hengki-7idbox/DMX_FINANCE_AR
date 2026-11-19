@@ -42,6 +42,10 @@
                     <x-input id="tax_number" name="tax_number" value="{{ old('tax_number') }}" />
                 </x-form-group>
 
+                <x-form-group label="NITKU" for="nitku" :error="$errors->first('nitku')">
+                    <x-input id="nitku" name="nitku" value="{{ old('nitku') }}" />
+                </x-form-group>
+
                 <x-form-group label="Payment Term" for="payment_term_id" :error="$errors->first('payment_term_id')" :required="true">
                     <select id="payment_term_id" name="payment_term_id" class="flex h-9 w-full rounded-lg border border-border bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring">
                         <option value="">Pilih Payment Term</option>

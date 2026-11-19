@@ -44,13 +44,10 @@ class DetailSaleController extends Controller
             $query->where('owing', '!=', 0);
         }
 
-        // Tab internal: sembunyikan dokumen retur (format SR — bukan DMX/SDMX) persis.
-        // Varian sufiks huruf (mis. ...D) disaring di PHP setelah fetch agar query cepat.
-        if ($tab === DetailSale::SOURCE_INTERNAL) {
-            $query->whereNotIn('doc_number', function ($sub) {
-                $sub->select('return_no')->from('sales_returns');
-            });
-        }
+        // Sembunyikan dokumen retur di kedua tab (internal & external):
+        // 1) nomor yang terdaftar di modul Retur Sales, atau
+        // 2) berawalan SR diikuti pemisah: SR/ , SR- , SR - , SR. (termasuk huruf kecil).
+        $this->hideReturnDocs($query);
 
         // Filter tahun & bulan via query param (?bulan=8,9&tahun=2026).
         // Tanpa param → default bulan & tahun terakhir yang punya data (fallback: bulan berjalan).
@@ -87,27 +84,6 @@ class DetailSaleController extends Controller
             ]);
 
         $this->annotateMatch($detailSales, $tab);
-
-        // Filter PHP: varian sufiks huruf retur (mis. ...D) yang base-nya ada di sales_returns.
-        if ($tab === DetailSale::SOURCE_INTERNAL) {
-            $returnNumbers = \DB::table('sales_returns')->pluck('return_no')->all();
-            $detailSales = $detailSales->filter(function ($r) use ($returnNumbers) {
-                $doc = (string) $r->doc_number;
-                if (in_array($doc, $returnNumbers, true)) {
-                    return false;
-                }
-                if (str_starts_with($doc, 'SR/') && strlen($doc) > 4) {
-                    $lastChar = substr($doc, -1);
-                    if (ctype_alpha($lastChar)) {
-                        $base = substr($doc, 0, -1);
-                        if (in_array($base, $returnNumbers, true)) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            })->values();
-        }
 
         // Kolom Faktur Pajak (tab external): cocokkan doc_number dengan reference faktur_pajak.
         // Reference double (2 faktur) dipetakan ke nomor pajak faktur pertama.
@@ -181,12 +157,15 @@ class DetailSaleController extends Controller
         $payload = $detailSales->map(fn ($r) => [
             'id' => $r->id,
             'customer_code' => $r->customer_code,
+            // Mapping customer adalah acuan kode pasangan. Kode dari dokumen tab
+            // lawan hanya dipakai bila customer tersebut belum punya mapping —
+            // data external hasil import sering masih memakai kode internal.
             'customer_code_external' => $tab === DetailSale::SOURCE_EXTERNAL
                 ? $r->customer_code
-                : ($externalCustByDoc[(string) $r->doc_number] ?? $custExternalMap[(string) $r->customer_code] ?? null),
+                : ($custExternalMap[(string) $r->customer_code] ?? $externalCustByDoc[(string) $r->doc_number] ?? null),
             'customer_code_internal' => $tab === DetailSale::SOURCE_INTERNAL
                 ? $r->customer_code
-                : ($internalCustByDoc[(string) $r->doc_number] ?? $custInternalMap[(string) $r->customer_code] ?? null),
+                : ($custInternalMap[(string) $r->customer_code] ?? $internalCustByDoc[(string) $r->doc_number] ?? null),
             'customer_name' => $r->customer_name,
             'doc_number' => $r->doc_number,
             'transaction_date' => $r->transaction_date?->format('Y-m-d'),
@@ -220,11 +199,7 @@ class DetailSaleController extends Controller
         if ($isInvoices) {
             $optQuery->where('owing', '!=', 0);
         }
-        if ($tab === DetailSale::SOURCE_INTERNAL) {
-            $optQuery->whereNotIn('doc_number', function ($sub) {
-                $sub->select('return_no')->from('sales_returns');
-            });
-        }
+        $this->hideReturnDocs($optQuery);
         // Buang 0 — hasil MONTH/YEAR(NULL) pada baris tanpa tanggal (import rusak).
         $availableBulan = (clone $optQuery)
             ->selectRaw('DISTINCT MONTH(transaction_date) AS m')
@@ -241,11 +216,7 @@ class DetailSaleController extends Controller
             ->sort()
             ->values();
         $totalQuery = DetailSale::where('source_type', $tab);
-        if ($tab === DetailSale::SOURCE_INTERNAL) {
-            $totalQuery->whereNotIn('doc_number', function ($sub) {
-                $sub->select('return_no')->from('sales_returns');
-            });
-        }
+        $this->hideReturnDocs($totalQuery);
         $totalAll = $totalQuery->count();
 
         $pageTitle = $isInvoices ? 'Invoice Belum Lunas' : 'Detail Sales';
@@ -294,17 +265,43 @@ class DetailSaleController extends Controller
     }
 
     /**
+     * Sembunyikan dokumen retur dari query Detail Sales (berlaku kedua tab).
+     *
+     * Aturan:
+     *  1) nomor terdaftar di modul Retur Sales (`sales_returns.return_no`), atau
+     *  2) berawalan "SR" diikuti pemisah: SR/ , SR- , SR - , SR. (case-insensitive,
+     *     termasuk varian sufiks huruf seperti SR/2610/0043D).
+     */
+    private function hideReturnDocs(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $query->whereNotIn('doc_number', function ($sub) {
+                $sub->select('return_no')->from('sales_returns');
+            })
+            ->whereRaw("TRIM(doc_number) NOT REGEXP '^SR[[:space:]]*[/.-]'");
+    }
+
+    /**
      * Compare doc_number against the other tab.
      *
-     * Nilai internal : tax_base > 0 (ada PPN) → invoice_amount, selain itu → calculate_field.
-     * Nilai external : amount.
+     * Kolom angka pada export Accurate tidak konsisten antar periode / antar entitas:
+     *   - 'Calculate Field' bisa berarti NET setelah retur (invoice - retur),
+     *   - 'Invoice Amount' = nilai GROSS (sebelum retur),
+     *   - 'Amount' = nilai DPP (mis. invoice / 1.11 saat ada PPN).
+     *
+     * Karena itu sebuah pasangan dianggap 'match' bila nilai eksternal (kolom Amount
+     * tab lawan) sama dengan SALAH SATU representasi internal pada doc_number yang sama:
+     * calculate_field, amount (DPP), invoice_amount (gross), atau calculate_field + retur.
+     * Sebelumnya hanya dibandingkan satu nilai turunan saja sehingga invoice yang
+     * sebenarnya cocok (mis. DMXS26100311) ditandai 'unmatch'.
      *
      * match_status:
-     *   'match'   — |nilaiInternal - nilaiExternal| < 0.01
-     *   'unmatch' — selisih >= 0.01
-     *   'no_pair' — doc_number tidak ada di tab lain
+     *   'match'       — cocok dengan salah satu representasi (selisih < 0.01)
+     *   'unmatch'     — tidak ada yang cocok (selisih >= 0.01)
+     *   'no_pair'     — doc_number tidak ada di tab lain
+     *   'full_return' — (tab internal) semua qty item sudah diretur
      *
-     * Berlaku untuk kedua tab (status identik untuk sepasang doc).
+     * Berlaku untuk kedua tab (status identik untuk sepasang doc), kecuali
+     * 'full_return' yang hanya muncul di tab internal.
      */
     private function annotateMatch($detailSales, string $tab): void
     {
@@ -320,32 +317,40 @@ class DetailSaleController extends Controller
             ->get(['doc_number', 'amount'])
             ->keyBy('doc_number');
 
-        // Nilai internal per doc_number (hanya dibutuhkan saat tab = external).
-        // calculate_field export internal sudah net return_amount → jangan dipulihkan.
+        // Baris internal per doc_number. Saat tab = internal, baris internal = $detailSales
+        // itu sendiri; saat tab = external, ambil dari tab internal.
         $internalRows = $tab === DetailSale::SOURCE_INTERNAL
-            ? collect()
+            ? $detailSales
             : DetailSale::where('source_type', DetailSale::SOURCE_INTERNAL)
                 ->whereIn('doc_number', $docNumbers)
-                ->get(['doc_number', 'tax_base', 'invoice_amount', 'calculate_field', 'return_amount']);
-        $internalVals = $internalRows->mapWithKeys(fn ($r) => [
-            $r->doc_number => (float) $r->tax_base > 0
-                ? (float) $r->invoice_amount
-                : (float) $r->calculate_field,
-        ]);
-        $internalReturns = $internalRows->mapWithKeys(fn ($r) => [
-            $r->doc_number => (float) $r->return_amount,
-        ]);
+                ->get(['doc_number', 'tax_base', 'invoice_amount', 'amount', 'calculate_field', 'return_amount']);
 
-        // Total retur per invoice (amount retur sudah negatif). Koreksi hanya untuk
-        // invoice yang punya dokumen SR di sales_returns — calculate_field export
-        // internal sudah net return_amount kolom export, jadi hindari potong ganda.
-        $returnDeductions = SalesReturn::query()
-            ->whereIn('invoice_no', $docNumbers)
-            ->groupBy('invoice_no')
-            ->selectRaw('invoice_no, SUM(amount) AS total')
-            ->pluck('total', 'invoice_no');
+        // Kumpulan nilai internal yang mungkin (semua representasi) per doc_number.
+        $internalCandidates = [];
+        foreach ($internalRows as $r) {
+            $calc = (float) $r->calculate_field;
+            $internalCandidates[(string) $r->doc_number] = [
+                $calc,
+                (float) $r->amount,
+                (float) $r->invoice_amount,
+                $calc + (float) $r->return_amount,
+            ];
+        }
+
+        // Dokumen yang seluruh qty itemnya sudah diretur: statusnya Full Retur
+        // (bukan Match/Unmatch) karena tidak ada qty tersisa untuk dikirim.
+        $fullReturn = $tab === DetailSale::SOURCE_INTERNAL
+            ? $this->fullReturnDocs($docNumbers->all())
+            : [];
 
         foreach ($detailSales as $row) {
+            $doc = (string) $row->doc_number;
+
+            if (isset($fullReturn[$doc])) {
+                $row->match_status = 'full_return';
+                continue;
+            }
+
             $partner = $others[$row->doc_number] ?? null;
 
             if ($partner === null) {
@@ -353,34 +358,241 @@ class DetailSaleController extends Controller
                 continue;
             }
 
-            $doc = (string) $row->doc_number;
-
-            if ($tab === DetailSale::SOURCE_INTERNAL) {
-                $base = (float) $row->tax_base > 0
-                    ? (float) $row->invoice_amount
-                    : (float) $row->calculate_field;
-                $koreksi = array_key_exists($doc, $returnDeductions->all())
-                    ? (float) $returnDeductions[$doc] + (float) $row->return_amount
-                    : 0.0;
-                $nilaiInternal = $base + $koreksi;
-                $nilaiExternal = (float) $partner->amount;
-            } else {
-                $internalRowBase = $internalVals[$doc] ?? null;
-                if ($internalRowBase === null) {
-                    $row->match_status = 'no_pair';
-                    continue;
-                }
-                $koreksi = array_key_exists($doc, $returnDeductions->all())
-                    ? (float) $returnDeductions[$doc] + (float) ($internalReturns[$doc] ?? 0)
-                    : 0.0;
-                $nilaiInternal = (float) $internalRowBase + $koreksi;
-                $nilaiExternal = (float) $row->amount;
+            $candidates = $internalCandidates[$doc] ?? [];
+            if ($candidates === []) {
+                $row->match_status = 'no_pair';
+                continue;
             }
 
-            $row->match_status = abs($nilaiInternal - $nilaiExternal) < 0.01
-                ? 'match'
-                : 'unmatch';
+            // Nilai eksternal = kolom Amount pada baris tab lawan.
+            $nilaiExternal = $tab === DetailSale::SOURCE_INTERNAL
+                ? (float) $partner->amount
+                : (float) $row->amount;
+
+            $isMatch = false;
+            foreach ($candidates as $v) {
+                if (abs($v - $nilaiExternal) < 0.01) {
+                    $isMatch = true;
+                    break;
+                }
+            }
+
+            $row->match_status = $isMatch ? 'match' : 'unmatch';
         }
+    }
+
+    /**
+     * Bandingkan nilai internal (beberapa representasi) dengan nilai external.
+     *
+     * @param  array<int,float>  $candidates
+     */
+    private function compareMatch(array $candidates, float $externalAmount): string
+    {
+        if ($candidates === []) {
+            return 'no_pair';
+        }
+
+        foreach ($candidates as $value) {
+            if (abs((float) $value - $externalAmount) < 0.01) {
+                return 'match';
+            }
+        }
+
+        return 'unmatch';
+    }
+
+    /**
+     * Dokumen internal yang seluruh qty itemnya sudah tertutup retur.
+     *
+     * Dokumen seperti ini tidak punya sisa qty untuk dikirim ke Accurate, jadi
+     * statusnya bukan Match/Unmatch melainkan 'full_return'.
+     *
+     * @param  array<int,string>  $docNumbers
+     * @return array<string,bool> doc_number => true
+     */
+    private function fullReturnDocs(array $docNumbers): array
+    {
+        $docNumbers = array_values(array_unique(array_map('strval', $docNumbers)));
+        if ($docNumbers === []) {
+            return [];
+        }
+
+        $itemTotals = DB::table('detail_sale_items')
+            ->select('doc_number', 'item_no', DB::raw('SUM(qty) AS qty'))
+            ->where('source_type', DetailSale::SOURCE_INTERNAL)
+            ->whereIn('doc_number', $docNumbers)
+            ->groupBy('doc_number', 'item_no')
+            ->get();
+
+        if ($itemTotals->isEmpty()) {
+            return [];
+        }
+
+        $returnTotals = DB::table('sales_returns')
+            ->select('invoice_no', 'item_no', DB::raw('SUM(ABS(quantity)) AS qty'))
+            ->whereIn('invoice_no', $docNumbers)
+            ->groupBy('invoice_no', 'item_no')
+            ->get();
+
+        if ($returnTotals->isEmpty()) {
+            return [];
+        }
+
+        [, $itemCodeMap] = $this->externalMaps();
+
+        // Retur bisa menunjuk kode internal berbeda untuk barang yang sama, jadi
+        // item disamakan lewat kode eksternal bila ada, kalau tidak kode internal.
+        $keyOf = static function (string $doc, string $itemNo) use ($itemCodeMap): string {
+            $external = trim((string) ($itemCodeMap[$itemNo] ?? ''));
+
+            return $doc . '|' . ($external !== '' ? 'X:' . strtoupper($external) : 'I:' . $itemNo);
+        };
+
+        $returned = [];
+        foreach ($returnTotals as $row) {
+            $key = $keyOf((string) $row->invoice_no, (string) $row->item_no);
+            $returned[$key] = ($returned[$key] ?? 0.0) + (float) $row->qty;
+        }
+
+        // Qty item dijumlahkan per kunci yang sama dengan retur. Beberapa kode
+        // internal bisa menunjuk barang Accurate yang sama (mis. CHF028.1.5.1
+        // dan CHF028.1.5.1.2 -> BP020.10), jadi qty-nya harus digabung dulu.
+        $itemQty = [];
+        $documents = [];
+        foreach ($itemTotals as $row) {
+            $doc = (string) $row->doc_number;
+            $qty = (float) $row->qty;
+
+            if ($qty <= 0.005) {
+                continue;
+            }
+
+            // Hanya dokumen yang punya item qty positif yang bisa dinilai.
+            $documents[$doc] = true;
+
+            $key = $keyOf($doc, (string) $row->item_no);
+            $itemQty[$key] = ($itemQty[$key] ?? 0.0) + $qty;
+        }
+
+        foreach ($itemQty as $key => $qty) {
+            $doc = (string) strstr($key, '|', true);
+            if (($returned[$key] ?? 0.0) < $qty - 0.005) {
+                $documents[$doc] = false;
+            }
+        }
+
+        return array_filter($documents);
+    }
+
+    /**
+     * Status Match/Unmatch sekumpulan dokumen pada satu tab.
+     *
+     * @param  array<int,string>  $docNumbers
+     * @return array<string,string> doc_number => match|unmatch|no_pair
+     */
+    private function matchStatusMap(array $docNumbers, string $tab): array
+    {
+        $docNumbers = array_values(array_unique(array_map('strval', $docNumbers)));
+        if ($docNumbers === []) {
+            return [];
+        }
+
+        $otherTab = $tab === DetailSale::SOURCE_INTERNAL
+            ? DetailSale::SOURCE_EXTERNAL
+            : DetailSale::SOURCE_INTERNAL;
+
+        $others = DetailSale::where('source_type', $otherTab)
+            ->whereIn('doc_number', $docNumbers)
+            ->get(['doc_number', 'amount'])
+            ->keyBy('doc_number');
+
+        // Tab external: nilai pembanding diambil dari baris external itu sendiri.
+        $selfAmounts = $tab === DetailSale::SOURCE_EXTERNAL
+            ? DetailSale::where('source_type', DetailSale::SOURCE_EXTERNAL)
+                ->whereIn('doc_number', $docNumbers)
+                ->pluck('amount', 'doc_number')
+            : collect();
+
+        $internalRows = DetailSale::where('source_type', DetailSale::SOURCE_INTERNAL)
+            ->whereIn('doc_number', $docNumbers)
+            ->get(['doc_number', 'tax_base', 'invoice_amount', 'amount', 'calculate_field', 'return_amount']);
+
+        $internalCandidates = [];
+        foreach ($internalRows as $r) {
+            $calc = (float) $r->calculate_field;
+            $internalCandidates[(string) $r->doc_number] = [
+                $calc,
+                (float) $r->amount,
+                (float) $r->invoice_amount,
+                $calc + (float) $r->return_amount,
+            ];
+        }
+
+        $result = [];
+        $fullReturn = $tab === DetailSale::SOURCE_INTERNAL
+            ? $this->fullReturnDocs($docNumbers)
+            : [];
+
+        foreach ($docNumbers as $doc) {
+            if (isset($fullReturn[$doc])) {
+                $result[$doc] = 'full_return';
+                continue;
+            }
+
+            $partner = $others[$doc] ?? null;
+            if ($partner === null) {
+                $result[$doc] = 'no_pair';
+                continue;
+            }
+
+            $nilaiExternal = $tab === DetailSale::SOURCE_INTERNAL
+                ? (float) $partner->amount
+                : (float) ($selfAmounts[$doc] ?? 0);
+
+            $result[$doc] = $this->compareMatch($internalCandidates[$doc] ?? [], $nilaiExternal);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Hitung ulang status Match/Unmatch satu dokumen tanpa reload halaman.
+     */
+    public function matchStatus(Request $request)
+    {
+        $data = $request->validate([
+            'doc_number' => ['required', 'string', 'max:50'],
+            'tab' => ['nullable', Rule::in([DetailSale::SOURCE_INTERNAL, DetailSale::SOURCE_EXTERNAL])],
+        ]);
+
+        $tab = $data['tab'] ?? $this->resolveTab($request);
+        $map = $this->matchStatusMap([$data['doc_number']], $tab);
+
+        return response()->json([
+            'ok' => true,
+            'status' => $map[$data['doc_number']] ?? 'no_pair',
+        ]);
+    }
+
+    /**
+     * Hitung ulang status Match/Unmatch banyak dokumen sekaligus (tombol toolbar).
+     */
+    public function matchStatusBulk(Request $request)
+    {
+        $data = $request->validate([
+            'docs' => ['required', 'array', 'min:1', 'max:5000'],
+            'docs.*' => ['required'],
+            'tab' => ['nullable', Rule::in([DetailSale::SOURCE_INTERNAL, DetailSale::SOURCE_EXTERNAL])],
+        ]);
+
+        $docs = array_map(fn ($doc) => trim((string) $doc), $data['docs']);
+
+        $tab = $data['tab'] ?? $this->resolveTab($request);
+
+        return response()->json([
+            'ok' => true,
+            'statuses' => $this->matchStatusMap($docs, $tab),
+        ]);
     }
 
     public function import(Request $request)
@@ -800,16 +1012,18 @@ class DetailSaleController extends Controller
 
         $result = (new CoretaxXmlBuilder())->build($docNumbers, $tab);
 
-        if ($result['blockers'] !== []) {
+        // Dokumen bermasalah dilewati satu per satu; export tetap jalan untuk
+        // dokumen yang valid dan daftar yang dilewati dikirim ke pengguna.
+        if ($result['count'] === 0) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Export dibatalkan: ' . count($result['blockers']) . ' data belum lengkap.',
-                'errors' => $result['blockers'],
+                'message' => $result['skipped'] !== []
+                    ? 'Tidak ada dokumen yang bisa diexport.'
+                    : 'Invoice tidak ditemukan di tab ' . $tab . '.',
+                'errors' => $result['skipped'],
+                'unmapped' => $result['unmapped'] ?? [],
+                'unmapped_default' => $result['unmapped_default'] ?? null,
             ], 422);
-        }
-
-        if ($result['count'] === 0) {
-            return response()->json(['ok' => false, 'message' => 'Invoice tidak ditemukan di tab ' . $tab . '.'], 422);
         }
 
         $single = count($docNumbers) === 1 ? $docNumbers[0] : null;
@@ -818,6 +1032,9 @@ class DetailSaleController extends Controller
         return response()->json([
             'ok' => true,
             'count' => $result['count'],
+            'skipped' => $result['skipped'],
+            'unmapped' => $result['unmapped'] ?? [],
+            'unmapped_default' => $result['unmapped_default'] ?? null,
             'files' => [
                 ['name' => 'Coretax' . $suffix . '.xml', 'content' => $result['xml']],
             ],
@@ -1052,19 +1269,12 @@ class DetailSaleController extends Controller
         $returns = SalesReturn::where('invoice_no', $doc)->orderBy('id')->get();
 
         foreach ($returns as $ret) {
-            $remaining = (float) $ret->quantity;
+            $remaining = $this->refineReturnQty($ret, $prepared, $itemCodeMap);
             $found = false;
             $retExternal = trim((string) ($itemCodeMap[(string) $ret->item_no] ?? ''));
 
             foreach ($prepared as &$row) {
-                $sameItem = (string) $row['line']->item_no === (string) $ret->item_no;
-
-                if (! $sameItem && $retExternal !== '') {
-                    $rowExternal = trim((string) ($itemCodeMap[(string) $row['line']->item_no] ?? ''));
-                    $sameItem = $rowExternal !== '' && $rowExternal === $retExternal;
-                }
-
-                if (! $sameItem) {
+                if (! $this->isSameReturnItem($row['line'], $ret, $itemCodeMap)) {
                     continue;
                 }
 
@@ -1580,6 +1790,7 @@ class DetailSaleController extends Controller
     {
         $data = $request->validate([
             'doc_number' => ['required', 'string', 'max:50'],
+            'tab' => ['nullable', Rule::in([DetailSale::SOURCE_INTERNAL, DetailSale::SOURCE_EXTERNAL])],
         ]);
 
         $doc = $data['doc_number'];
@@ -1628,10 +1839,13 @@ class DetailSaleController extends Controller
 
         $alias = $client->identity()['alias'] ?? null;
 
+        $tab = $data['tab'] ?? DetailSale::SOURCE_EXTERNAL;
+
         return response()->json([
             'ok' => true,
             'ext' => $ext,
             'numbers' => $numbers,
+            'match_status' => $this->matchStatusMap([$doc], $tab)[$doc] ?? 'no_pair',
             'database' => $alias,
             'message' => $stages === []
                 ? 'Tidak ada SO/DO/INV untuk ' . $doc . ' di Accurate.'
@@ -2296,14 +2510,20 @@ class DetailSaleController extends Controller
             }
 
             $tolerance = max(1.0, abs($target) * 0.005);
-            $ratio = $info['units'][$this->normalizeUnitName($unit)] ?? null;
+            $unitKey = $this->normalizeUnitName($unit);
+            $ratio = $info['units'][$unitKey] ?? null;
             $unitSupported = $ratio !== null && $ratio > 0;
+
+            // Accurate mencocokkan nama satuan secara case-sensitive ("Crt" ≠ "crt"),
+            // sedangkan data internal bisa menyimpan "crt"/"CRT". Kirim nama kanonik
+            // dari master item Accurate bila ada.
+            $unitSend = (string) ($info['names'][$unitKey] ?? $unit);
 
             // 1) Qty baris sudah sepadan dengan harganya (qty x harga = nilai baris):
             //    kirim apa adanya selama satuannya dikenal item Accurate.
             if ($unitSupported && abs(($qtyBase * $price) - $target) <= $tolerance) {
                 $row['qty_send'] = $qtyBase;
-                $row['unit_send'] = $unit;
+                $row['unit_send'] = $unitSend;
                 $row['price_send'] = $price;
                 continue;
             }
@@ -2318,14 +2538,14 @@ class DetailSaleController extends Controller
                 $qtyBulat = round($qtySend);
                 if ($qtyBulat > 0 && abs(($qtyBulat * $price) - $target) <= 0.01) {
                     $row['qty_send'] = $qtyBulat;
-                    $row['unit_send'] = $unit;
+                    $row['unit_send'] = $unitSend;
                     $row['price_send'] = $price;
                     continue;
                 }
 
                 if (abs(($qtySend * $price) - $target) <= $tolerance) {
                     $row['qty_send'] = $qtySend;
-                    $row['unit_send'] = $unit;
+                    $row['unit_send'] = $unitSend;
                     $row['price_send'] = $price;
                     continue;
                 }
@@ -2344,11 +2564,11 @@ class DetailSaleController extends Controller
     }
 
     /**
-     * Rasio satuan item Accurate: kode => ['base' => 'Crt', 'units' => ['crt' => 1, 'kg' => 0.2]].
+     * Rasio satuan item Accurate: kode => ['base' => 'Crt', 'units' => ['crt' => 1, 'kg' => 0.2], 'names' => ['crt' => 'Crt', 'kg' => 'Kg']].
      * Rasio = jumlah satuan dasar per 1 satuan tersebut. Di-cache 1 hari.
      *
      * @param  array<int,string>  $codes
-     * @return array<string,array{base:string,units:array<string,float>}>
+     * @return array<string,array{base:string,units:array<string,float>,names:array<string,string>}>
      */
     private function itemUnitRatios(AccurateApiClient $client, array $codes): array
     {
@@ -2361,8 +2581,9 @@ class DetailSaleController extends Controller
                 continue;
             }
 
-            $cached = Cache::get('accurate.item.units.' . md5($key));
-            if (is_array($cached)) {
+            // v2: nilai cache menyertakan nama satuan kanonik (case-sensitive Accurate).
+            $cached = Cache::get('accurate.item.units.v2.' . md5($key));
+            if (is_array($cached) && isset($cached['names'])) {
                 $map[$key] = $cached;
             } else {
                 $missing[$key] = $code;
@@ -2394,17 +2615,19 @@ class DetailSaleController extends Controller
                 }
 
                 $units = [$this->normalizeUnitName($base) => 1.0];
+                $names = [$this->normalizeUnitName($base) => $base];
                 for ($i = 2; $i <= 5; $i++) {
                     $name = trim((string) ($row['unit' . $i]['name'] ?? ''));
                     $ratio = (float) ($row['ratio' . $i] ?? 0);
                     if ($name !== '' && $ratio > 0) {
                         $units[$this->normalizeUnitName($name)] = $ratio;
+                        $names[$this->normalizeUnitName($name)] = $name;
                     }
                 }
 
-                $info = ['base' => $base, 'units' => $units];
+                $info = ['base' => $base, 'units' => $units, 'names' => $names];
                 $map[$no] = $info;
-                Cache::put('accurate.item.units.' . md5($no), $info, 86400);
+                Cache::put('accurate.item.units.v2.' . md5($no), $info, 86400);
             }
 
             usleep(150000);
@@ -2439,14 +2662,36 @@ class DetailSaleController extends Controller
         // pada dokumen maupun item. Kode lain tetap ber-PPN seperti sebelumnya.
         $taxable = ! Taxability::isNonPpnCustomer($customerNo);
 
+        // Diskon di Accurate adalah DISKON INVOICE (satu nilai untuk dokumen).
+        // Harga item tetap harga gross; diskon dikirim terpisah lewat cashDiscount,
+        // bukan dengan menurunkan unitPrice.
+        $invoiceDiscount = max(0.0, round((float) $header->discount, 2));
+        // Amount internal = nilai setelah diskon (DPP), jadi gross = amount + diskon.
+        $grossTotal = (float) $header->amount + $invoiceDiscount;
+        $discRate = $grossTotal > 0 && $invoiceDiscount > 0
+            ? $invoiceDiscount / $grossTotal
+            : 0.0;
+
         foreach ($prepared as $row) {
+            $qty = (float) ($row['qty_send'] ?? $row['qty']);
+            $priceNet = (float) ($row['price_send'] ?? $row['line']->unit_price);
+            $priceGross = $priceNet;
+
+            if ($discRate > 0 && $discRate < 1) {
+                $calc = $priceNet / (1 - $discRate);
+
+                // Pakai harga gross baris internal bila hasilnya sama (kasus satuan
+                // tidak berubah) supaya harga tetap bulat seperti Accurate.
+                $linePrice = (float) $row['line']->unit_price;
+                $priceGross = abs($calc - $linePrice) < 0.01 ? $linePrice : round($calc, 6);
+            }
+
             $item = [
                 'itemNo' => (string) $row['item_no_external'],
                 'detailName' => (string) $row['item_name_external'],
-                'quantity' => (float) ($row['qty_send'] ?? $row['qty']),
+                'quantity' => $qty,
                 'itemUnitName' => (string) ($row['unit_send'] ?? $row['line']->unit),
-                'unitPrice' => (float) ($row['price_send'] ?? $row['line']->unit_price),
-                'itemDiscPercent' => '0',
+                'unitPrice' => $priceGross,
                 'useTax1' => $taxable,
             ];
 
@@ -2482,6 +2727,11 @@ class DetailSaleController extends Controller
 
         if ($type === ExternalDocument::TYPE_INV) {
             $payload['detailDownPayment'] = [];
+
+            // Diskon invoice (bukan diskon item): harga tetap gross.
+            if ($invoiceDiscount > 0) {
+                $payload['cashDiscount'] = $invoiceDiscount;
+            }
         }
 
         return $payload;
@@ -2610,6 +2860,76 @@ class DetailSaleController extends Controller
         $formatted = rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
 
         return $formatted === '' ? '0' : $formatted;
+    }
+
+    /**
+     * Cocokkan item retur dengan baris invoice: kode internal sama, atau
+     * kode eksternal (Accurate) sama.
+     */
+    private function isSameReturnItem(object $line, SalesReturn $ret, array $itemCodeMap): bool
+    {
+        if ((string) $line->item_no === (string) $ret->item_no) {
+            return true;
+        }
+
+        $retExternal = trim((string) ($itemCodeMap[(string) $ret->item_no] ?? ''));
+        if ($retExternal === '') {
+            return false;
+        }
+
+        return trim((string) ($itemCodeMap[(string) $line->item_no] ?? '')) === $retExternal;
+    }
+
+    /**
+     * Qty retur dari export Accurate hanya 2 desimal (mis. 0,47 Crt padahal
+     * sebenarnya 1,9 Kg = 0,475 Crt), sehingga konversinya ke satuan baris
+     * bergeser (1,88 Kg). Bila qty hasil hitung dari nilai retur berbeda hanya
+     * karena pembulatan tersebut, pakai angka dari nilai retur supaya
+     * qty x harga = nilai retur dan total invoice tetap balance.
+     *
+     * @param  array<int,array{line:DetailSaleItem,qty:float}>  $prepared
+     */
+    private function refineReturnQty(SalesReturn $ret, array $prepared, array $itemCodeMap): float
+    {
+        $qty = (float) $ret->quantity;
+
+        if (abs((float) $ret->amount) <= 0.005) {
+            return $qty;
+        }
+
+        $matchedIndex = null;
+        $matchedCount = 0;
+
+        foreach ($prepared as $index => $row) {
+            if ($this->isSameReturnItem($row['line'], $ret, $itemCodeMap)) {
+                $matchedIndex = $index;
+                $matchedCount++;
+            }
+        }
+
+        // Retur yang menunjuk beberapa baris invoice tetap dibagi seperti semula.
+        if ($matchedCount !== 1) {
+            return $qty;
+        }
+
+        $line = $prepared[$matchedIndex]['line'];
+        $lineQty = (float) $line->qty;
+        $lineAmount = (float) $line->amount;
+
+        if ($lineQty <= 0 || $lineAmount <= 0) {
+            return $qty;
+        }
+
+        // Harga per satuan dasar item, dipakai mengubah nilai retur jadi qty.
+        $implied = abs((float) $ret->amount) / ($lineAmount / $lineQty);
+
+        // Selisih di atas 0,0051 berarti harga retur memang beda dari harga
+        // invoice (bukan pembulatan 2 desimal) -> tetap pakai qty retur.
+        if ($implied <= 0 || abs($implied - abs($qty)) > 0.0051) {
+            return $qty;
+        }
+
+        return $qty < 0 ? -$implied : $implied;
     }
 
     private function externalMaps(): array
