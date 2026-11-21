@@ -305,6 +305,7 @@ class OlahDataController extends Controller
         $fpMap = FakturPajak::query()
             ->whereNotNull('reference')
             ->where('reference', '!=', '')
+            ->whereRaw("TRIM(COALESCE(tax_invoice_number, '')) <> ''")
             ->orderBy('id')
             ->get(['reference', 'tax_invoice_number'])
             ->unique('reference')

@@ -7,7 +7,7 @@
                 </svg>
                 Import
             </x-button>
-            <x-button variant="destructive" onclick="document.getElementById('clear_modal').showModal()">
+            <x-button variant="destructive" onclick="document.getElementById('clear_modal').showModal(); if (window.updateClearPreview) window.updateClearPreview();">
                 <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
@@ -151,21 +151,75 @@
         </form>
     </dialog>
 
-    {{-- Clear Data Modal --}}
+    {{-- Clear Data Modal: hapus per periode (bulan) atau rentang tanggal --}}
     <dialog id="clear_modal" class="modal">
-        <div class="modal-box">
-            <h3 class="font-bold text-lg text-foreground">Hapus Semua Data?</h3>
+        <div class="modal-box max-w-lg">
+            <h3 class="font-bold text-lg text-foreground">Hapus Data Faktur Pajak</h3>
             <p class="py-2 text-sm text-muted-foreground">
-                Semua data Faktur Pajak akan dihapus permanen.
+                Pilih periode yang ingin dihapus. Data yang sudah dihapus tidak bisa dikembalikan
+                kecuali di-import ulang dari CSV e-Faktur.
             </p>
-            <div class="modal-action">
-                <form action="{{ route('faktur-pajak.clear') }}" method="POST">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-error">Ya, Hapus</button>
-                </form>
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('clear_modal').close()">Batal</button>
-            </div>
+
+            <form id="clear_form" action="{{ route('faktur-pajak.clear') }}" method="POST" class="space-y-4">
+                @csrf
+                @method('DELETE')
+
+                <div class="flex flex-wrap items-center gap-4 text-sm text-foreground">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="mode" value="bulan" class="radio radio-sm" checked>
+                        <span>Per Bulan <span class="text-xs text-muted-foreground">(periode FP)</span></span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="mode" value="tanggal" class="radio radio-sm">
+                        <span>Per Tanggal <span class="text-xs text-muted-foreground">(tanggal FP)</span></span>
+                    </label>
+                </div>
+
+                <div id="clear_mode_bulan" class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="clear_bulan" class="mb-1 block text-xs font-medium text-muted-foreground">Bulan</label>
+                        <select id="clear_bulan" name="bulan"
+                                class="w-full min-h-9 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                            @foreach ($bulanNames as $num => $nama)
+                                <option value="{{ $num }}" @selected((int) $defaultBulan === (int) $num)>{{ $nama }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="clear_tahun" class="mb-1 block text-xs font-medium text-muted-foreground">Tahun</label>
+                        <select id="clear_tahun" name="tahun"
+                                class="w-full min-h-9 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                            @foreach ($tahunOptions as $th)
+                                <option value="{{ $th }}" @selected((string) $defaultTahun === (string) $th)>{{ $th }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div id="clear_mode_tanggal" class="grid grid-cols-2 gap-3" style="display: none;">
+                    <div>
+                        <label for="clear_dari" class="mb-1 block text-xs font-medium text-muted-foreground">Tanggal Dari</label>
+                        <input type="date" id="clear_dari" name="dari" value="{{ $defaultDari }}"
+                               class="w-full min-h-9 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                    </div>
+                    <div>
+                        <label for="clear_sampai" class="mb-1 block text-xs font-medium text-muted-foreground">Tanggal Sampai</label>
+                        <input type="date" id="clear_sampai" name="sampai" value="{{ $defaultSampai }}"
+                               class="w-full min-h-9 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                    </div>
+                </div>
+
+                <div class="rounded-md border border-border bg-background px-3 py-2">
+                    <div class="text-xs text-muted-foreground">Akan dihapus</div>
+                    <div id="clear_preview_count" class="text-lg font-semibold text-foreground">0 baris</div>
+                    <div id="clear_preview_dpp" class="text-xs text-muted-foreground">Total DPP: Rp 0</div>
+                </div>
+
+                <div class="modal-action">
+                    <button type="submit" id="clear_submit" class="btn btn-error" disabled>Ya, Hapus</button>
+                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('clear_modal').close()">Batal</button>
+                </div>
+            </form>
         </div>
         <form method="dialog" class="modal-backdrop">
             <button>close</button>
@@ -255,7 +309,11 @@
                     { data: 'tax_invoice_code', className: 'px-2 py-1.5 max-w-[280px] truncate text-foreground',
                         render: function (v, type) { v = v || ''; if (type !== 'display') return v; return v === '' ? '-' : '<span title="' + escapeHtml(v) + '">' + escapeHtml(v) + '</span>'; } },
                     { data: 'tax_invoice_number', className: 'px-2 py-1.5 font-medium text-foreground',
-                        render: function (v, type) { if (type !== 'display') return v || ''; return v ? escapeHtml(v) : '-'; } },
+                        render: function (v, type) {
+                            if (type !== 'display') return v || '';
+                            if (v) return escapeHtml(v);
+                            return '<span class="inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning ring-1 ring-warning/40">Belum terbit</span>';
+                        } },
                     { data: 'date', className: 'px-2 py-1.5 text-muted-foreground',
                         render: function (v, type) {
                             if (type !== 'display') return v || '';
@@ -455,6 +513,69 @@
                     .catch(function () {
                         showFpToast('Gagal menyimpan', false);
                     });
+            });
+
+            // ==== Clear Data: pilih periode + preview instan ====
+            var CLEAR_BULAN = @json($bulanNames);
+            var clearForm = document.getElementById('clear_form');
+            var clearSubmit = document.getElementById('clear_submit');
+
+            function clearMode() {
+                var el = clearForm.querySelector('input[name="mode"]:checked');
+                return el ? el.value : 'bulan';
+            }
+
+            window.updateClearPreview = function () {
+                if (!clearForm) return;
+
+                var mode = clearMode();
+                document.getElementById('clear_mode_bulan').style.display = mode === 'bulan' ? '' : 'none';
+                document.getElementById('clear_mode_tanggal').style.display = mode === 'tanggal' ? '' : 'none';
+
+                var rows;
+
+                if (mode === 'bulan') {
+                    var nama = CLEAR_BULAN[String(document.getElementById('clear_bulan').value)] || '';
+                    var tahun = String(document.getElementById('clear_tahun').value || '');
+                    rows = FP_DATA.filter(function (r) {
+                        return String(r.period || '') === nama && String(r.tahun || '') === tahun;
+                    });
+                } else {
+                    var d1 = document.getElementById('clear_dari').value || '';
+                    var d2 = document.getElementById('clear_sampai').value || '';
+
+                    if (d1 && d2 && d1 > d2) {
+                        document.getElementById('clear_preview_count').textContent = 'Rentang tanggal terbalik';
+                        document.getElementById('clear_preview_dpp').textContent = '';
+                        clearSubmit.disabled = true;
+                        return;
+                    }
+
+                    rows = FP_DATA.filter(function (r) {
+                        var d = r.date || '';
+                        if (!d) return false;
+                        if (!d1 && !d2) return false;
+                        if (d1 && d < d1) return false;
+                        if (d2 && d > d2) return false;
+                        return true;
+                    });
+                }
+
+                var dpp = rows.reduce(function (sum, r) {
+                    return sum + Number(r.selling_price || 0);
+                }, 0);
+
+                document.getElementById('clear_preview_count').textContent = rows.length + ' baris';
+                document.getElementById('clear_preview_dpp').textContent = 'Total DPP: ' + formatRp(dpp);
+                clearSubmit.disabled = rows.length === 0;
+            };
+
+            ['clear_bulan', 'clear_tahun', 'clear_dari', 'clear_sampai'].forEach(function (id) {
+                document.getElementById(id).addEventListener('change', window.updateClearPreview);
+            });
+
+            clearForm.querySelectorAll('input[name="mode"]').forEach(function (el) {
+                el.addEventListener('change', window.updateClearPreview);
             });
         });
     </script>

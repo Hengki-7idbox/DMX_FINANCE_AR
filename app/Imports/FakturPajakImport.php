@@ -43,6 +43,7 @@ class FakturPajakImport implements ToCollection
     private int $updated = 0;
     private int $unchanged = 0;
     private int $skipped = 0;
+    private int $drafts = 0;
 
     public function collection(Collection $rows): void
     {
@@ -61,10 +62,14 @@ class FakturPajakImport implements ToCollection
                 continue;
             }
 
+            // Baris CREATED (belum terbit) tidak punya nomor. Tetap disimpan
+            // sebagai draft supaya ikut dihitung; nomor diisi saat import ulang
+            // setelah FP di-approve.
             $number = $this->clean($this->cell($row, $colMap, 'tax_invoice_number'));
-            if ($number === '') {
-                $this->skipped++;
-                continue;
+            $number = $number === '' ? null : $number;
+
+            if ($number === null) {
+                $this->drafts++;
             }
 
             $payload = [
@@ -89,13 +94,24 @@ class FakturPajakImport implements ToCollection
         }
     }
 
-    private function upsert(string $number, array $payload): void
+    private function upsert(?string $number, array $payload): void
     {
-        $existing = FakturPajak::where('tax_invoice_number', $number)->first();
+        $existing = null;
+
+        if ($number !== null) {
+            $existing = FakturPajak::where('tax_invoice_number', $number)->first();
+        }
+
+        // Draft yang sama (belum punya nomor) tidak boleh dibuat dobel;
+        // sekaligus menangkap draft yang sekarang sudah terbit nomor.
+        if ($existing === null) {
+            $existing = $this->findDraft($payload);
+        }
 
         if ($existing === null) {
             FakturPajak::create($payload + ['tax_invoice_number' => $number]);
             $this->created++;
+
             return;
         }
 
@@ -107,13 +123,56 @@ class FakturPajakImport implements ToCollection
             }
         }
 
-        if ($dirty) {
+        $numberFilled = $number !== null
+            && trim((string) $existing->tax_invoice_number) !== $number;
+
+        if ($dirty || $numberFilled) {
             $existing->fill($payload);
+            if ($number !== null) {
+                $existing->tax_invoice_number = $number;
+            }
             $existing->save();
             $this->updated++;
         } else {
             $this->unchanged++;
         }
+    }
+
+    /**
+     * Cari draft (nomor masih kosong) yang cocok dengan baris import.
+     * Kunci utama: reference + tanggal + nilai; fallback reference + nilai,
+     * lalu reference saja bila hanya ada satu draft.
+     */
+    private function findDraft(array $payload): ?FakturPajak
+    {
+        $reference = trim((string) ($payload['reference'] ?? ''));
+        if ($reference === '') {
+            return null;
+        }
+
+        $base = FakturPajak::whereNull('tax_invoice_number')
+            ->where('reference', $reference);
+
+        $exact = (clone $base)
+            ->where('tax_invoice_date', $payload['tax_invoice_date'])
+            ->where('selling_price', $payload['selling_price'])
+            ->first();
+
+        if ($exact !== null) {
+            return $exact;
+        }
+
+        $byPrice = (clone $base)
+            ->where('selling_price', $payload['selling_price'])
+            ->first();
+
+        if ($byPrice !== null) {
+            return $byPrice;
+        }
+
+        $candidates = (clone $base)->limit(2)->get();
+
+        return $candidates->count() === 1 ? $candidates->first() : null;
     }
 
     private function detectHeader(Collection $rows): array
@@ -299,5 +358,13 @@ class FakturPajakImport implements ToCollection
     public function getSkippedCount(): int
     {
         return $this->skipped;
+    }
+
+    /**
+     * Jumlah baris yang tidak punya nomor FP (draft / belum terbit).
+     */
+    public function getDraftCount(): int
+    {
+        return $this->drafts;
     }
 }

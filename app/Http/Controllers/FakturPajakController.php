@@ -6,10 +6,33 @@ use App\Imports\FakturPajakImport;
 use App\Models\DetailSale;
 use App\Models\FakturPajak;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 
 class FakturPajakController extends Controller
 {
+    /**
+     * Nama bulan sesuai kolom tax_invoice_period (hasil import CSV e-Faktur).
+     *
+     * @var array<int,string>
+     */
+    private const BULAN = [
+        1 => 'Januari',
+        2 => 'Februari',
+        3 => 'Maret',
+        4 => 'April',
+        5 => 'Mei',
+        6 => 'Juni',
+        7 => 'Juli',
+        8 => 'Agustus',
+        9 => 'September',
+        10 => 'Oktober',
+        11 => 'November',
+        12 => 'Desember',
+    ];
+
     public function index()
     {
         $rows = FakturPajak::query()
@@ -56,7 +79,45 @@ class FakturPajakController extends Controller
             ];
         })->values();
 
-        return view('faktur-pajak.index', ['payload' => $payload]);
+        // Default modal "Clear Data": periode terbaru yang ada datanya.
+        $latest = $payload->first();
+        $defaultBulan = (int) now()->month;
+        $defaultTahun = (int) now()->year;
+
+        if ($latest !== null) {
+            $foundBulan = array_search($latest['period'], self::BULAN, true);
+            if ($foundBulan !== false) {
+                $defaultBulan = (int) $foundBulan;
+            }
+            if ($latest['tahun'] !== '') {
+                $defaultTahun = (int) $latest['tahun'];
+            }
+        }
+
+        $defaultDate = Carbon::create($defaultTahun, $defaultBulan, 1);
+        $defaultDari = $defaultDate->copy()->startOfMonth()->toDateString();
+        $defaultSampai = $defaultDate->copy()->endOfMonth()->toDateString();
+
+        $tahunOptions = $payload->pluck('tahun')
+            ->filter(fn ($t) => $t !== '')
+            ->unique()
+            ->sortDesc()
+            ->values()
+            ->all();
+
+        if ($tahunOptions === []) {
+            $tahunOptions = [(string) $defaultTahun];
+        }
+
+        return view('faktur-pajak.index', [
+            'payload' => $payload,
+            'bulanNames' => self::BULAN,
+            'defaultBulan' => $defaultBulan,
+            'defaultTahun' => $defaultTahun,
+            'defaultDari' => $defaultDari,
+            'defaultSampai' => $defaultSampai,
+            'tahunOptions' => $tahunOptions,
+        ]);
     }
 
     public function import(Request $request)
@@ -85,18 +146,66 @@ class FakturPajakController extends Controller
             $message .= sprintf(' %d baris dilewati.', $import->getSkippedCount());
         }
 
+        if ($import->getDraftCount() > 0) {
+            $message .= sprintf(' %d baris belum terbit nomor FP (draft).', $import->getDraftCount());
+        }
+
         return redirect()
             ->route('faktur-pajak.index')
             ->with('success', $message);
     }
 
-    public function clear()
+    /**
+     * Hapus data Faktur Pajak per periode (bulan) atau per rentang tanggal.
+     * Tidak ada opsi "hapus semua" — supaya data tidak terhapus tanpa sengaja.
+     */
+    public function clear(Request $request)
     {
-        $deleted = FakturPajak::query()->delete();
+        $data = $request->validate([
+            'mode' => ['required', Rule::in(['bulan', 'tanggal'])],
+            'bulan' => ['nullable', 'integer', 'between:1,12', 'required_if:mode,bulan'],
+            'tahun' => ['nullable', 'integer', 'between:2000,2100', 'required_if:mode,bulan'],
+            'dari' => ['nullable', 'date', 'required_if:mode,tanggal'],
+            'sampai' => ['nullable', 'date', 'after_or_equal:dari', 'required_if:mode,tanggal'],
+        ]);
+
+        $query = FakturPajak::query();
+
+        if ($data['mode'] === 'bulan') {
+            $bulan = (int) $data['bulan'];
+            $tahun = (int) $data['tahun'];
+            $namaBulan = self::BULAN[$bulan];
+
+            // "Per Bulan" mengikuti periode FP (kolom tax_invoice_period),
+            // bukan tanggal terbit — sama seperti filter Bulan di tabel.
+            $query->where('tax_invoice_period', $namaBulan)
+                ->where('tax_invoice_year', $tahun);
+
+            $label = 'periode ' . $namaBulan . ' ' . $tahun;
+        } else {
+            $dari = Carbon::parse($data['dari'])->toDateString();
+            $sampai = Carbon::parse($data['sampai'])->toDateString();
+
+            // "Per Tanggal" mengikuti tanggal FP (tax_invoice_date).
+            $query->whereBetween('tax_invoice_date', [$dari, $sampai]);
+
+            $label = 'tanggal ' . Carbon::parse($dari)->format('d/m/Y')
+                . ' s/d ' . Carbon::parse($sampai)->format('d/m/Y');
+        }
+
+        $count = (clone $query)->count();
+
+        if ($count === 0) {
+            return redirect()
+                ->route('faktur-pajak.index')
+                ->with('error', 'Tidak ada data Faktur Pajak pada ' . $label . '. Tidak ada yang dihapus.');
+        }
+
+        $deleted = DB::transaction(fn () => $query->delete());
 
         return redirect()
             ->route('faktur-pajak.index')
-            ->with('success', "Berhasil menghapus {$deleted} data Faktur Pajak.");
+            ->with('success', 'Berhasil menghapus ' . $deleted . ' data Faktur Pajak ' . $label . '.');
     }
 
     /**
