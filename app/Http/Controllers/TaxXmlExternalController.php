@@ -99,6 +99,27 @@ class TaxXmlExternalController extends Controller
     {
         $data = $request->validate($this->rules());
 
+        // Hanya "FP belum ada" yang boleh ditarik. Status lain berarti FP-nya
+        // sudah ada (terbit/draft) atau sengaja tidak dibuat -> upload ulang dobel.
+        $fpStatus = (string) ($data['fp'] ?? 'belum');
+
+        if ($fpStatus !== 'belum') {
+            $reason = match ($fpStatus) {
+                'ada' => 'sudah punya Faktur Pajak bernomor',
+                'draft' => 'masih berstatus draft dan sudah ada di Coretax',
+                'gung_gung' => 'ditandai Gung Gung (FP sengaja tidak dibuat)',
+                default => 'tidak memenuhi syarat tarik',
+            };
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'Dokumen tidak bisa ditarik: ' . $reason . '. '
+                    . 'Upload ulang berisiko membuat Faktur Pajak dobel.',
+                'errors' => [],
+                'unmapped' => [],
+            ], 422);
+        }
+
         @set_time_limit(0);
         @ini_set('memory_limit', '-1');
 
@@ -231,7 +252,7 @@ class TaxXmlExternalController extends Controller
             'dari' => ['nullable', 'date', 'required_if:mode,tanggal'],
             'sampai' => ['nullable', 'date', 'after_or_equal:dari', 'required_if:mode,tanggal'],
             'cust_type' => ['nullable', Rule::in(self::CUSTOMER_TYPES)],
-            'fp' => ['nullable', Rule::in(['ada', 'belum', 'gung_gung'])],
+            'fp' => ['nullable', Rule::in(['ada', 'belum', 'draft', 'gung_gung'])],
         ];
     }
 
@@ -264,8 +285,12 @@ class TaxXmlExternalController extends Controller
      * Filter status Faktur Pajak (aturan sama dengan kolom Faktur Pajak di
      * Detail Sales tab external):
      *  - ada       : punya nomor faktur (faktur_pajaks), bukan Gung Gung
-     *  - belum     : belum punya nomor faktur, bukan Gung Gung
+     *  - draft     : sudah punya record FP tapi belum terbit nomor (CREATED)
+     *  - belum     : belum punya record FP sama sekali, bukan Gung Gung
      *  - gung_gung : detail_sales.fp_status = 'gung_gung'
+     *
+     * Draft tidak dimasukkan ke "belum" supaya tidak ditarik ulang: FP-nya
+     * sudah ada di Coretax dan upload ulang bisa membuat dobel.
      */
     private function applyFakturPajak(Builder $query, string $status): void
     {
@@ -286,10 +311,19 @@ class TaxXmlExternalController extends Controller
                 ->whereRaw("TRIM(COALESCE(tax_invoice_number, '')) <> ''");
         };
 
+        $hasDraft = function ($sub) {
+            $sub->select(DB::raw(1))
+                ->from('faktur_pajaks')
+                ->whereColumn('faktur_pajaks.reference', 'detail_sales.doc_number')
+                ->whereRaw("TRIM(COALESCE(tax_invoice_number, '')) = ''");
+        };
+
         if ($status === 'ada') {
             $query->whereExists($hasFaktur);
+        } elseif ($status === 'draft') {
+            $query->whereNotExists($hasFaktur)->whereExists($hasDraft);
         } else {
-            $query->whereNotExists($hasFaktur);
+            $query->whereNotExists($hasFaktur)->whereNotExists($hasDraft);
         }
 
         // Gung Gung = FP sengaja tidak dibuat; tidak masuk hitungan "ada"/"belum".
@@ -358,6 +392,7 @@ class TaxXmlExternalController extends Controller
 
         $fpLabel = match ((string) ($data['fp'] ?? 'belum')) {
             'ada' => 'FP-ada',
+            'draft' => 'FP-draft',
             'gung_gung' => 'FP-gunggung',
             default => 'FP-belum',
         };

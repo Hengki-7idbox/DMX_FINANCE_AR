@@ -10,8 +10,9 @@
         (builder, urutan dokumen, dan filter retur yang sama). Dokumen bermasalah dilewati satu per satu
         dan daftarnya ditampilkan setelah proses selesai.
         <br>
-        Default <strong>Faktur Pajak = FP belum ada</strong> — dokumen yang sudah punya faktur pajak tidak ikut
-        ditarik supaya upload ulang ke Coretax tidak membuat dobel.
+        <strong>Hanya filter "FP belum ada" yang bisa ditarik.</strong>
+        Status <strong>FP ada</strong>, <strong>FP draft</strong>, dan <strong>Gung Gung</strong> hanya untuk melihat
+        jumlah — dokumennya sudah punya FP (atau sengaja tidak dibuat), jadi upload ulang berisiko dobel.
     </x-alert>
 
     @if(session('error'))
@@ -89,12 +90,14 @@
                     <label for="f_fp" class="mb-1 block text-sm font-medium text-muted-foreground">Faktur Pajak</label>
                     <x-select id="f_fp" placeholder="">
                         <option value="belum" selected>FP belum ada</option>
-                        <option value="ada">FP ada</option>
-                        <option value="gung_gung">Gung Gung</option>
+                        <option value="ada">FP ada (tidak bisa ditarik)</option>
+                        <option value="draft">FP draft (tidak bisa ditarik)</option>
+                        <option value="gung_gung">Gung Gung (tidak bisa ditarik)</option>
                     </x-select>
                     <p id="fp_warning" class="mt-2 hidden text-xs text-warning">
-                        Dokumen ini sudah pernah dilaporkan ke Coretax (atau sengaja tidak dibuat).
-                        Jangan upload ulang agar tidak dobel.
+                        Filter ini hanya untuk melihat jumlah. Tarik XML hanya tersedia untuk
+                        <strong>FP belum ada</strong> — status lain berarti FP-nya sudah ada atau sengaja tidak dibuat,
+                        sehingga upload ulang berisiko dobel.
                     </p>
                 </div>
             </div>
@@ -255,7 +258,17 @@
 
         function toggleFpWarning() {
             var value = document.getElementById('f_fp').value;
-            document.getElementById('fp_warning').classList.toggle('hidden', value === 'belum');
+            var blocked = value !== 'belum';
+
+            document.getElementById('fp_warning').classList.toggle('hidden', !blocked);
+
+            var btn = document.getElementById('btn_download');
+            if (btn) {
+                btn.disabled = blocked;
+                btn.classList.toggle('opacity-50', blocked);
+                btn.classList.toggle('cursor-not-allowed', blocked);
+                btn.title = blocked ? 'Hanya "FP belum ada" yang bisa ditarik.' : '';
+            }
         }
 
         function showResultModal(title, items, type) {
