@@ -105,6 +105,7 @@ class CoretaxXmlBuilder
 
         $taxByReference = FakturPajak::whereIn('reference', $docNumbers)
             ->whereNotNull('buyer_tin')
+            ->whereRaw("TRIM(COALESCE(tax_invoice_number, '')) <> ''")
             ->pluck('buyer_tin', 'reference')
             ->all();
 

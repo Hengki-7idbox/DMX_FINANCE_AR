@@ -146,7 +146,9 @@
                 </ul>
             </div>
             @endif
-            @if($tab === 'internal')
+            @php
+                $bulkSource = $tab === 'external' ? 'external' : 'internal';
+            @endphp
             <div class="dropdown dropdown-end">
                 <button type="button" id="bulk_create_btn" tabindex="0" disabled
                         class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
@@ -157,13 +159,12 @@
                 </button>
                 <ul tabindex="0"
                     class="dropdown-content menu z-[90] mt-1 w-56 rounded-lg border border-border bg-card p-1 shadow-xl">
-                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="so">Buat SO</button></li>
-                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="do">Buat DO</button></li>
-                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="inv">Buat INV</button></li>
-                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="chain">Buat SO &rarr; DO &rarr; INV</button></li>
+                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="so" data-source="{{ $bulkSource }}">Buat SO</button></li>
+                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="do" data-source="{{ $bulkSource }}">Buat DO</button></li>
+                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="inv" data-source="{{ $bulkSource }}">Buat INV</button></li>
+                    <li><button type="button" class="flex w-full rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground" data-bulk-create="chain" data-source="{{ $bulkSource }}">Buat SO &rarr; DO &rarr; INV</button></li>
                 </ul>
             </div>
-            @endif
             <button type="button" id="bulk_delete_btn" disabled onclick="bulkDeleteExt()"
                     class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-destructive/40 bg-background px-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
                 Hapus data Accurate
@@ -300,6 +301,31 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span id="menu_fp_label">Ubah Status Fp</span>
+        </button>
+        <div class="my-1 border-t border-border"></div>
+        <button type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                onclick="createExtFromExternalFromMenu('so')">
+            <svg class="h-4 w-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Create SO
+        </button>
+        <button type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                onclick="createExtFromExternalFromMenu('do')">
+            <svg class="h-4 w-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Create DO
+        </button>
+        <button type="button"
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                onclick="createExtFromExternalFromMenu('inv')">
+            <svg class="h-4 w-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Create INV
         </button>
         @endif
         @if($tab === 'internal')
@@ -1276,6 +1302,7 @@
         }
 
         var CREATE_EXT_URL = @json(route('detail-sales.create-ext'));
+        var CREATE_EXT_EXTERNAL_URL = @json(route('detail-sales.create-ext-external'));
         var CREATE_EXT_BULK_URL = @json(route('detail-sales.create-ext-bulk'));
 
         function showExtResult(title, items, type) {
@@ -1399,6 +1426,52 @@
                     restoreBtn();
                     if (!silent) showExtResult('Gagal', ['Gagal menghubungi server.'], 'error');
                     return { ok: false, message: 'Gagal menghubungi server.', doc: doc, type: type };
+                });
+        }
+
+        // ==== Create SO/DO/INV dari data tab external ====
+        function createExtFromExternalFromMenu(type) {
+            var doc = actionMenuDoc;
+            closeActionMenu();
+            if (doc) createExtFromExternalRequest(doc, type);
+        }
+
+        function createExtFromExternalRequest(doc, type) {
+            if (!doc) return;
+
+            var label = String(type || '').toUpperCase();
+
+            fetch(CREATE_EXT_EXTERNAL_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': EXPORT_XML_CSRF
+                },
+                body: JSON.stringify({ doc_number: doc, type: type })
+            })
+                .then(function (res) {
+                    return res.json().then(function (j) { return { ok: res.ok, body: j }; });
+                })
+                .then(function (r) {
+                    if (!r.ok || !r.body.ok) {
+                        var reasons = (r.body && r.body.errors && r.body.errors.length)
+                            ? r.body.errors
+                            : [(r.body && r.body.message) || 'Gagal membuat dokumen di Accurate.'];
+                        showExtResult('Tidak bisa membuat ' + label + ' External', reasons, 'error');
+                        return;
+                    }
+
+                    markExtDocState(doc, type, true);
+                    showExtResult(
+                        label + ' ' + (r.body.number || doc) + ' berhasil',
+                        [r.body.message || 'Dokumen dibuat di Accurate.'],
+                        'success'
+                    );
+                })
+                .catch(function () {
+                    showExtResult('Gagal', ['Gagal menghubungi server.'], 'error');
                 });
         }
 
@@ -1740,6 +1813,10 @@
                         return '<span class="' + BADGE_BASE + 'bg-success/10 text-success">FP ada</span> '
                             + '<span class="text-foreground">' + escapeHtml(v) + '</span>';
                     }
+                    if (row.fp_draft) {
+                        if (type !== 'display') return 'fp draft';
+                        return '<span class="' + BADGE_BASE + 'bg-warning/10 text-warning">FP draft</span>';
+                    }
                     if (type !== 'display') return 'fp belum ada';
                     return '<span class="' + BADGE_BASE + 'bg-error/10 text-error">fp belum ada</span>';
                 }
@@ -1748,13 +1825,15 @@
             var HAS_STAGE = @json($tab === 'external');
             var STAGE_LABEL = { so: 'SO', do: 'SO \u2192 DO', inv: 'SO \u2192 DO \u2192 INV' };
             var STAGE_CLASS = { so: 'bg-info/10 text-info', do: 'bg-info/15 text-info', inv: 'bg-success/10 text-success' };
+            // Rank untuk sorting kolom Tahap: belum ada -> 0, SO -> 1, DO -> 2, INV -> 3.
+            var STAGE_RANK = { so: 1, do: 2, inv: 3 };
             var TAHAP_COL = {
                 data: 'ext_stage',
-                orderable: false,
+                orderable: true,
                 searchable: false,
                 className: 'px-2 py-1.5',
                 render: function (v, type, row) {
-                    if (type !== 'display') return (v && STAGE_LABEL[v]) ? STAGE_LABEL[v] : '';
+                    if (type !== 'display') return STAGE_RANK[v] || 0;
 
                     var badge = (v && STAGE_LABEL[v])
                         ? '<span class="' + BADGE_BASE + (STAGE_CLASS[v] || 'border border-border text-foreground') + '">' + STAGE_LABEL[v] + '</span>'
@@ -2199,7 +2278,7 @@
                 if (dlg && dlg.open) dlg.close();
             };
 
-            function bulkCreateExt(kind) {
+            function bulkCreateExt(kind, source) {
                 if (bulkRunning) return;
                 var types = BULK_TYPE_SEQ[kind];
                 if (!types) return;
@@ -2213,12 +2292,13 @@
                 var label = BULK_TYPE_LABEL[kind];
                 askConfirm('Buat ' + label,
                     'Buat ' + label + ' untuk ' + docs.length + ' dokumen di Accurate?',
-                    function () { runBulkCreate(docs, types, label); },
+                    function () { runBulkCreate(docs, types, label, source); },
                     'Ya, Buat'
                 );
             }
 
-            function runBulkCreate(docs, types, label) {
+            function runBulkCreate(docs, types, label, source) {
+                source = source || 'internal';
                 bulkRunning = true;
                 var dlg = document.getElementById('bulk_progress_modal');
                 var list = document.getElementById('bulk_progress_list');
@@ -2266,7 +2346,7 @@
                             'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-TOKEN': EXPORT_XML_CSRF
                         },
-                        body: JSON.stringify({ docs: current, types: [type] })
+                        body: JSON.stringify({ docs: current, types: [type], source: source })
                     })
                         .then(function (res) {
                             return res.json().then(function (j) { return { ok: res.ok, body: j }; });
@@ -2448,7 +2528,7 @@
 
             document.querySelectorAll('#bulk_create_btn ~ ul [data-bulk-create]').forEach(function (item) {
                 item.addEventListener('click', function () {
-                    bulkCreateExt(item.getAttribute('data-bulk-create'));
+                    bulkCreateExt(item.getAttribute('data-bulk-create'), item.getAttribute('data-source'));
                 });
             });
 

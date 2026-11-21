@@ -89,14 +89,26 @@ class DetailSaleController extends Controller
         // Reference double (2 faktur) dipetakan ke nomor pajak faktur pertama.
         // Status manual FP ("Gung Gung" = FP memang tidak dibuat) disimpan di detail_sales.fp_status.
         $fpMap = collect();
+        $fpDraftMap = collect();
         if ($tab === DetailSale::SOURCE_EXTERNAL) {
+            // Hanya FP yang sudah terbit nomor yang dipakai untuk kolom Faktur Pajak.
             $fpMap = FakturPajak::query()
                 ->whereNotNull('reference')
                 ->where('reference', '!=', '')
+                ->whereRaw("TRIM(COALESCE(tax_invoice_number, '')) <> ''")
                 ->orderBy('id')
                 ->get(['reference', 'tax_invoice_number'])
                 ->unique('reference')
                 ->mapWithKeys(fn ($r) => [$r->reference => $r->tax_invoice_number]);
+
+            // Draft (belum terbit) ditandai terpisah agar kolom menampilkan "Draft".
+            $fpDraftMap = FakturPajak::query()
+                ->whereNotNull('reference')
+                ->where('reference', '!=', '')
+                ->whereRaw("TRIM(COALESCE(tax_invoice_number, '')) = ''")
+                ->pluck('reference')
+                ->unique()
+                ->flip();
         }
 
         // Dokumen external yang sudah dibuat via API (mapping per tahap SO/DO/INV).
@@ -180,6 +192,9 @@ class DetailSaleController extends Controller
             'fp_number' => $tab === DetailSale::SOURCE_EXTERNAL
                 ? ($fpMap[$r->doc_number] ?? null)
                 : null,
+            'fp_draft' => $tab === DetailSale::SOURCE_EXTERNAL
+                ? $fpDraftMap->has((string) $r->doc_number)
+                : false,
             'fp_status' => $tab === DetailSale::SOURCE_EXTERNAL
                 ? $r->fp_status
                 : null,
@@ -1188,6 +1203,115 @@ class DetailSaleController extends Controller
     }
 
     /**
+     * Buat SO/DO/INV di Accurate dari data tab EXTERNAL.
+     *
+     * Dipakai untuk dokumen yang hanya ada di tab external (mis. hasil import
+     * yang belum pernah dibuat di Accurate). Sumber harga/qty/satuan adalah
+     * baris external apa adanya; tidak ada konversi satuan dan tidak ada mirror
+     * ulang karena tab external memang sudah berisi data tersebut.
+     */
+    public function createExternalDocFromExternal(Request $request)
+    {
+        $data = $request->validate([
+            'doc_number' => ['required', 'string', 'max:50'],
+            'type' => ['required', Rule::in(['so', 'do', 'inv'])],
+        ]);
+
+        $type = $data['type'];
+        $doc = $data['doc_number'];
+        $module = ExternalDocument::MODULES[$type];
+
+        $existing = ExternalDocument::where('doc_number', $doc)->where('type', $type)->first();
+        if ($existing) {
+            return response()->json([
+                'ok' => true,
+                'already' => true,
+                'number' => $existing->accurate_number,
+                'message' => strtoupper($type) . ' ' . $existing->accurate_number . ' sudah ada di Accurate.',
+                'notes' => [],
+            ]);
+        }
+
+        $client = new AccurateApiClient();
+
+        if (! $client->configured()) {
+            return $this->externalFailure(['API Token dan Signature Secret Accurate belum diisi di Settings.']);
+        }
+
+        // DO sudah difakturkan dengan nomor lain (mis. SI.2026.11.00008):
+        // adopsi invoice yang sudah ada, jangan buat invoice baru.
+        if ($type === ExternalDocument::TYPE_INV) {
+            $adopted = $this->adoptExistingInvoice($doc, $client);
+
+            if ($adopted !== null) {
+                return response()->json([
+                    'ok' => true,
+                    'already' => true,
+                    'number' => $adopted['number'],
+                    'message' => 'INV ' . $adopted['number'] . ' sudah ada di Accurate. Tahap diperbarui.',
+                    'notes' => [],
+                ]);
+            }
+        }
+
+        $prep = $this->prepareExternalDocFromExternal($doc, $type, $client);
+
+        if (! $prep['ok']) {
+            return $this->externalFailure($prep['reasons']);
+        }
+
+        $payload = $prep['payload'];
+
+        // Dokumen sudah ada di Accurate -> adopsi nomornya (jangan buat dobel).
+        $found = $client->findByNumber($module, $doc);
+        if ($found !== null) {
+            $this->storeExternalDocument($doc, $type, $payload, [
+                'ok' => true,
+                'status' => 200,
+                'body' => ['r' => $found],
+                'message' => null,
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'already' => true,
+                'number' => (string) ($found['number'] ?? $doc),
+                'message' => strtoupper($type) . ' ' . ($found['number'] ?? $doc) . ' sudah ada di Accurate.',
+                'notes' => $prep['notes'],
+            ]);
+        }
+
+        $result = $client->post('/accurate/api/' . $module . '/save.do', $payload);
+
+        if (! $result['ok']) {
+            $reason = $result['message'] ?? ('Accurate menolak pembuatan ' . strtoupper($type) . '.');
+
+            if (preg_match('/non\s*aktif|tidak\s*aktif|suspended/i', $reason)) {
+                $reason = $this->nonActiveCustomerHint($reason, (string) $prep['header']->customer_code, (string) $payload['customerNo']);
+            }
+
+            return response()->json([
+                'ok' => false,
+                'message' => $reason,
+                'errors' => [$reason],
+            ], 422);
+        }
+
+        $r = $result['body']['r'] ?? [];
+        $number = (string) ($r['number'] ?? $doc);
+
+        $this->storeExternalDocument($doc, $type, $payload, $result);
+
+        return response()->json([
+            'ok' => true,
+            'number' => $number,
+            'status' => $r['status'] ?? null,
+            'message' => strtoupper($type) . ' ' . $number . ' berhasil dibuat di Accurate.',
+            'notes' => $prep['notes'],
+        ]);
+    }
+
+    /**
      * Siapkan payload dokumen external tanpa memanggil save.do.
      *
      * Dipakai jalur satuan (createExternalDoc) dan jalur bulk supaya aturan
@@ -1400,6 +1524,156 @@ class DetailSaleController extends Controller
     }
 
     /**
+     * Siapkan payload SO/DO/INV dari data tab EXTERNAL.
+     *
+     * Dipakai untuk dokumen yang hanya ada di tab external. Harga, qty, dan
+     * satuan dikirim apa adanya (tanpa konversi); baris yang qty x harga-nya
+     * tidak sama dengan nilai baris ditolak agar nilai dokumen tidak berubah.
+     *
+     * @return array{ok:bool,reasons:array<int,string>,header:?DetailSale,prepared:array,notes:array,payload:array,so_number:string,do_number:string}
+     */
+    private function prepareExternalDocFromExternal(
+        string $doc,
+        string $type,
+        AccurateApiClient $client,
+        ?array $doDetail = null
+    ): array {
+        $header = DetailSale::where('source_type', DetailSale::SOURCE_EXTERNAL)
+            ->where('doc_number', $doc)
+            ->first();
+
+        if (! $header) {
+            return $this->preparedFailure(['Dokumen ' . $doc . ' tidak ditemukan di tab external.']);
+        }
+
+        $lines = DetailSaleItem::where('source_type', DetailSaleItem::SOURCE_EXTERNAL)
+            ->where('doc_number', $doc)
+            ->orderBy('id')
+            ->get();
+
+        if ($lines->isEmpty()) {
+            return $this->preparedFailure(['Item dokumen ' . $doc . ' tidak ditemukan.']);
+        }
+
+        $reasons = [];
+
+        if ($header->transaction_date === null) {
+            $reasons[] = 'Tanggal transaksi ' . $doc . ' kosong.';
+        }
+
+        if (! $client->configured()) {
+            $reasons[] = 'API Token dan Signature Secret Accurate belum diisi di Settings.';
+        }
+
+        $customerNo = trim((string) $header->customer_code);
+        if ($customerNo === '') {
+            $reasons[] = 'Dokumen ' . $doc . ' tidak punya Customer No. Accurate.';
+        }
+
+        $soDoc = $type === ExternalDocument::TYPE_SO
+            ? null
+            : ExternalDocument::where('doc_number', $doc)->where('type', ExternalDocument::TYPE_SO)->first();
+        $doDoc = $type === ExternalDocument::TYPE_INV
+            ? ExternalDocument::where('doc_number', $doc)->where('type', ExternalDocument::TYPE_DO)->first()
+            : null;
+
+        if ($client->configured()) {
+            if ($type === ExternalDocument::TYPE_DO && ! $soDoc
+                && $client->findByNumber(ExternalDocument::MODULES[ExternalDocument::TYPE_SO], $doc) === null) {
+                $reasons[] = 'SO ' . $doc . ' belum ada di Accurate. Buat SO terlebih dahulu.';
+            }
+
+            if ($type === ExternalDocument::TYPE_INV && ! $doDoc
+                && $client->findByNumber(ExternalDocument::MODULES[ExternalDocument::TYPE_DO], $doc) === null) {
+                $reasons[] = 'DO ' . $doc . ' belum ada di Accurate. Buat DO terlebih dahulu.';
+            }
+        }
+
+        $prepared = [];
+
+        foreach ($lines as $line) {
+            $qty = (float) $line->qty;
+            $price = (float) $line->unit_price;
+            $value = (float) $line->amount;
+
+            if (trim((string) $line->item_no) === '') {
+                $reasons[] = 'Item ' . $line->item_description . ' belum punya kode barang Accurate.';
+                continue;
+            }
+
+            if ($qty <= 0) {
+                $reasons[] = 'Item ' . $line->item_no . ' (' . $line->item_description . '): qty harus lebih dari 0.';
+                continue;
+            }
+
+            if ($value > 0) {
+                $tolerance = max(1.0, abs($value) * 0.01);
+
+                if (abs($qty * $price - $value) > $tolerance) {
+                    $reasons[] = 'Item ' . $line->item_no . ' (' . $line->item_description . '): qty x harga '
+                        . number_format($qty * $price, 2, ',', '.') . ' tidak sama dengan nilai baris '
+                        . number_format($value, 2, ',', '.') . '. Periksa satuan/harga item.';
+                    continue;
+                }
+            }
+
+            $prepared[] = [
+                'line' => $line,
+                'qty' => $qty,
+                'qty_send' => $qty,
+                'unit_send' => (string) $line->unit,
+                'price_send' => $price,
+                'item_no_external' => (string) $line->item_no,
+                'item_name_external' => (string) $line->item_description,
+            ];
+        }
+
+        if ($reasons !== []) {
+            return $this->preparedFailure($reasons);
+        }
+
+        $soNumber = (string) ($soDoc?->accurate_number ?? $doc);
+        $doNumber = (string) ($doDoc?->accurate_number ?? $doc);
+
+        // Payment term: kode external dipetakan ke kode internal bila ada.
+        $termCode = MappingCustomer::where('kode_external', $customerNo)->value('kode_internal');
+        $termCode = $termCode !== null && trim((string) $termCode) !== ''
+            ? (string) $termCode
+            : $customerNo;
+
+        $payload = $this->buildExternalPayload(
+            $type,
+            $header,
+            $prepared,
+            $customerNo,
+            $soNumber,
+            $doNumber,
+            $termCode
+        );
+
+        if ($type === ExternalDocument::TYPE_INV) {
+            $this->linkInvoiceLinesToDeliveryOrder(
+                $payload,
+                $client,
+                $doNumber,
+                $doDoc?->accurate_id !== null ? (int) $doDoc->accurate_id : null,
+                $doDetail
+            );
+        }
+
+        return [
+            'ok' => true,
+            'reasons' => [],
+            'header' => $header,
+            'prepared' => $prepared,
+            'notes' => [],
+            'payload' => $payload,
+            'so_number' => $soNumber,
+            'do_number' => $doNumber,
+        ];
+    }
+
+    /**
      * @param  array<int,string>  $reasons
      * @return array{ok:false,reasons:array<int,string>,header:null,prepared:array,notes:array,payload:array,so_number:string,do_number:string}
      */
@@ -1431,7 +1705,10 @@ class DetailSaleController extends Controller
             'docs.*' => ['required', 'string', 'max:50'],
             'types' => ['required', 'array', 'min:1'],
             'types.*' => ['required', Rule::in(['so', 'do', 'inv'])],
+            'source' => ['nullable', Rule::in(['internal', 'external'])],
         ]);
+
+        $source = $data['source'] ?? 'internal';
 
         $docs = [];
         foreach ($data['docs'] as $doc) {
@@ -1543,15 +1820,38 @@ class DetailSaleController extends Controller
 
             $batch = [];
             foreach ($queue as $doc) {
-                $prep = $this->prepareExternalDoc(
-                    $doc,
-                    $type,
-                    $client,
-                    $custMap,
-                    $itemCodeMap,
-                    $itemNameMap,
-                    $doDetails[$doc] ?? null
-                );
+                // DO sudah difakturkan dengan nomor lain -> adopsi (hanya tab external).
+                if ($source === 'external' && $type === ExternalDocument::TYPE_INV) {
+                    $adopted = $this->adoptExistingInvoice($doc, $client);
+
+                    if ($adopted !== null) {
+                        $results[] = [
+                            'doc' => $doc,
+                            'type' => $type,
+                            'ok' => true,
+                            'already' => true,
+                            'number' => $adopted['number'],
+                            'message' => 'INV ' . $adopted['number'] . ' sudah ada di Accurate. Tahap diperbarui.',
+                            'notes' => [],
+                            'unit_issues' => [],
+                        ];
+                        $typeOk++;
+
+                        continue;
+                    }
+                }
+
+                $prep = $source === 'external'
+                    ? $this->prepareExternalDocFromExternal($doc, $type, $client, $doDetails[$doc] ?? null)
+                    : $this->prepareExternalDoc(
+                        $doc,
+                        $type,
+                        $client,
+                        $custMap,
+                        $itemCodeMap,
+                        $itemNameMap,
+                        $doDetails[$doc] ?? null
+                    );
 
                 if (! $prep['ok']) {
                     $results[] = [
@@ -1575,8 +1875,9 @@ class DetailSaleController extends Controller
             }
 
             // Nama customer untuk mirror invoice: sekali per tahap, cache 1 jam.
+            // Hanya diperlukan saat sumbernya tab internal (yang di-mirror).
             $customerNames = [];
-            if ($type === ExternalDocument::TYPE_INV && $batch !== []) {
+            if ($source === 'internal' && $type === ExternalDocument::TYPE_INV && $batch !== []) {
                 $customerNames = $this->accurateCustomerNames($client, array_map(
                     fn (array $item) => (string) ($item['payload']['customerNo'] ?? ''),
                     $batch
@@ -1646,7 +1947,7 @@ class DetailSaleController extends Controller
                             'message' => null,
                         ]);
 
-                        if ($type === ExternalDocument::TYPE_INV) {
+                        if ($source === 'internal' && $type === ExternalDocument::TYPE_INV) {
                             $this->mirrorExternalInvoice($item['header'], $payload, $client, $customerNames[$customerNo] ?? null);
                         }
 
@@ -1680,7 +1981,7 @@ class DetailSaleController extends Controller
                             'message' => null,
                         ]);
 
-                        if ($type === ExternalDocument::TYPE_INV) {
+                        if ($source === 'internal' && $type === ExternalDocument::TYPE_INV) {
                             $this->mirrorExternalInvoice($item['header'], $payload, $client, $customerNames[$customerNo] ?? null);
                         }
 
@@ -1857,6 +2158,16 @@ class DetailSaleController extends Controller
             $row = $this->recordExternalDoc($doc, $type, $lookup['row']);
             if ($row !== null) {
                 $numbers[$type] = (string) $row->accurate_number;
+            }
+        }
+
+        // Invoice bisa bernomor lain (mis. SI.2026.11.00008) walau DO sudah
+        // INVOICED. Coba adopsi supaya kolom Tahap ikut terisi INV.
+        if (empty($numbers[ExternalDocument::TYPE_INV])) {
+            $adopted = $this->adoptExistingInvoice($doc, $client);
+
+            if ($adopted !== null) {
+                $numbers[ExternalDocument::TYPE_INV] = $adopted['number'];
             }
         }
 
@@ -2445,7 +2756,11 @@ class DetailSaleController extends Controller
         $row->fill([
             'accurate_id' => (int) $found['id'],
             'accurate_number' => isset($found['number']) ? (string) $found['number'] : $doc,
-            'accurate_status' => isset($found['status']) ? (string) $found['status'] : null,
+            // lookupByNumber kadang tidak mengembalikan status; jangan hapus
+            // status lama hanya karena field itu tidak ada di respons.
+            'accurate_status' => isset($found['status'])
+                ? (string) $found['status']
+                : $row->accurate_status,
             'http_status' => 200,
         ]);
         $row->deleted_at = null;
@@ -2464,6 +2779,157 @@ class DetailSaleController extends Controller
             ExternalDocument::TYPE_DO => in_array(ExternalDocument::TYPE_DO, $types, true),
             ExternalDocument::TYPE_INV => in_array(ExternalDocument::TYPE_INV, $types, true),
         ];
+    }
+
+    /**
+     * DO tertentu sudah difakturkan di Accurate, tetapi invoice-nya memakai
+     * nomor lain (mis. SI.2026.11.00008, dibuat manual). Cari invoice yang
+     * memakai baris DO tersebut lalu catat sebagai tahap INV untuk dokumen ini.
+     *
+     * Tidak membuat dokumen apa pun di Accurate.
+     *
+     * @return array{number:string,id:int,status:?string}|null
+     */
+    private function adoptExistingInvoice(string $doc, AccurateApiClient $client): ?array
+    {
+        $doRow = ExternalDocument::withTrashed()
+            ->where('doc_number', $doc)
+            ->where('type', ExternalDocument::TYPE_DO)
+            ->first();
+
+        $doId = $doRow?->accurate_id !== null ? (int) $doRow->accurate_id : null;
+
+        if ($doId === null) {
+            $found = $client->findByNumber(ExternalDocument::MODULES[ExternalDocument::TYPE_DO], $doc);
+            $doId = isset($found['id']) ? (int) $found['id'] : null;
+
+            if ($doId === null) {
+                return null;
+            }
+
+            $this->recordExternalDoc($doc, ExternalDocument::TYPE_DO, $found);
+        }
+
+        $detail = $client->get('/accurate/api/delivery-order/detail.do', ['id' => $doId]);
+        if (! ($detail['ok'] ?? false)) {
+            return null;
+        }
+
+        $d = $detail['body']['d'] ?? [];
+        if (isset($d[0]) && is_array($d[0])) {
+            $d = $d[0];
+        }
+
+        $items = is_array($d['detailItem'] ?? null) ? $d['detailItem'] : [];
+        if ($items === []) {
+            return null;
+        }
+
+        // Sudah difakturkan? status INVOICED, atau semua baris habis difakturkan.
+        $invoiced = strtoupper((string) ($d['status'] ?? '')) === 'INVOICED';
+        $allInvoiced = true;
+        $detailIds = [];
+
+        foreach ($items as $item) {
+            $id = (int) ($item['id'] ?? 0);
+            if ($id > 0) {
+                $detailIds[] = $id;
+            }
+
+            $qty = (float) ($item['quantity'] ?? 0);
+            $invoiceQty = (float) ($item['invoiceQuantity'] ?? 0);
+
+            if ($qty <= 0 || $invoiceQty + 0.00001 < $qty) {
+                $allInvoiced = false;
+            }
+        }
+
+        if ($detailIds === [] || (! $invoiced && ! $allInvoiced)) {
+            return null;
+        }
+
+        $customerId = (int) ($d['customer']['id'] ?? 0);
+        if ($customerId <= 0) {
+            return null;
+        }
+
+        // Invoice manual biasanya dibuat beberapa hari/minggu setelah DO.
+        $shipDate = $this->parseAccurateDate($d['shipDate'] ?? $d['transDate'] ?? null);
+        $from = ($shipDate ?? now())->copy()->subDays(7)->format('d/m/Y');
+        $to = ($shipDate ?? now())->copy()->addDays(120)->format('d/m/Y');
+
+        $candidates = [];
+
+        for ($page = 1; $page <= 3; $page++) {
+            $list = $client->get('/accurate/api/sales-invoice/list.do', [
+                'filter.customerId.op' => 'EQUAL',
+                'filter.customerId.val' => $customerId,
+                'filter.transDate.op' => 'BETWEEN',
+                'filter.transDate.val[0]' => $from,
+                'filter.transDate.val[1]' => $to,
+                'sp.pageSize' => 50,
+                'sp.page' => $page,
+                'fields' => 'id,number,transDate,status',
+            ]);
+
+            if (! ($list['ok'] ?? false)) {
+                break;
+            }
+
+            $rows = $list['body']['d'] ?? [];
+            if (! is_array($rows) || $rows === []) {
+                break;
+            }
+
+            foreach ($rows as $row) {
+                $candidates[] = $row;
+            }
+
+            if (count($rows) < 50) {
+                break;
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            $invoiceId = (int) ($candidate['id'] ?? 0);
+            $invoiceNumber = trim((string) ($candidate['number'] ?? ''));
+
+            if ($invoiceId <= 0 || $invoiceNumber === '') {
+                continue;
+            }
+
+            $invoiceDetail = $client->get('/accurate/api/sales-invoice/detail.do', ['id' => $invoiceId]);
+            if (! ($invoiceDetail['ok'] ?? false)) {
+                continue;
+            }
+
+            $invoice = $invoiceDetail['body']['d'] ?? [];
+            if (isset($invoice[0]) && is_array($invoice[0])) {
+                $invoice = $invoice[0];
+            }
+
+            foreach (($invoice['detailItem'] ?? []) as $line) {
+                if (! in_array((int) ($line['deliveryOrderDetailId'] ?? 0), $detailIds, true)) {
+                    continue;
+                }
+
+                $status = isset($invoice['status']) ? (string) $invoice['status'] : null;
+
+                $this->recordExternalDoc($doc, ExternalDocument::TYPE_INV, [
+                    'id' => $invoiceId,
+                    'number' => $invoiceNumber,
+                    'status' => $status,
+                ]);
+
+                return [
+                    'number' => $invoiceNumber,
+                    'id' => $invoiceId,
+                    'status' => $status,
+                ];
+            }
+        }
+
+        return null;
     }
 
     private function storeExternalDocument(string $doc, string $type, array $payload, array $result): void
@@ -2686,10 +3152,11 @@ class DetailSaleController extends Controller
         return strtolower(trim($unit));
     }
 
-    private function buildExternalPayload(string $type, DetailSale $header, array $prepared, string $customerNo, string $soNumber, string $doNumber): array
+    private function buildExternalPayload(string $type, DetailSale $header, array $prepared, string $customerNo, string $soNumber, string $doNumber, ?string $termCustomerCode = null): array
     {
+        $termCode = $termCustomerCode ?? (string) $header->customer_code;
         $termId = Customer::where('source_type', Customer::SOURCE_INTERNAL)
-            ->where('customer_code', $header->customer_code)
+            ->where('customer_code', $termCode)
             ->value('payment_term_id');
         $termDays = (int) (PaymentTerm::whereKey($termId)->value('days') ?? 0);
 
